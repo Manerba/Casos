@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+09.02.2026;0.0.1+9;Bugfix;Scroll-Position bleibt beim Zuklappen von Detail-Bereichen erhalten (Aufgaben + Teilaufgaben)
+09.02.2026;0.0.1+9;Aenderung;WYSIWYG-Toolbar: Dropdowns auf feste Breite, einzeilig, nicht mehr von Subtask-Table-Styles ueberschrieben
 09.02.2026;0.0.1+8;Aenderung;Mehr Kontrast fuer Teilaufgaben-Detailbereich (Light/Dark)
 09.02.2026;0.0.1+7;Aenderung;Detail-Hintergruende: Aufgaben-Detail und Teilaufgaben-Detail mit unterschiedlichen Farben fuer besseren Kontrast
 09.02.2026;0.0.1+6;Bugfix;Changelog

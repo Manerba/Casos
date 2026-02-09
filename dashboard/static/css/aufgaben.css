@@ -219,7 +219,7 @@
 
 .wysiwyg-toolbar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 2px;
     padding: 6px 8px;
     background-color: var(--bg-secondary);
@@ -259,6 +259,8 @@
     color: var(--text-primary);
     font-size: 11px;
     cursor: pointer;
+    width: 80px;
+    flex-shrink: 0;
 }
 
 .wysiwyg-toolbar .toolbar-sep {
@@ -363,8 +365,8 @@
     background-color: var(--bg-row-hover);
 }
 
-.subtask-table input,
-.subtask-table select {
+.subtask-table input:not(.wysiwyg-toolbar input),
+.subtask-table select:not(.wysiwyg-toolbar select) {
     padding: 3px 6px;
     border: 1px solid var(--border-color);
     border-radius: 3px;
@@ -374,8 +376,8 @@
     width: 100%;
 }
 
-.subtask-table input:focus,
-.subtask-table select:focus {
+.subtask-table input:not(.wysiwyg-toolbar input):focus,
+.subtask-table select:not(.wysiwyg-toolbar select):focus {
     outline: none;
     border-color: var(--accent-primary);
 }

@@ -198,15 +198,20 @@ perfekt, jetzt muss sich nur noch die trennlinie an der unterkante der vorgänge
 
 ====================================================================================
 
-
+für die übersichtlichkeit müssen wir noch für etwas kontrast sorgen. 
+- der hintergrund des detail-bereichs einer aufgabe/projeks soll eine andere farbe als der globale hintergrund haben
+- der hintergrund des detail-bereichs einer teilaufgabe soll nochmal eine andere hintergrundfarbe haben.
+wähle bitte farben mit genügend kontrast und passend zu den farbschemas.
 
 ====================================================================================
 
-
+gehe bitte in den planungsmodus. nächster sprint: verallgemeinerung des "sind sie sicher"-overlay-dialogs, der beim löschen von chips genutzt wird.
+- verallgemeinere den code bitte in einer globalen klasse, so dass der dialog durch einen einzeiler aufgerufen werden kann, in der art: msgbox("cancel/yes", "alert", "Vorgaenger wirklich entfernen?")
+füge eine "sind sie sicher" abfrage für das löschen von aufgaben/projekten und den teilaufgaben ein.
 
 ====================================================================================
 
-
+beim zuklappen eines detail-bereichs scrollt die gesamte seite nach oben, wenn die letzte zeile dann nicht mehr außerhalb des anzeigebreichs ist. stattdessen soll alles oberhalb der zeile, deren detailbereich zugeklappt wurde, die zuvor angezeigte position beibehalten und wenn erforderlich, unterhalb der letzten zeile der aufgaben-tabelle, ein lerer bereich angezeigt werden.
 
 ====================================================================================
 

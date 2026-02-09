@@ -781,12 +781,22 @@ class ExpandableTable {
         const wrapper = document.querySelector(`[data-row-id="${rowId}"]`);
         if (wrapper) {
             const wasExpanded = wrapper.classList.contains('expanded');
+
+            // Beim Zuklappen: Scroll-Position relativ zur Zeile merken
+            const rowTop = wrapper.getBoundingClientRect().top;
+
             wrapper.classList.toggle('expanded');
 
             // Callback aufrufen wenn Zeile aufgeklappt wird
             if (!wasExpanded && this.options.onRowExpanded) {
                 const detailElement = wrapper.querySelector('.table-row-detail');
                 this.options.onRowExpanded(rowId, detailElement);
+            }
+
+            // Beim Zuklappen: Scroll-Position korrigieren
+            if (wasExpanded) {
+                const newRowTop = wrapper.getBoundingClientRect().top;
+                window.scrollBy(0, newRowTop - rowTop);
             }
         }
     }

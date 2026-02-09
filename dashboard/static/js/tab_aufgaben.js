@@ -417,8 +417,16 @@ function toggleSubTaskDetail(taskId, subtaskId) {
     if (!dataRow || !detailRow) return;
 
     const isExpanding = !dataRow.classList.contains('expanded');
+    const rowTop = dataRow.getBoundingClientRect().top;
+
     dataRow.classList.toggle('expanded');
     detailRow.classList.toggle('visible');
+
+    // Beim Zuklappen: Scroll-Position korrigieren
+    if (!isExpanding) {
+        const newRowTop = dataRow.getBoundingClientRect().top;
+        window.scrollBy(0, newRowTop - rowTop);
+    }
 
     // WYSIWYG-Editor beim ersten Aufklappen initialisieren
     if (isExpanding) {
