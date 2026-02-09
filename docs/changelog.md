@@ -11,3 +11,9 @@ Zeitstempel;Version;Kategorie;Beschreibung
 09.02.2026;0.1.0;Feature;Modal-Dialog fuer neue Aufgaben
 09.02.2026;0.1.0;Aenderung;Tab "Dashboard" entfernt, ersetzt durch "Aufgaben" als Startseite
 09.02.2026;0.1.0;Aenderung;ExpandableTable: toggleAllRows(), client-seitige Select-Filter
+09.02.2026;0.1.1;Feature;Aufklappbare Teilaufgaben: Text-Zeilen mit Detailbereich (gleiches Layout wie Hauptaufgaben)
+09.02.2026;0.1.1;Feature;WYSIWYG-Editor fuer Teilaufgaben-Beschreibungen (description-Spalte in sub_tasks)
+09.02.2026;0.1.1;Aenderung;Vorgaenger-Dropdown in Header-Zeile verschoben (zwischen Name und Bereich)
+09.02.2026;0.1.1;Aenderung;Vorgaenger-Chips als 4-Spalten-Grid inline positioniert
+09.02.2026;0.1.1;Aenderung;Browser-confirm() durch eigenes Overlay-Modal ersetzt (Confirm-Dialog)
+09.02.2026;0.1.1;Bugfix;Expanded-State bleibt nach Vorgaenger hinzufuegen/entfernen erhalten

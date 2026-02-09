@@ -179,19 +179,22 @@ bitte erstelle mir eine handlungsanweisung für session 2 in docs/TODO/, welche 
 
 ====================================================================================
 
-
-
-====================================================================================
-
-
+Implementiere bitte den Plan aus docs/TODO/session2_projekt_nested_table.md
 
 ====================================================================================
 
-
+die teilaufgaben sollen ihrerseits ebenfalls einen detailbereich mit wysiwyg-editor für den aufgabentext, haben, also ausklappbar sein.
+- jetzt können in den einzelnen zeilen der tailaufgaben (tabellen-header der teilaufgaben) alle daten der teilaufgabe über eingabeelemente bearbeitet werden.
+- es soll so sein, dass nur eingabeelemente angezeigt werden, wenn der detailbereich der teilaufgabe ausgeklappt ist. wenn er eingeklappt ist, sollen keine eingabeelemente angezeigt werden, sondern nur die werte.
+gehe bitte in den planungsmodus und stelle rückfragen, um sicherzustellen, dass du die aufgabe verstanden hast.
 
 ====================================================================================
 
+das dropdown für vorgänger im detailbereich der teilaufgaben soll in der selben zeile wie die anderen eingabeelemente sein, zwischen name und bereich.
 
+====================================================================================
+
+perfekt, jetzt muss sich nur noch die trennlinie an der unterkante der vorgänger-items ausrichten. momentan ist die trennlinie an der unterkante der eingabeelemente ausgerichtet, was dazu führt, dass sie von den vorgänger-items überlagert wird. verlege die vorgänger-items bitte zwischen das vorgänger-dropdown und bereich-dropdown. es soll platz für 4 items geben, erst danach soll eine neue zeile begonnen werden. also ein 4 x X grid.
 
 ====================================================================================
 
