@@ -5,10 +5,11 @@ Tareas - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from dashboard.database import get_db
+from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
 
 router = APIRouter()
@@ -131,15 +132,15 @@ async def get_tasks():
 
 
 @router.post("/api/tasks")
-async def create_task(task: TaskCreate):
+async def create_task(task: TaskCreate, user=Depends(get_current_user)):
     """Neue Aufgabe anlegen."""
     db = get_db()
     try:
         deadline = _parse_date_input(task.deadline)
         cursor = db.execute(
-            """INSERT INTO tasks (name, deadline, priority, task_type, status, description)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (task.name, deadline, task.priority, task.task_type, task.status, task.description),
+            """INSERT INTO tasks (name, deadline, priority, task_type, status, description, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (task.name, deadline, task.priority, task.task_type, task.status, task.description, user["id"]),
         )
         db.commit()
         return {"id": cursor.lastrowid, "message": "Aufgabe erstellt"}

@@ -14,10 +14,20 @@
     <header class="header">
         <h1>Tareas</h1>
         <div class="header-controls">
+            <span class="header-username" id="headerUsername"></span>
             <div class="settings-dropdown-wrapper">
                 <button class="settings-btn" id="settingsBtn">&#x2699;&#xFE0F;</button>
                 <nav class="settings-dropdown" id="settingsDropdown" style="display: none;">
                     <div class="settings-menu">
+                        <div class="settings-item" id="changePasswordBtn">
+                            <span class="settings-icon">&#x1F511;</span>
+                            <span class="settings-label">Passwort aendern</span>
+                        </div>
+                        <div class="settings-item settings-danger" id="logoutBtn">
+                            <span class="settings-icon">&#x2192;</span>
+                            <span class="settings-label">Abmelden</span>
+                        </div>
+                        <div class="settings-divider"></div>
                         <div class="settings-item" id="themeToggle">
                             <span class="settings-icon">&#x263E;</span>
                             <span class="settings-label">Dark Mode</span>

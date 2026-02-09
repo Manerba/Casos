@@ -21,6 +21,7 @@ env/
 
 # Data
 data/*.db
+data/secret.key
 
 # Claude Code
 .claude/

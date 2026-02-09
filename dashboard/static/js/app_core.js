@@ -4,10 +4,24 @@
  */
 
 // ========================================
+// Globaler 401-Interceptor
+// ========================================
+
+const _origFetch = window.fetch;
+window.fetch = async function(...args) {
+    const resp = await _origFetch.apply(this, args);
+    if (resp.status === 401 && String(args[0]).includes('/api/')) {
+        window.location.href = '/login';
+    }
+    return resp;
+};
+
+// ========================================
 // Globale Variablen
 // ========================================
 
 let currentTab = 'aufgaben';
+let currentUser = null;
 
 // Settings Dropdown State
 let settingsDropdownOpen = false;
@@ -22,7 +36,12 @@ const tabDOMCache = {};
 document.addEventListener('DOMContentLoaded', function() {
     initTheme();
     initEventListeners();
-    initTabs();
+
+    // Admin-Mode Guard: Tabs nur in der Haupt-App initialisieren
+    if (!document.body.dataset.adminMode) {
+        loadCurrentUser();
+        initTabs();
+    }
 });
 
 function initEventListeners() {
@@ -47,6 +66,18 @@ function initEventListeners() {
         restartBtn.addEventListener('click', restartDashboard);
     }
 
+    // Logout-Button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // Passwort-Aendern-Button
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', openPasswordChangeModal);
+    }
+
     // Tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function(e) {
@@ -69,6 +100,125 @@ function initEventListeners() {
             if (settingsDropdownOpen) {
                 toggleSettingsDropdown(false);
             }
+        }
+    });
+}
+
+// ========================================
+// User / Auth
+// ========================================
+
+async function loadCurrentUser() {
+    try {
+        const resp = await _origFetch('/api/auth/me');
+        if (!resp.ok) {
+            window.location.href = '/login';
+            return;
+        }
+        const data = await resp.json();
+        currentUser = data.user;
+
+        const headerUsername = document.getElementById('headerUsername');
+        if (headerUsername && currentUser) {
+            const displayName = currentUser.vorname
+                ? `${currentUser.vorname} ${currentUser.nachname}`.trim()
+                : currentUser.username;
+            headerUsername.textContent = displayName;
+        }
+    } catch (e) {
+        // Netzwerkfehler - nichts tun
+    }
+}
+
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+        // Ignorieren
+    }
+    window.location.href = '/login';
+}
+
+function openPasswordChangeModal() {
+    toggleSettingsDropdown(false);
+
+    const existing = document.querySelector('.modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">Passwort aendern</div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label>Altes Passwort</label>
+                    <input type="password" id="pwdOld" autocomplete="current-password">
+                </div>
+                <div class="modal-field">
+                    <label>Neues Passwort</label>
+                    <input type="password" id="pwdNew" autocomplete="new-password">
+                </div>
+                <div class="modal-field">
+                    <label>Neues Passwort bestaetigen</label>
+                    <input type="password" id="pwdConfirm" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+                <button class="action-btn primary" id="pwdSaveBtn">Aendern</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    document.getElementById('pwdOld').focus();
+
+    document.getElementById('pwdSaveBtn').addEventListener('click', async () => {
+        const oldPwd = document.getElementById('pwdOld').value;
+        const newPwd = document.getElementById('pwdNew').value;
+        const confirmPwd = document.getElementById('pwdConfirm').value;
+
+        if (!oldPwd || !newPwd) {
+            showNotification('Bitte alle Felder ausfuellen', 'error');
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            showNotification('Neue Passwoerter stimmen nicht ueberein', 'error');
+            return;
+        }
+        if (newPwd.length < 4) {
+            showNotification('Passwort muss mindestens 4 Zeichen haben', 'error');
+            return;
+        }
+
+        try {
+            const resp = await fetch('/api/auth/password', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ old_password: oldPwd, new_password: newPwd }),
+            });
+
+            if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                throw new Error(data.detail || 'Fehler');
+            }
+
+            showNotification('Passwort geaendert', 'success');
+            overlay.remove();
+        } catch (error) {
+            showNotification(error.message, 'error');
         }
     });
 }

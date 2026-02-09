@@ -181,22 +181,22 @@ bitte erstelle mir eine handlungsanweisung für session 2 in docs/TODO/, welche 
 
 Implementiere bitte den Plan aus docs/TODO/session2_projekt_nested_table.md
 
-====================================================================================
+------------------------------------------------------------------------------------
 
 die teilaufgaben sollen ihrerseits ebenfalls einen detailbereich mit wysiwyg-editor für den aufgabentext, haben, also ausklappbar sein.
 - jetzt können in den einzelnen zeilen der tailaufgaben (tabellen-header der teilaufgaben) alle daten der teilaufgabe über eingabeelemente bearbeitet werden.
 - es soll so sein, dass nur eingabeelemente angezeigt werden, wenn der detailbereich der teilaufgabe ausgeklappt ist. wenn er eingeklappt ist, sollen keine eingabeelemente angezeigt werden, sondern nur die werte.
 gehe bitte in den planungsmodus und stelle rückfragen, um sicherzustellen, dass du die aufgabe verstanden hast.
 
-====================================================================================
+------------------------------------------------------------------------------------
 
 das dropdown für vorgänger im detailbereich der teilaufgaben soll in der selben zeile wie die anderen eingabeelemente sein, zwischen name und bereich.
 
-====================================================================================
+------------------------------------------------------------------------------------
 
 perfekt, jetzt muss sich nur noch die trennlinie an der unterkante der vorgänger-items ausrichten. momentan ist die trennlinie an der unterkante der eingabeelemente ausgerichtet, was dazu führt, dass sie von den vorgänger-items überlagert wird. verlege die vorgänger-items bitte zwischen das vorgänger-dropdown und bereich-dropdown. es soll platz für 4 items geben, erst danach soll eine neue zeile begonnen werden. also ein 4 x X grid.
 
-====================================================================================
+------------------------------------------------------------------------------------
 
 für die übersichtlichkeit müssen wir noch für etwas kontrast sorgen. 
 - der hintergrund des detail-bereichs einer aufgabe/projeks soll eine andere farbe als der globale hintergrund haben
@@ -209,25 +209,54 @@ gehe bitte in den planungsmodus. nächster sprint: verallgemeinerung des "sind s
 - verallgemeinere den code bitte in einer globalen klasse, so dass der dialog durch einen einzeiler aufgerufen werden kann, in der art: msgbox("cancel/yes", "alert", "Vorgaenger wirklich entfernen?")
 füge eine "sind sie sicher" abfrage für das löschen von aufgaben/projekten und den teilaufgaben ein.
 
-====================================================================================
+------------------------------------------------------------------------------------
 
 beim zuklappen eines detail-bereichs scrollt die gesamte seite nach oben, wenn die letzte zeile dann nicht mehr außerhalb des anzeigebreichs ist. stattdessen soll alles oberhalb der zeile, deren detailbereich zugeklappt wurde, die zuvor angezeigte position beibehalten und wenn erforderlich, unterhalb der letzten zeile der aufgaben-tabelle, ein lerer bereich angezeigt werden.
 
 ====================================================================================
 
+gehe bitte in den planungsmodus für den nächsten sprint: mehrbenutzerfähigkeit
+- wir brauchen einen anmeldebildschirm, benutzerverwaltung und berechtigungskonzept (für wer darf wessen aufgaben sehen, admin-ui mit pass.
+  - die benutzerverwaltung soll über einen eigenen port, 8505, aufgerufen werden können -> admin-ui.
+    - gleicher anmeldebildschirm wie für benutzeranmeldung mit dem titel "Tareas Admin" -> benutzername/passwort: admin/admin (der einfachheit halber vorerst hartcodiert)
+  - für die oberfläche der admin-ui nehmen wir auch das dashboard -> ein tab: benutzerverwaltung.
+    - in der bentzerverwaltung soll für den view-bereich die generische tabellen-komponente verwendet werden.
+	- spalten: nachname, vorname, email
+	- kontrollelemente für löschen, ändern (nachname, vorname, email) am ende der tabellenzeile
+	- im control-bereich ein button zum hinzufügen neuer benutzer.
+  - berechtigungskonzept: 
+    - benutzer sollen anderen benutzern erlauben können, ihre aufgaben zu sehen.
+	- die aufgaben-tabelle soll um die spalten "Von" und "Zugewiesen an" erweitert werden.
+	- es sollen teams gebildet werden können, die gemeinsam zugriff auf ein projekt haben
+	  - zum verwalten der teammitglieder eines projekts soll im detail-bereich des projekts bei den eingabeelementen am ende nach "status" eine schaltfläche eingefügt werden, über welche sich ein overlay-dialog öffnet
+		- button zum hinzufügen neuer teammitglieder
+	    - liste mit teammitgliedern: nachname, vorname, email
+		  - am ende der zeile soll ein button zum entfernen des teammitglieds sein und zu anpassen der standardberechtigungen lesen/bearbeiten/erstellen von aufgaben. die projektweiten standardberechtigungen sollen durch granulare an teilaufgaben geknüpfte berechtigungen, überschrieben werden können.
+		  - die globale vollberechtigung des projekt-erstellers innerhalb des projekts kann nicht eingeschränkt werden.
+	  - innerhalb eines projekts sollen an teammitglieder berechtigungen für einzelne teilaufgaben lesen/schreiben/erstellen vergeben werden können
+	  - die nested-tabelle für die teilaufgaben soll um die spalten "Von" und "Zugewiesen an" erweitert werden.
+- benutzer sollen sich untereinander aufgaben zuweisen können. 
+  - einmal zugewiesen, ist die aufgabe für den zuweisenden nicht mehr bearbeitbar. 
+  - der, dem die aufgabe zugewiesen wurde, kann priorität, deadline und name der aufgabe nicht bearbeiten. 
+  - der aufgaben-text wird in einem kasten dargestellt (nicht bearbeitbar) 
+  - darunter wysiwyg-editor für notizen.
+  - die notizen desjenigen, welchem die aufgabe zugewiesen wurde, sollen beim zuweisenden in einem zweiten kasten unter dem kasten mit dem originalen aufgaben-text, angezeigt werden.
+- bei zuweisung wird die aufgabe im tab "aufgaben" desjenigen angezeigt, dem die aufgabe zugewiesen wurde, 
+  - der name des zuweisenden soll in einer eigenen spalte der aufgabentabelle angezeigt werden -> "Von"
+wenn du es für sinnvoll hältst, teilen wir das ganze in zwei oder mehr sprints auf: mehrbenutzerfähigkeit, admin-ui, aufgabenzuweisung.
+erfrage dir fehlende informationen.
 
+------------------------------------------------------------------------------------
+
+ok, gute punkte. erfrage dir bitte die fehlenden details und erstelle handlungsanweisungen für die drei sprints. die handlungsanweisungen sollen keine codebeispiele enthalten. nur die verbesserten prompts. genug, damit du in einer neuen session weißt, was die ziele des sprints sind.
 
 ====================================================================================
 
-
-
-====================================================================================
-
-
+gehe bitte in den planungsmmodus und plane die implementierung der spezifikationen in docs/TODO/sprint_a_auth_admin.md
 
 ====================================================================================
 
-
+gehe bitte in den planungsmmodus und plane die implementierung der spezifikationen in docs/TODO/sprint_b_aufgabenzuweisung.md
 
 ====================================================================================
 

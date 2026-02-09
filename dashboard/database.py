@@ -63,6 +63,25 @@ def init_db():
             depends_on_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
             UNIQUE(sub_task_id, depends_on_id)
         );
+
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            vorname TEXT DEFAULT '',
+            nachname TEXT DEFAULT '',
+            email TEXT DEFAULT '',
+            is_admin INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token TEXT NOT NULL UNIQUE,
+            created_at TEXT DEFAULT (datetime('now')),
+            expires_at TEXT NOT NULL
+        );
     """)
 
     # Migrationen: Spalten hinzufuegen falls nicht vorhanden
@@ -87,11 +106,26 @@ def init_db():
                     "UPDATE sub_tasks SET position_number = ? WHERE id = ?", (i, sid)
                 )
 
+    # Migration: created_by fuer tasks
+    task_cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+    if "created_by" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN created_by INTEGER REFERENCES users(id)")
+
     # Default-Bereiche einfuegen (nur wenn Tabelle leer)
     cursor = conn.execute("SELECT COUNT(*) FROM areas")
     if cursor.fetchone()[0] == 0:
         for area in DEFAULT_AREAS:
             conn.execute("INSERT INTO areas (name) VALUES (?)", (area,))
+
+    # Default-Admin anlegen (nur wenn keine User vorhanden)
+    user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    if user_count == 0:
+        import bcrypt
+        hashed = bcrypt.hashpw("admin".encode(), bcrypt.gensalt()).decode()
+        conn.execute(
+            "INSERT INTO users (username, password_hash, vorname, nachname, is_admin) VALUES (?, ?, ?, ?, ?)",
+            ("admin", hashed, "Administrator", "", 1),
+        )
 
     conn.commit()
     conn.close()

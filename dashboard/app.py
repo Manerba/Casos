@@ -11,13 +11,15 @@ from pathlib import Path
 # Sicherstellen, dass 'dashboard' als Package importierbar ist
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
 
 from dashboard.database import init_db
 from dashboard.api_tasks import router as tasks_router
+from dashboard.api_auth import router as auth_router
+from dashboard.auth import get_current_user, _extract_user_from_request
 
 
 @asynccontextmanager
@@ -28,7 +30,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Tareas", lifespan=lifespan)
-app.include_router(tasks_router)
+
+# Auth-Router OHNE globale Dependency (login muss oeffentlich sein)
+app.include_router(auth_router)
+
+# Tasks-Router MIT auth Dependency
+app.include_router(tasks_router, dependencies=[Depends(get_current_user)])
 
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"
@@ -52,7 +59,7 @@ async def no_cache_static(request, call_next):
 # ============================================================
 
 @app.get("/api/dashboard/info")
-async def dashboard_info():
+async def dashboard_info(user=Depends(get_current_user)):
     """
     Template-Informationen und Entwickler-Hilfe.
     """
@@ -157,7 +164,7 @@ async def dashboard_info():
 
 
 @app.post("/api/dashboard/restart")
-async def restart_dashboard():
+async def restart_dashboard(user=Depends(get_current_user)):
     """
     Startet den Dashboard-Service neu.
     """
@@ -173,15 +180,28 @@ async def restart_dashboard():
 # HTML-Routen (Catch-All fuer SPA-Routing, NACH API-Routen)
 # ============================================================
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    """Login-Seite."""
+    return FileResponse(templates_dir / "login.html")
+
+
 @app.get("/", response_class=HTMLResponse)
-async def index():
-    """Startseite."""
+async def index(request):
+    """Startseite - bei fehlendem Login -> Login-Seite."""
+    user = _extract_user_from_request(request)
+    if not user:
+        return FileResponse(templates_dir / "login.html")
     return FileResponse(templates_dir / "index.html")
 
 
 @app.get("/{path:path}", response_class=HTMLResponse)
-async def catch_all(path: str):
+async def catch_all(path: str, request=None):
     """Catch-All fuer clientseitiges Routing (SPA)."""
+    if request:
+        user = _extract_user_from_request(request)
+        if not user:
+            return FileResponse(templates_dir / "login.html")
     return FileResponse(templates_dir / "index.html")
 
 

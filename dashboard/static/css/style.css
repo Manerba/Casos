@@ -103,6 +103,12 @@ body {
     gap: 15px;
 }
 
+.header-username {
+    font-size: 13px;
+    color: var(--text-header);
+    opacity: 0.85;
+}
+
 /* ========================================
    Settings Dropdown
    ======================================== */

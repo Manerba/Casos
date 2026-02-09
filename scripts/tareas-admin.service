@@ -1,0 +1,14 @@
+[Unit]
+Description=Tareas Admin - Benutzerverwaltung (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/sdb1/nextcloud/data/mir/files/Dev/Tareas
+ExecStart=/sdb1/nextcloud/data/mir/files/Dev/Tareas/venv/bin/python dashboard/admin_app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
