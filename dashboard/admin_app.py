@@ -10,7 +10,7 @@ from pathlib import Path
 # Sicherstellen, dass 'dashboard' als Package importierbar ist
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
@@ -63,7 +63,7 @@ async def admin_login_page():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def admin_index(request):
+async def admin_index(request: Request):
     """Admin-Startseite - prueft Login und Admin-Rechte."""
     user = _extract_user_from_request(request)
     if not user:
@@ -74,7 +74,7 @@ async def admin_index(request):
 
 
 @app.get("/{path:path}", response_class=HTMLResponse)
-async def admin_catch_all(path: str, request=None):
+async def admin_catch_all(path: str, request: Request = None):
     """Catch-All."""
     if request:
         user = _extract_user_from_request(request)

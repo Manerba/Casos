@@ -11,7 +11,7 @@ from pathlib import Path
 # Sicherstellen, dass 'dashboard' als Package importierbar ist
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
@@ -187,7 +187,7 @@ async def login_page():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request):
+async def index(request: Request):
     """Startseite - bei fehlendem Login -> Login-Seite."""
     user = _extract_user_from_request(request)
     if not user:
@@ -196,7 +196,7 @@ async def index(request):
 
 
 @app.get("/{path:path}", response_class=HTMLResponse)
-async def catch_all(path: str, request=None):
+async def catch_all(path: str, request: Request = None):
     """Catch-All fuer clientseitiges Routing (SPA)."""
     if request:
         user = _extract_user_from_request(request)
