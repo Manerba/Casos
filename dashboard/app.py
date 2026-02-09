@@ -4,15 +4,31 @@ FastAPI Backend, Port 8504
 """
 
 import subprocess
+import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
+
+# Sicherstellen, dass 'dashboard' als Package importierbar ist
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
 
+from dashboard.database import init_db
+from dashboard.api_tasks import router as tasks_router
 
-app = FastAPI(title="Tareas")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/Shutdown Events."""
+    init_db()
+    yield
+
+
+app = FastAPI(title="Tareas", lifespan=lifespan)
+app.include_router(tasks_router)
 
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"

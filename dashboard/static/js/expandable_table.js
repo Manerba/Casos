@@ -388,10 +388,11 @@ class ExpandableTable {
             }
         }
 
-        // Input/Select-Filter anwenden (nur client-seitige Filter, nicht Select-Filter)
+        // Input/Select-Filter anwenden
         this.config.filters?.forEach(filter => {
-            // Select/Number-Filter werden serverseitig angewendet, nicht hier
-            if (filter.type === 'buttons' || filter.type === 'select' || filter.type === 'number') return;
+            if (filter.type === 'buttons') return;
+            // Select/Number-Filter bei Pagination serverseitig
+            if (this.pagination.enabled && (filter.type === 'select' || filter.type === 'number')) return;
 
             const value = this.filterValues[filter.id];
             if (!value) return;
@@ -850,6 +851,29 @@ class ExpandableTable {
 
     refresh() {
         this.loadData(this.lastParams || {});
+    }
+
+    /**
+     * Alle Zeilen auf-/zuklappen
+     */
+    toggleAllRows(expand) {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+
+        const wrappers = container.querySelectorAll('.table-row-wrapper');
+        wrappers.forEach(wrapper => {
+            const isExpanded = wrapper.classList.contains('expanded');
+            if (expand && !isExpanded) {
+                wrapper.classList.add('expanded');
+                if (this.options.onRowExpanded) {
+                    const rowId = wrapper.dataset.rowId;
+                    const detailElement = wrapper.querySelector('.table-row-detail');
+                    this.options.onRowExpanded(rowId, detailElement);
+                }
+            } else if (!expand && isExpanded) {
+                wrapper.classList.remove('expanded');
+            }
+        });
     }
 
     /**

@@ -1,0 +1,492 @@
+projekt-scope:{
+neues projekt: Tareas (Spanisch für "Aufgaben")
+ein einfaches tool zum planen und tracken von aufgaben.
+1. projektphase: CRUD-Implementierung
+- umbennung tab Dashboard in Aufgaben
+- benutze für den view-bereich des tabs die generische tabellen-komponente, je aufgabe eine zeile.
+- spaltenüberschriften: name, erstellungsdatum, deadline, priorität, aufgaben-typ, status.
+- eine aufgabe kann den typ "aufgabe" und den typ "projekt" haben.
+- bei typ aufgabe:
+  - im detail-bereich der aufgabe (aufklappbarer teil der tabellenzeile) soll eine mehrzeilige textbox (aufgabendetails) sein (wysiwyg-editor)
+  - über dem eingabefeld sollen bedienelemente für die textformatierung sein (schriftgrad, fett, unterstrichen, kursiv, nummerierte liste, normale auflistung und formatvorlagen (standard, code, überschrift 1, überschrift 2, überschrift 3)
+  - wenn der detailbereich ausgeklappt wird, sollen die werte der tabellenzeile (quasi der aufgaben-header) bearbeitbar sein, in dem sie in einer textbox, bzw. einem date-picker angezeigt werden.
+- bei typ projekt
+  - im detailbereich soll eine nested-tabelle angezeigt werden, je zeile eine aufgabe.
+  - spaltenüberschriften: name, bereich, erstellungsdatum, deadline, priorität, status.
+    - positionsnummer: für jede aufgabe kann eine positionsnummer vergeben werden.
+      - nummer ist unique innerhalb des porjekts
+      - standardmäßig bei eins beginnen und für jede weitere aufgabe hochzählen.
+      - jede aufgabe kann eine oder mehrere positionsnummern als vorgänger definiert werden -> vorgänger muss abgeschlossen sein, bevor mit der aktuellen aufgabe begonnen werden kann.
+	- vorgänger: positionsnummern der aufgaben, welche abgeschlossen sein müssen, bevor diese begonnen werden kann.
+	  - beim erstellen und bearbeiten der aufgabe soll ein dropdown-menü angezeigt werden, in welchem alle aufgaben des projekts aufgelistet sind und ausausgewählt werden können. mit einem klick auf +-button wird die gewählte aufgabe der liste hinzugefügt.
+	  - darstellung der vorangehenden aufgaben: 
+	    - beim erstellen und bearbeiten: positionsnummer als item in einer box unter dem dropdown.
+		- in zeile der nested-tabelle: kommaseparierte zahlen
+    - name: name der aufgabe
+	- bereich: hier sollen aufgaben einem bereich/team zugeordnet werden können, um sie in der ansicht gruppieren zu können (vorderfinierte bereiche (eigene db-tabelle), neue bereich sollen über einen +-button hinzugefügt werden können). 
+	- erstellungsdatum: nicht bearbeitbar
+	- deadline: zeitpunkt, zu dem die aufgabe erledigt sein muss (datum-picker)
+	- prioriät: wert zwischen 1 und 100, 1 = hohe priorität.
+	- status: fertigstellung der aufgabe in prozent, wert kann über eine textbox gesetzt werden (1-100)
+- db-tabellen anlegen und funktionen implementieren.
+
+2. projektphase: db-tabellen anlegen und funktionen implementieren.
+
+3. projektphase: enterprise-features
+- mehrbenutzerfähigkeit
+  - benutzer sollen sich untereinander aufgaben zuweisen können. einmal zugewiesen, ist die aufgabe für den zuweisenden nicht mehr bearbeitbar. der, dem die aufgabe zugewiesen wurde, kann priorität, deadline und name der aufgabe nicht bearbeiten. der aufgaben-text wird in einem kasten dargestellt (nicht bearbeitbar), darunter wysiwyg-editor für notizen.
+  - bei zuweisung wird die aufgabe im tab "aufgaben" angezeigt, mit dem namen des zuweisenden.
+- ldap-anbindung für benutzermanagement. berechtigungen (teamzugehörigkeiten, wer darf wessen aufgaben sehen, usw.) über ad-gruppen.
+- installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
+- schnittstellen für für dateiablage: nextcloud und sharepoint online
+- schnittstellen für mailversand: exchange online (imap mit authentifizierung)
+}
+aufgabe:{
+
+}
+
+====================================================================================
+
+scope:{
+neues projekt: Tareas (Spanisch für "Aufgaben")
+ein einfaches tool zum planen und tracken von aufgaben.
+1. projektphase: CRUD-Implementierung
+- umbennung tab Dashboard in Aufgaben
+- benutze für den view-bereich des tabs die generische tabellen-komponente, je aufgabe eine zeile.
+- spaltenüberschriften: name, erstellungsdatum, deadline, priorität, aufgaben-typ, status.
+- eine aufgabe kann den typ "aufgabe" und den typ "projekt" haben.
+- bei typ aufgabe:
+  - im detail-bereich der aufgabe (aufklappbarer teil der tabellenzeile) soll eine mehrzeilige textbox (aufgabendetails) sein (wysiwyg-editor)
+  - über dem eingabefeld sollen bedienelemente für die textformatierung sein (schriftgrad, fett, unterstrichen, kursiv, nummerierte liste, normale auflistung und formatvorlagen (standard, code, überschrift 1, überschrift 2, überschrift 3)
+  - wenn der detailbereich ausgeklappt wird, sollen die werte der tabellenzeile (quasi der aufgaben-header) bearbeitbar sein, in dem sie in einer textbox, bzw. einem date-picker angezeigt werden.
+- bei typ projekt
+  - im detailbereich soll eine nested-tabelle angezeigt werden, je zeile eine aufgabe.
+  - spaltenüberschriften: name, bereich, erstellungsdatum, deadline, priorität, status.
+    - name: name der aufgabe
+	- bereich: hier sollen aufgaben einem bereich/team zugeordnet werden können, um sie in der ansicht gruppieren zu können (vorderfinierte bereiche (eigene db-tabelle), neue bereich sollen über einen +-button hinzugefügt werden können). 
+	- erstellungsdatum: nicht bearbeitbar
+	- deadline: zeitpunkt, zu dem die aufgabe erledigt sein muss (datum-picker)
+	- prioriät: wert zwischen 1 und 100, 1 = hohe priorität.
+	- status: fertigstellung der aufgabe in prozent, wert kann über eine textbox gesetzt werden (1-100)
+
+2. projektphase: db-tabellen anlegen und funktionen implementieren.
+
+3. projektphase: enterprise-features
+- mehrbenutzerfähigkeit
+  - benutzer sollen sich untereinander aufgaben zuweisen können. einmal zugewiesen, ist die aufgabe für den zuweisenden nicht mehr bearbeitbar. der, dem die aufgabe zugewiesen wurde, kann priorität, deadline und name der aufgabe nicht bearbeiten. der aufgaben-text wird in einem kasten dargestellt (nicht bearbeitbar), darunter wysiwyg-editor für notizen.
+  - bei zuweisung wird die aufgabe im tab "aufgaben" angezeigt, mit dem namen des zuweisenden.
+- ldap-anbindung für benutzermanagement. berechtigungen (teamzugehörigkeiten, wer darf wessen aufgaben sehen, usw.) über ad-gruppen.
+- installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
+- schnittstellen für für dateiablage: nextcloud und sharepoint online
+- schnittstellen für mailversand: exchange online (imap mit authentifizierung)
+}
+frage:{
+wie machen wir das am besten? eine "master-session", in der wir nur handlungsanweisungen erstellen und du das ergebnis kontrollierst oder nacheinander, jede phase in einer eigenen session, welche an die vorangegangene anknüpft?
+}
+
+● Gute Frage. Hier meine Einschaetzung:
+
+  Empfehlung: Phase-fuer-Phase in einzelnen Sessions
+
+  Warum nicht Master-Session:
+  - Eine Master-Session, die nur Anweisungen erstellt, fuegt eine unnoetige Abstraktionsebene hinzu. Ich kann den Code direkt schreiben und testen.
+  - "Anweisungen erstellen und kontrollieren" ist langsamer als direkt implementieren.
+
+  Warum Phase-fuer-Phase:
+  - Jede Phase hat einen klaren, abgeschlossenen Scope.
+  - Nach jeder Phase kannst du testen, Feedback geben, und wir korrigieren bevor wir weiter bauen.
+  - Die Memory-Datei (MEMORY.md) sorgt dafuer, dass ich zwischen Sessions den Kontext behalte.
+  - Phase 1 und 2 gehoeren eigentlich zusammen (UI ohne DB ist nur Attrappe), Phase 3 ist klar getrennt.
+
+  Konkreter Vorschlag
+  ┌─────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Session │                                                   Inhalt                                                   │
+  ├─────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 1       │ Phase 1+2 zusammen: DB-Schema + CRUD-API + Aufgaben-Tab mit ExpandableTable, Typ "Aufgabe" (inkl. WYSIWYG) │
+  ├─────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 2       │ Typ "Projekt" mit Nested-Table, Bereiche-Verwaltung                                                        │
+  ├─────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 3       │ Testen, Feinschliff, Bugfixes aus Session 1+2                                                              │
+  ├─────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ 4+      │ Phase 3: Enterprise-Features (je Feature eine Session)                                                     │
+  └─────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+  Phase 1 und 2 trenne ich bewusst nicht, weil eine Tabellen-UI ohne dahinterliegende Datenbank nur Wegwerf-Code waere. Besser gleich richtig mit DB bauen.
+
+  Sollen wir mit Session 1 starten (DB + CRUD + Aufgaben-Tab)?
+
+====================================================================================
+
+das ist mein prompt für die nächste session. hast du verbesserungsvorschläge oder möchtest du der zweiten session zusätzliche informationen in einer datei mitgeben?:{
+projekt-scope:{
+neues projekt: Tareas (Spanisch für "Aufgaben")
+ein einfaches tool zum planen und tracken von aufgaben.
+1. projektphase: CRUD-Implementierung
+- umbennung tab Dashboard in Aufgaben
+- benutze für den view-bereich des tabs die generische tabellen-komponente, je aufgabe eine zeile.
+- spaltenüberschriften: name, erstellungsdatum, deadline, priorität, aufgaben-typ, status.
+- eine aufgabe kann den typ "aufgabe" und den typ "projekt" haben.
+- bei typ aufgabe:
+  - im detail-bereich der aufgabe (aufklappbarer teil der tabellenzeile) soll eine mehrzeilige textbox (aufgabendetails) sein (wysiwyg-editor)
+  - über dem eingabefeld sollen bedienelemente für die textformatierung sein (schriftgrad, fett, unterstrichen, kursiv, nummerierte liste, normale auflistung und formatvorlagen (standard, code, überschrift 1, überschrift 2, überschrift 3)
+  - wenn der detailbereich ausgeklappt wird, sollen die werte der tabellenzeile (quasi der aufgaben-header) bearbeitbar sein, in dem sie in einer textbox, bzw. einem date-picker angezeigt werden.
+- bei typ projekt
+  - im detailbereich soll eine nested-tabelle angezeigt werden, je zeile eine aufgabe.
+  - spaltenüberschriften: name, bereich, erstellungsdatum, deadline, priorität, status.
+    - positionsnummer: für jede aufgabe kann eine positionsnummer vergeben werden.
+      - nummer ist unique innerhalb des porjekts
+      - standardmäßig bei eins beginnen und für jede weitere aufgabe hochzählen.
+      - jede aufgabe kann eine oder mehrere positionsnummern als vorgänger definiert werden -> vorgänger muss abgeschlossen sein, bevor mit der aktuellen aufgabe begonnen werden kann.
+	- vorgänger: positionsnummern der aufgaben, welche abgeschlossen sein müssen, bevor diese begonnen werden kann.
+	  - beim erstellen und bearbeiten der aufgabe soll ein dropdown-menü angezeigt werden, in welchem alle aufgaben des projekts aufgelistet sind und ausausgewählt werden können. mit einem klick auf +-button wird die gewählte aufgabe der liste hinzugefügt.
+	  - darstellung der vorangehenden aufgaben: 
+	    - beim erstellen und bearbeiten: positionsnummer als item in einer box unter dem dropdown.
+		- in zeile der nested-tabelle: kommaseparierte zahlen
+    - name: name der aufgabe
+	- bereich: hier sollen aufgaben einem bereich/team zugeordnet werden können, um sie in der ansicht gruppieren zu können (vorderfinierte bereiche (eigene db-tabelle), neue bereich sollen über einen +-button hinzugefügt werden können). 
+	- erstellungsdatum: nicht bearbeitbar
+	- deadline: zeitpunkt, zu dem die aufgabe erledigt sein muss (datum-picker)
+	- prioriät: wert zwischen 1 und 100, 1 = hohe priorität.
+	- status: fertigstellung der aufgabe in prozent, wert kann über eine textbox gesetzt werden (1-100)
+- db-tabellen anlegen und funktionen implementieren.
+
+2. projektphase: db-tabellen anlegen und funktionen implementieren.
+
+3. projektphase: enterprise-features
+- mehrbenutzerfähigkeit
+  - benutzer sollen sich untereinander aufgaben zuweisen können. einmal zugewiesen, ist die aufgabe für den zuweisenden nicht mehr bearbeitbar. der, dem die aufgabe zugewiesen wurde, kann priorität, deadline und name der aufgabe nicht bearbeiten. der aufgaben-text wird in einem kasten dargestellt (nicht bearbeitbar), darunter wysiwyg-editor für notizen.
+  - bei zuweisung wird die aufgabe im tab "aufgaben" angezeigt, mit dem namen des zuweisenden.
+- ldap-anbindung für benutzermanagement. berechtigungen (teamzugehörigkeiten, wer darf wessen aufgaben sehen, usw.) über ad-gruppen.
+- installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
+- schnittstellen für für dateiablage: nextcloud und sharepoint online
+- schnittstellen für mailversand: exchange online (imap mit authentifizierung)
+}
+projektplan:{
+Session 1  : Phase 1+2 zusammen: DB-Schema + CRUD-API + Aufgaben-Tab mit ExpandableTable, Typ "Aufgabe" (inkl. WYSIWYG)
+Session 2  : Typ "Projekt" mit Nested-Table, Bereiche-Verwaltung
+Session 3  : Testen, Feinschliff, Bugfixes aus Session 1+2
+Session 4+ : Phase 3: Enterprise-Features (je Feature eine Session)
+---
+Phase 1 und 2 trenne ich bewusst nicht, weil eine Tabellen-UI ohne dahinterliegende Datenbank nur Wegwerf-Code waere. Besser gleich richtig mit DB bauen.
+}
+aufgabe:{
+session 1 haben wir fertig. beginne bitte mit session 2
+}
+}
+
+------------------------------------------------------------------------------------
+
+bitte erstelle mir eine handlungsanweisung für session 2 in docs/TODO/, welche ich in session 2 direkt referenzieren kann.
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================

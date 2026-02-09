@@ -19,5 +19,8 @@ env/
 *.log
 .DS_Store
 
+# Data
+data/*.db
+
 # Claude Code
 .claude/

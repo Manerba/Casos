@@ -7,7 +7,7 @@
 // Globale Variablen
 // ========================================
 
-let currentTab = 'dashboard';
+let currentTab = 'aufgaben';
 
 // Settings Dropdown State
 let settingsDropdownOpen = false;
@@ -161,22 +161,22 @@ function parseRoute() {
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
     const segments = path.split('/').filter(Boolean);
 
-    if (segments.length === 0) return { tab: 'dashboard' };
+    if (segments.length === 0) return { tab: 'aufgaben' };
 
     const first = segments[0];
 
     const tabMap = {
-        'dashboard': 'dashboard',
+        'aufgaben': 'aufgaben',
     };
 
-    return { tab: tabMap[first] || 'dashboard' };
+    return { tab: tabMap[first] || 'aufgaben' };
 }
 
 function buildPath(tab) {
     const pathMap = {
-        'dashboard': '/dashboard',
+        'aufgaben': '/aufgaben',
     };
-    return pathMap[tab] || '/dashboard';
+    return pathMap[tab] || '/aufgaben';
 }
 
 function navigateTo(tab, replaceState) {
@@ -238,12 +238,10 @@ function switchTab(tab) {
     }
 
     // Kein Cache oder gleicher Tab: Init-Funktion aufrufen
-    if (tab === 'dashboard') {
-        initDashboardTab();
-        if (filterBar) filterBar.style.display = 'none';
+    if (tab === 'aufgaben') {
+        initAufgabenTab();
+        if (filterBar) filterBar.style.display = 'flex';
     }
-    // Hier neue Tabs registrieren:
-    // else if (tab === 'example') { initExampleTab(); }
 }
 
 // ========================================
@@ -309,81 +307,6 @@ function restoreTabDOM(tabName) {
 
 function invalidateTabCache(tabName) {
     delete tabDOMCache[tabName];
-}
-
-// ========================================
-// Dashboard Tab (Info-Seite)
-// ========================================
-
-async function initDashboardTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    try {
-        const resp = await fetch('/api/dashboard/info');
-        const info = await resp.json();
-        container.innerHTML = renderDashboardInfo(info);
-    } catch (error) {
-        console.error('Dashboard-Fehler:', error);
-        container.innerHTML = '<div class="kpi-error"><span class="kpi-error-icon">\u26A0\uFE0F</span><span class="kpi-error-text">Fehler beim Laden</span></div>';
-    }
-}
-
-function renderDashboardInfo(info) {
-    const componentsHtml = info.components.map(comp => `
-        <div class="info-component">
-            <h3>${escapeHtml(comp.name)}</h3>
-            <p class="info-description">${escapeHtml(comp.description)}</p>
-            <ul class="info-features">
-                ${comp.features.map(f => `<li>${escapeHtml(f)}</li>`).join('')}
-            </ul>
-        </div>
-    `).join('');
-
-    const stepsHtml = info.how_to_add_tab.steps
-        .map(s => `<li>${escapeHtml(s)}</li>`).join('');
-
-    const apiExamples = info.api_structure.examples
-        .map(e => `<li><code>${escapeHtml(e)}</code></li>`).join('');
-
-    const apiConventions = info.api_structure.conventions
-        .map(c => `<li>${escapeHtml(c)}</li>`).join('');
-
-    return `
-        <div class="dashboard-info">
-            <div class="info-header">
-                <h2>${escapeHtml(info.title)}</h2>
-                <span class="info-version">v${escapeHtml(info.version)}</span>
-            </div>
-            <p class="info-lead">${escapeHtml(info.description)}</p>
-
-            <section class="info-section">
-                <h2>Verfuegbare Komponenten</h2>
-                <div class="info-components-grid">
-                    ${componentsHtml}
-                </div>
-            </section>
-
-            <section class="info-section">
-                <h2>Neuen Tab hinzufuegen</h2>
-                <ol class="info-steps">
-                    ${stepsHtml}
-                </ol>
-                <p class="info-hint">${escapeHtml(info.how_to_add_tab.example)}</p>
-            </section>
-
-            <section class="info-section">
-                <h2>API-Struktur</h2>
-                <p>Pattern: <code>${escapeHtml(info.api_structure.pattern)}</code></p>
-                <h3>Endpunkte</h3>
-                <ul>${apiExamples}</ul>
-                <h3>Konventionen</h3>
-                <ul>${apiConventions}</ul>
-            </section>
-        </div>
-    `;
 }
 
 // ========================================
