@@ -250,7 +250,7 @@ async function saveTask(taskId) {
 }
 
 async function deleteTask(taskId) {
-    if (!confirm('Aufgabe wirklich loeschen?')) return;
+    if (!await showConfirmDialog('Aufgabe wirklich loeschen?')) return;
 
     try {
         const resp = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
@@ -272,10 +272,19 @@ async function loadSubTasks(taskId) {
     const container = document.getElementById(`subtaskContainer_${taskId}`);
     if (!container) return;
 
+    // Expanded-State merken
+    const expandedIds = [];
+    container.querySelectorAll('tr.subtask-row.expanded').forEach(row => {
+        expandedIds.push(parseInt(row.dataset.subtaskId));
+    });
+
     try {
         const resp = await fetch(`/api/tasks/${taskId}/subtasks`);
         const data = await resp.json();
         renderSubTasks(taskId, data.items || []);
+
+        // Expanded-State wiederherstellen
+        expandedIds.forEach(id => toggleSubTaskDetail(taskId, id));
     } catch (error) {
         console.error('SubTasks laden fehlgeschlagen:', error);
         container.innerHTML = '<div class="table-error">Fehler beim Laden</div>';
@@ -351,6 +360,17 @@ function renderSubTasks(taskId, subtasks) {
                             <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}">
                         </div>
                         <div class="detail-edit-field">
+                            <label>Vorgaenger</label>
+                            <div class="predecessor-input">
+                                <select id="predSelect_${st.id}">
+                                    <option value="">--</option>
+                                    ${predOptions}
+                                </select>
+                                <button onclick="event.stopPropagation(); addPredecessor(${taskId}, ${st.id})">+</button>
+                            </div>
+                        </div>
+                        <div class="predecessor-chips-inline" id="predChips_${st.id}">${predChips}</div>
+                        <div class="detail-edit-field">
                             <label>Bereich</label>
                             <div class="area-select-wrapper">
                                 <select id="stEditArea_${st.id}">
@@ -372,17 +392,6 @@ function renderSubTasks(taskId, subtasks) {
                             <label>Status (%)</label>
                             <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px">
                         </div>
-                    </div>
-                    <div class="detail-edit-field" style="margin-bottom:8px">
-                        <label>Vorgaenger</label>
-                        <div class="predecessor-input">
-                            <select id="predSelect_${st.id}">
-                                <option value="">--</option>
-                                ${predOptions}
-                            </select>
-                            <button onclick="event.stopPropagation(); addPredecessor(${taskId}, ${st.id})">+</button>
-                        </div>
-                        <div class="predecessor-chips" id="predChips_${st.id}">${predChips}</div>
                     </div>
                     <div id="stWysiwyg_${st.id}"></div>
                     <div class="detail-edit-actions">
@@ -576,6 +585,8 @@ async function addPredecessor(taskId, subtaskId) {
 }
 
 async function removePredecessor(taskId, subtaskId, predIdToRemove) {
+    if (!await showConfirmDialog('Vorgaenger wirklich entfernen?')) return;
+
     // Aktuelle predecessor_ids sammeln und die zu entfernende rausfiltern
     const chipsContainer = document.getElementById(`predChips_${subtaskId}`);
     const currentChips = chipsContainer ? chipsContainer.querySelectorAll('.predecessor-chip') : [];
@@ -744,6 +755,41 @@ function convertToISO(dateStr) {
         return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
     return dateStr;
+}
+
+function showConfirmDialog(message) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="modal-content confirm-dialog">
+                <div class="modal-body">
+                    <p style="margin:0;font-size:14px">${message}</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="action-btn" data-action="cancel">Abbrechen</button>
+                    <button class="action-btn danger" data-action="confirm">Ja</button>
+                </div>
+            </div>
+        `;
+
+        const close = (result) => {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+            resolve(result);
+        };
+
+        overlay.querySelector('[data-action="cancel"]').onclick = () => close(false);
+        overlay.querySelector('[data-action="confirm"]').onclick = () => close(true);
+        overlay.onclick = (e) => { if (e.target === overlay) close(false); };
+
+        const escHandler = (e) => { if (e.key === 'Escape') close(false); };
+        document.addEventListener('keydown', escHandler);
+
+        document.body.appendChild(overlay);
+        overlay.querySelector('[data-action="confirm"]').focus();
+    });
 }
 
 function escapeAttr(text) {

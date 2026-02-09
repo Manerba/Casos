@@ -508,6 +508,19 @@
     border-top: 1px solid var(--border-color);
 }
 
+/* Vorgaenger-Chips inline im Header (zwischen Dropdown und Bereich) */
+.predecessor-chips-inline {
+    display: grid;
+    grid-template-columns: repeat(4, auto);
+    gap: 4px;
+    align-self: flex-end;
+    padding-bottom: 2px;
+}
+
+.predecessor-chips-inline:empty {
+    display: none;
+}
+
 /* Status-Prozent in Text-Zeile */
 .subtask-status-text {
     display: inline-flex;
@@ -739,6 +752,34 @@
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+}
+
+/* ----------------------------------------
+   Confirm Dialog
+   ---------------------------------------- */
+
+.confirm-dialog {
+    width: 320px;
+}
+
+.confirm-dialog .modal-body {
+    padding: 24px 20px;
+    text-align: center;
+}
+
+.confirm-dialog .modal-footer {
+    border-top: none;
+    justify-content: center;
+}
+
+.action-btn.danger {
+    background-color: var(--color-bearish);
+    color: white;
+    border-color: var(--color-bearish);
+}
+
+.action-btn.danger:hover {
+    opacity: 0.85;
 }
 
 /* ----------------------------------------
