@@ -356,3 +356,63 @@ function formatPercent(value) {
     if (value === null || value === undefined) return '-';
     return Math.round(value) + '%';
 }
+
+// ========================================
+// MsgBox - Globaler Bestaetigungsdialog
+// ========================================
+
+/**
+ * Zeigt einen modalen Dialog an.
+ * @param {"ok"|"cancel/yes"} buttons - Button-Layout
+ * @param {"alert"|"confirm"|"warning"} type - Styling-Variante
+ * @param {string} message - Nachrichtentext
+ * @returns {Promise<boolean>} true bei Ok/Ja, false bei Abbrechen
+ */
+async function msgbox(buttons, type, message) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+
+        let buttonsHtml = '';
+        if (buttons === 'ok') {
+            buttonsHtml = `<button class="action-btn msgbox-btn-primary" data-action="confirm">Ok</button>`;
+        } else {
+            buttonsHtml = `
+                <button class="action-btn" data-action="cancel">Abbrechen</button>
+                <button class="action-btn msgbox-btn-primary" data-action="confirm">Ja</button>`;
+        }
+
+        overlay.innerHTML = `
+            <div class="modal-content msgbox-dialog type-${type}">
+                <div class="modal-body">
+                    <p style="margin:0;font-size:14px">${message}</p>
+                </div>
+                <div class="modal-footer">
+                    ${buttonsHtml}
+                </div>
+            </div>
+        `;
+
+        const close = (result) => {
+            overlay.remove();
+            document.removeEventListener('keydown', keyHandler);
+            resolve(result);
+        };
+
+        const cancelBtn = overlay.querySelector('[data-action="cancel"]');
+        const confirmBtn = overlay.querySelector('[data-action="confirm"]');
+
+        if (cancelBtn) cancelBtn.onclick = () => close(false);
+        confirmBtn.onclick = () => close(true);
+        overlay.onclick = (e) => { if (e.target === overlay) close(false); };
+
+        const keyHandler = (e) => {
+            if (e.key === 'Escape') close(false);
+            if (e.key === 'Enter') close(true);
+        };
+        document.addEventListener('keydown', keyHandler);
+
+        document.body.appendChild(overlay);
+        confirmBtn.focus();
+    });
+}

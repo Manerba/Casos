@@ -762,23 +762,57 @@
 }
 
 /* ----------------------------------------
-   Confirm Dialog
+   MsgBox Dialog
    ---------------------------------------- */
 
-.confirm-dialog {
+.msgbox-dialog {
     width: 320px;
 }
 
-.confirm-dialog .modal-body {
+.msgbox-dialog .modal-body {
     padding: 24px 20px;
     text-align: center;
 }
 
-.confirm-dialog .modal-footer {
+.msgbox-dialog .modal-footer {
     border-top: none;
     justify-content: center;
 }
 
+/* Type: confirm → roter Danger-Button */
+.msgbox-dialog.type-confirm .msgbox-btn-primary {
+    background-color: var(--color-bearish);
+    color: white;
+    border-color: var(--color-bearish);
+}
+
+.msgbox-dialog.type-confirm .msgbox-btn-primary:hover {
+    opacity: 0.85;
+}
+
+/* Type: alert → Akzent-Blau */
+.msgbox-dialog.type-alert .msgbox-btn-primary {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.msgbox-dialog.type-alert .msgbox-btn-primary:hover {
+    opacity: 0.85;
+}
+
+/* Type: warning → Orange */
+.msgbox-dialog.type-warning .msgbox-btn-primary {
+    background-color: #e67e22;
+    color: white;
+    border-color: #e67e22;
+}
+
+.msgbox-dialog.type-warning .msgbox-btn-primary:hover {
+    opacity: 0.85;
+}
+
+/* Danger-Button (fuer Detail-Actions) */
 .action-btn.danger {
     background-color: var(--color-bearish);
     color: white;

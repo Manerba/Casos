@@ -250,7 +250,7 @@ async function saveTask(taskId) {
 }
 
 async function deleteTask(taskId) {
-    if (!await showConfirmDialog('Aufgabe wirklich loeschen?')) return;
+    if (!await msgbox('cancel/yes', 'confirm', 'Aufgabe wirklich loeschen?')) return;
 
     try {
         const resp = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
@@ -543,6 +543,8 @@ async function addSubTask(taskId) {
 }
 
 async function deleteSubTask(taskId, subtaskId) {
+    if (!await msgbox('cancel/yes', 'confirm', 'Teilaufgabe wirklich loeschen?')) return;
+
     try {
         const resp = await fetch(`/api/subtasks/${subtaskId}`, { method: 'DELETE' });
         if (!resp.ok) throw new Error('Fehler');
@@ -593,7 +595,7 @@ async function addPredecessor(taskId, subtaskId) {
 }
 
 async function removePredecessor(taskId, subtaskId, predIdToRemove) {
-    if (!await showConfirmDialog('Vorgaenger wirklich entfernen?')) return;
+    if (!await msgbox('cancel/yes', 'confirm', 'Vorgaenger wirklich entfernen?')) return;
 
     // Aktuelle predecessor_ids sammeln und die zu entfernende rausfiltern
     const chipsContainer = document.getElementById(`predChips_${subtaskId}`);
@@ -763,41 +765,6 @@ function convertToISO(dateStr) {
         return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
     return dateStr;
-}
-
-function showConfirmDialog(message) {
-    return new Promise(resolve => {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-
-        overlay.innerHTML = `
-            <div class="modal-content confirm-dialog">
-                <div class="modal-body">
-                    <p style="margin:0;font-size:14px">${message}</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="action-btn" data-action="cancel">Abbrechen</button>
-                    <button class="action-btn danger" data-action="confirm">Ja</button>
-                </div>
-            </div>
-        `;
-
-        const close = (result) => {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-            resolve(result);
-        };
-
-        overlay.querySelector('[data-action="cancel"]').onclick = () => close(false);
-        overlay.querySelector('[data-action="confirm"]').onclick = () => close(true);
-        overlay.onclick = (e) => { if (e.target === overlay) close(false); };
-
-        const escHandler = (e) => { if (e.key === 'Escape') close(false); };
-        document.addEventListener('keydown', escHandler);
-
-        document.body.appendChild(overlay);
-        overlay.querySelector('[data-action="confirm"]').focus();
-    });
 }
 
 function escapeAttr(text) {
