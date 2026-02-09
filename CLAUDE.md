@@ -1,8 +1,8 @@
-# Dashboard Template - Projektkontext
+# Tareas - Projektkontext
 
 ## Projektziel
 
-Wiederverwendbares Web-Dashboard-Template auf Basis von **FastAPI + Vanilla JS**. Bietet generische UI-Komponenten (Tabellen, KPI-Widgets, Theme-System, Notifications) als Startpunkt fuer beliebige Web-Applikationen.
+Aufgabenplanungs-Tool auf Basis von **FastAPI + Vanilla JS**. Basiert auf dem Dashboard-Template und bietet eine Web-Oberflaeche fuer Aufgabenverwaltung und -planung.
 
 ## Entscheidungen
 
@@ -11,7 +11,7 @@ Wiederverwendbares Web-Dashboard-Template auf Basis von **FastAPI + Vanilla JS**
 | Backend | FastAPI (Python) |
 | Frontend | Vanilla JS (kein Framework) |
 | Styling | CSS Custom Properties (Light/Dark Theme) |
-| Port | 8503 |
+| Port | 8504 |
 | Routing | SPA mit History API + Catch-All im Backend |
 
 ## Infrastruktur
@@ -19,9 +19,9 @@ Wiederverwendbares Web-Dashboard-Template auf Basis von **FastAPI + Vanilla JS**
 | Komponente | Details |
 |------------|---------|
 | Server | 10.0.12.7 (Ubuntu 24.04) |
-| Projektverzeichnis | `/sdb1/nextcloud/data/mir/files/Dev/Dashboard-Template` |
-| Dashboard | http://10.0.12.7:8503/ |
-| Service | `dashboard-template.service` |
+| Projektverzeichnis | `/sdb1/nextcloud/data/mir/files/Dev/Tareas` |
+| Dashboard | http://10.0.12.7:8504/ |
+| Service | `tareas.service` |
 
 ---
 
@@ -67,9 +67,9 @@ SPA-Routing mit `history.pushState()`. Backend hat Catch-All-Route fuer direkten
 ## Projektstruktur
 
 ```
-Dashboard-Template/
+Tareas/
 ├── dashboard/
-│   ├── app.py                  # FastAPI Backend (Port 8503)
+│   ├── app.py                  # FastAPI Backend (Port 8504)
 │   ├── components/
 │   │   ├── __init__.py
 │   │   ├── expandable_table.py # Generische Tabellen-Komponente
@@ -86,7 +86,7 @@ Dashboard-Template/
 │   └── templates/
 │       └── index.html          # SPA-Einstiegspunkt
 ├── scripts/
-│   └── dashboard-template.service  # Systemd-Service
+│   └── tareas.service          # Systemd-Service
 ├── git-commit.sh               # Auto-Version + Commit + Push
 ├── version.txt                 # Version (MAJOR.MINOR.PATCH+BUILD)
 ├── requirements.txt            # Python-Dependencies
@@ -107,7 +107,7 @@ Dashboard-Template/
 Das Script:
 1. Inkrementiert Build-Nummer in `version.txt`
 2. Staged alle Aenderungen (`git add -A`)
-3. Commit mit Version-Prefix (z.B. `0.0.1+157: Beschreibung`)
+3. Commit mit Version-Prefix (z.B. `0.0.1+1: Beschreibung`)
 4. Push zum Remote
 
 ---
@@ -116,7 +116,7 @@ Das Script:
 
 | Methode | Pfad | Beschreibung |
 |---------|------|--------------|
-| GET | `/api/dashboard/info` | Template-Infos, Komponenten, Entwickler-Hilfe |
+| GET | `/api/dashboard/info` | App-Infos und Entwickler-Hilfe |
 | POST | `/api/dashboard/restart` | Service neu starten |
 
 ---

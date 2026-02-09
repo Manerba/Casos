@@ -1,6 +1,6 @@
 """
-Dashboard Template - FastAPI Backend
-Port 8503
+Tareas - Aufgabenplanungs-Tool
+FastAPI Backend, Port 8504
 """
 
 import subprocess
@@ -12,7 +12,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 import uvicorn
 
 
-app = FastAPI(title="Dashboard Template")
+app = FastAPI(title="Tareas")
 
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"
@@ -48,8 +48,8 @@ async def dashboard_info():
 
     return {
         "version": version,
-        "title": "Dashboard Template",
-        "description": "Wiederverwendbares Web-Dashboard auf Basis von FastAPI + Vanilla JS",
+        "title": "Tareas",
+        "description": "Aufgabenplanungs-Tool auf Basis von FastAPI + Vanilla JS",
         "components": [
             {
                 "name": "ExpandableTable",
@@ -146,7 +146,7 @@ async def restart_dashboard():
     Startet den Dashboard-Service neu.
     """
     subprocess.Popen(
-        ["systemctl", "restart", "dashboard-template.service"],
+        ["systemctl", "restart", "tareas.service"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -176,16 +176,16 @@ async def catch_all(path: str):
 def main():
     """Dashboard starten."""
     print("=" * 50)
-    print("Dashboard Template")
+    print("Tareas - Aufgabenplanung")
     print("=" * 50)
-    print("URL: http://10.0.12.7:8503")
+    print("URL: http://10.0.12.7:8504")
     print("Strg+C zum Beenden")
     print("=" * 50)
 
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8503,
+        port=8504,
         log_level="info",
     )
 

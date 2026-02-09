@@ -1,5 +1,5 @@
 /**
- * Dashboard Template - Core Module
+ * Tareas - Core Module
  * Initialisierung, Theme, Settings, Tabs, URL-Routing, Notifications
  */
 
