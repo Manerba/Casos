@@ -29,6 +29,10 @@
     --accent-primary: #3498db;
     --accent-hover: #2980b9;
 
+    /* Detail-Hintergruende */
+    --bg-detail: #f0f4f8;
+    --bg-detail-nested: #e4ebf2;
+
     /* Transitions */
     --transition-speed: 0.3s;
 }
@@ -49,6 +53,9 @@
     --color-bearish: #d9534f;
     --color-neutral: #868e96;
     --color-unclear: #f0ad4e;
+
+    --bg-detail: #1e2a45;
+    --bg-detail-nested: #232f4e;
 }
 
 /* Reset & Base */

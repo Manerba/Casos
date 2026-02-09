@@ -1,6 +1,10 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+09.02.2026;0.0.1+7;Aenderung;Detail-Hintergruende: Aufgaben-Detail und Teilaufgaben-Detail mit unterschiedlichen Farben fuer besseren Kontrast
+09.02.2026;0.0.1+6;Bugfix;Changelog
+09.02.2026;0.0.1+5;Bugfix;Changelog
+09.02.2026;0.0.1+4;Bugfix;Changelog
 09.02.2026;0.0.1+3;Bugfix;Expanded-State bleibt nach Vorgaenger hinzufuegen/entfernen erhalten
 09.02.2026;0.0.1+3;Aenderung;Browser-confirm() durch eigenes Overlay-Modal ersetzt (Confirm-Dialog)
 09.02.2026;0.0.1+3;Aenderung;Vorgaenger-Chips als 4-Spalten-Grid inline positioniert
