@@ -357,7 +357,7 @@
     vertical-align: middle;
 }
 
-.subtask-table tr:hover {
+.subtask-table tr.subtask-row:hover {
     background-color: var(--bg-row-hover);
 }
 
@@ -448,6 +448,86 @@
     background-color: var(--accent-primary);
     color: white;
     border-color: var(--accent-primary);
+}
+
+/* ----------------------------------------
+   Aufklappbare SubTask-Zeilen
+   ---------------------------------------- */
+
+.subtask-row {
+    cursor: pointer;
+    user-select: none;
+}
+
+.subtask-row:hover {
+    background-color: var(--bg-row-hover);
+}
+
+.subtask-row.expanded {
+    background-color: var(--bg-secondary);
+}
+
+.subtask-expand-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 10px;
+    margin-right: 4px;
+    color: var(--text-secondary);
+}
+
+.subtask-row.expanded .subtask-expand-icon {
+    transform: rotate(90deg);
+}
+
+.subtask-detail-row {
+    display: none;
+}
+
+.subtask-detail-row.visible {
+    display: table-row;
+}
+
+.subtask-detail-row > td {
+    padding: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.subtask-detail-content {
+    padding: 12px 16px;
+}
+
+.subtask-detail-content .detail-edit-header {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.subtask-detail-content .detail-edit-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Status-Prozent in Text-Zeile */
+.subtask-status-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.subtask-status-bar {
+    width: 40px;
+    height: 5px;
+    background-color: var(--bg-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    display: inline-block;
+}
+
+.subtask-status-fill {
+    height: 100%;
+    background-color: var(--accent-primary);
+    border-radius: 3px;
 }
 
 /* ----------------------------------------

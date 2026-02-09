@@ -43,6 +43,7 @@ class SubTaskCreate(BaseModel):
     priority: int = 50
     status_percent: int = 0
     predecessor_ids: list[int] = []
+    description: str = ""
 
 
 class SubTaskUpdate(BaseModel):
@@ -53,6 +54,7 @@ class SubTaskUpdate(BaseModel):
     status_percent: Optional[int] = None
     position_number: Optional[int] = None
     predecessor_ids: Optional[list[int]] = None
+    description: Optional[str] = None
 
 
 class AreaCreate(BaseModel):
@@ -254,6 +256,7 @@ async def get_subtasks(task_id: int):
                 "status_percent": row["status_percent"],
                 "predecessor_ids": pred_ids,
                 "predecessors_display": ", ".join(str(p) for p in pred_positions if p),
+                "description": row["description"] or "",
             })
 
         return {"items": items, "total": len(items)}
@@ -279,9 +282,9 @@ async def create_subtask(task_id: int, subtask: SubTaskCreate):
 
         deadline = _parse_date_input(subtask.deadline)
         cursor = db.execute(
-            """INSERT INTO sub_tasks (project_id, name, area_id, deadline, priority, status_percent, position_number)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (task_id, subtask.name, subtask.area_id, deadline, subtask.priority, subtask.status_percent, next_pos),
+            """INSERT INTO sub_tasks (project_id, name, area_id, deadline, priority, status_percent, position_number, description)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (task_id, subtask.name, subtask.area_id, deadline, subtask.priority, subtask.status_percent, next_pos, subtask.description),
         )
         new_id = cursor.lastrowid
 
@@ -336,6 +339,9 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate):
                 raise HTTPException(status_code=400, detail="Positionsnummer bereits vergeben")
             updates.append("position_number = ?")
             values.append(subtask.position_number)
+        if subtask.description is not None:
+            updates.append("description = ?")
+            values.append(subtask.description)
 
         if updates:
             values.append(subtask_id)

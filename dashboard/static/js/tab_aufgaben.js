@@ -286,6 +286,9 @@ function renderSubTasks(taskId, subtasks) {
     const container = document.getElementById(`subtaskContainer_${taskId}`);
     if (!container) return;
 
+    // Subtask-Daten fuer spaetere Verwendung speichern
+    container._subtasksData = subtasks;
+
     const areasOptions = buildAreaOptions();
 
     let html = `<table class="subtask-table">
@@ -305,53 +308,86 @@ function renderSubTasks(taskId, subtasks) {
         <tbody>`;
 
     subtasks.forEach(st => {
+        const predIds = st.predecessor_ids || [];
+        const predDisplay = st.predecessors_display || '';
+        const statusPct = st.status_percent || 0;
+
+        // Daten-Zeile (klickbar, reiner Text)
+        html += `<tr class="subtask-row" data-subtask-id="${st.id}" onclick="toggleSubTaskDetail(${taskId}, ${st.id})">
+            <td class="pos-cell"><span class="subtask-expand-icon">&#9654;</span>${st.position_number || ''}</td>
+            <td>${escapeHtml(st.name)}</td>
+            <td>${predDisplay ? `<span class="predecessor-display">${escapeHtml(predDisplay)}</span>` : '-'}</td>
+            <td>${escapeHtml(st.area_name || '-')}</td>
+            <td>${escapeHtml(st.created_at)}</td>
+            <td>${escapeHtml(st.deadline || '-')}</td>
+            <td>${renderPriority(st.priority)}</td>
+            <td><span class="subtask-status-text"><span class="subtask-status-bar"><span class="subtask-status-fill" style="width:${statusPct}%"></span></span>${statusPct}%</span></td>
+            <td>
+                <div class="subtask-actions">
+                    <button class="subtask-btn delete" onclick="event.stopPropagation(); deleteSubTask(${taskId}, ${st.id})">x</button>
+                </div>
+            </td>
+        </tr>`;
+
+        // Detail-Zeile (versteckt, wird bei Klick eingeblendet)
         const dlISO = convertToISO(st.deadline);
-        // Optionen fuer Vorgaenger-Dropdown: alle anderen SubTasks des Projekts
         const predOptions = subtasks
             .filter(other => other.id !== st.id)
             .map(other => `<option value="${other.id}">Pos. ${other.position_number}: ${escapeHtml(other.name)}</option>`)
             .join('');
 
-        // Aktuelle Vorgaenger als Chips
-        const predIds = st.predecessor_ids || [];
         const predChips = predIds.map(pid => {
             const pred = subtasks.find(s => s.id === pid);
             const posLabel = pred ? pred.position_number : '?';
-            return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
+            return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="event.stopPropagation(); removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
         }).join('');
 
-        html += `<tr data-subtask-id="${st.id}">
-            <td class="pos-cell">${st.position_number || ''}</td>
-            <td><input type="text" class="subtask-name-input" value="${escapeAttr(st.name)}"
-                       onchange="updateSubTask(${st.id}, 'name', this.value)"></td>
-            <td class="predecessor-cell">
-                <div class="predecessor-input">
-                    <select id="predSelect_${st.id}">
-                        <option value="">--</option>
-                        ${predOptions}
-                    </select>
-                    <button onclick="addPredecessor(${taskId}, ${st.id})">+</button>
-                </div>
-                <div class="predecessor-chips" id="predChips_${st.id}">${predChips}</div>
-            </td>
-            <td>
-                <div class="area-select-wrapper">
-                    <select onchange="updateSubTask(${st.id}, 'area_id', this.value)">
-                        <option value="">-</option>
-                        ${areasOptions.map(a => `<option value="${a.id}" ${a.id === st.area_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}
-                    </select>
-                    <button class="area-add-btn" onclick="addNewArea(this, ${st.id})" title="Neuer Bereich">+</button>
-                </div>
-            </td>
-            <td>${escapeHtml(st.created_at)}</td>
-            <td><input type="date" value="${dlISO}" onchange="updateSubTask(${st.id}, 'deadline', this.value)"></td>
-            <td><input type="number" value="${st.priority}" min="1" max="100" style="width:60px"
-                       onchange="updateSubTask(${st.id}, 'priority', parseInt(this.value))"></td>
-            <td><input type="number" value="${st.status_percent}" min="0" max="100" style="width:60px"
-                       onchange="updateSubTask(${st.id}, 'status_percent', parseInt(this.value))" title="${st.status_percent}%"></td>
-            <td>
-                <div class="subtask-actions">
-                    <button class="subtask-btn delete" onclick="deleteSubTask(${taskId}, ${st.id})">x</button>
+        html += `<tr class="subtask-detail-row" data-subtask-detail-id="${st.id}">
+            <td colspan="9">
+                <div class="subtask-detail-content">
+                    <div class="detail-edit-header">
+                        <div class="detail-edit-field flex-grow">
+                            <label>Name</label>
+                            <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}">
+                        </div>
+                        <div class="detail-edit-field">
+                            <label>Bereich</label>
+                            <div class="area-select-wrapper">
+                                <select id="stEditArea_${st.id}">
+                                    <option value="">-</option>
+                                    ${areasOptions.map(a => `<option value="${a.id}" ${a.id === st.area_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}
+                                </select>
+                                <button class="area-add-btn" onclick="event.stopPropagation(); addNewAreaInDetail(this, ${taskId}, ${st.id})" title="Neuer Bereich">+</button>
+                            </div>
+                        </div>
+                        <div class="detail-edit-field">
+                            <label>Deadline</label>
+                            <input type="date" id="stEditDeadline_${st.id}" value="${dlISO}">
+                        </div>
+                        <div class="detail-edit-field">
+                            <label>Prioritaet</label>
+                            <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px">
+                        </div>
+                        <div class="detail-edit-field">
+                            <label>Status (%)</label>
+                            <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px">
+                        </div>
+                    </div>
+                    <div class="detail-edit-field" style="margin-bottom:8px">
+                        <label>Vorgaenger</label>
+                        <div class="predecessor-input">
+                            <select id="predSelect_${st.id}">
+                                <option value="">--</option>
+                                ${predOptions}
+                            </select>
+                            <button onclick="event.stopPropagation(); addPredecessor(${taskId}, ${st.id})">+</button>
+                        </div>
+                        <div class="predecessor-chips" id="predChips_${st.id}">${predChips}</div>
+                    </div>
+                    <div id="stWysiwyg_${st.id}"></div>
+                    <div class="detail-edit-actions">
+                        <button class="action-btn primary" onclick="event.stopPropagation(); saveSubTask(${taskId}, ${st.id})">Speichern</button>
+                    </div>
                 </div>
             </td>
         </tr>`;
@@ -364,6 +400,93 @@ function renderSubTasks(taskId, subtasks) {
     </div>`;
 
     container.innerHTML = html;
+}
+
+function toggleSubTaskDetail(taskId, subtaskId) {
+    const dataRow = document.querySelector(`tr.subtask-row[data-subtask-id="${subtaskId}"]`);
+    const detailRow = document.querySelector(`tr.subtask-detail-row[data-subtask-detail-id="${subtaskId}"]`);
+    if (!dataRow || !detailRow) return;
+
+    const isExpanding = !dataRow.classList.contains('expanded');
+    dataRow.classList.toggle('expanded');
+    detailRow.classList.toggle('visible');
+
+    // WYSIWYG-Editor beim ersten Aufklappen initialisieren
+    if (isExpanding) {
+        const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
+        if (editorContainer && !editorContainer._editorInit) {
+            // Subtask-Daten aus dem Container holen
+            const container = document.getElementById(`subtaskContainer_${taskId}`);
+            const subtasks = container?._subtasksData || [];
+            const st = subtasks.find(s => s.id === subtaskId);
+            new WysiwygEditor(`stWysiwyg_${subtaskId}`, st?.description || '');
+            editorContainer._editorInit = true;
+        }
+    }
+}
+
+async function saveSubTask(taskId, subtaskId) {
+    const name = document.getElementById(`stEditName_${subtaskId}`)?.value;
+    const area_id = parseInt(document.getElementById(`stEditArea_${subtaskId}`)?.value) || null;
+    const deadline = document.getElementById(`stEditDeadline_${subtaskId}`)?.value || '';
+    const priority = parseInt(document.getElementById(`stEditPriority_${subtaskId}`)?.value) || 50;
+    const status_percent = parseInt(document.getElementById(`stEditStatus_${subtaskId}`)?.value) || 0;
+
+    // WYSIWYG-Content
+    const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
+    const editorContent = editorContainer?.querySelector('.wysiwyg-content');
+    const description = editorContent ? editorContent.innerHTML : '';
+
+    // Aktuelle predecessor_ids sammeln
+    const chipsContainer = document.getElementById(`predChips_${subtaskId}`);
+    const currentChips = chipsContainer ? chipsContainer.querySelectorAll('.predecessor-chip') : [];
+    const predecessor_ids = Array.from(currentChips).map(c => parseInt(c.dataset.predId));
+
+    try {
+        const resp = await fetch(`/api/subtasks/${subtaskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, area_id, deadline, priority, status_percent, description, predecessor_ids }),
+        });
+        if (!resp.ok) throw new Error('Fehler beim Speichern');
+
+        showNotification('Teilaufgabe gespeichert', 'success');
+        await loadSubTasks(taskId);
+    } catch (error) {
+        console.error('SubTask speichern fehlgeschlagen:', error);
+        showNotification('Fehler beim Speichern', 'error');
+    }
+}
+
+async function addNewAreaInDetail(btn, taskId, subtaskId) {
+    const name = prompt('Neuer Bereich:');
+    if (!name || !name.trim()) return;
+
+    try {
+        const resp = await fetch('/api/areas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name.trim() }),
+        });
+        if (!resp.ok) throw new Error('Fehler');
+
+        const data = await resp.json();
+        cachedAreas.push({ id: data.id, name: data.name });
+
+        // Dropdown aktualisieren und neuen Bereich auswaehlen
+        const select = document.getElementById(`stEditArea_${subtaskId}`);
+        if (select) {
+            const option = document.createElement('option');
+            option.value = data.id;
+            option.textContent = data.name;
+            option.selected = true;
+            select.appendChild(option);
+        }
+
+        showNotification(`Bereich "${data.name}" erstellt`, 'success');
+    } catch (error) {
+        showNotification('Bereich existiert bereits oder Fehler', 'error');
+    }
 }
 
 function buildAreaOptions() {

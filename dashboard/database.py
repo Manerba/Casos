@@ -65,8 +65,12 @@ def init_db():
         );
     """)
 
-    # Migration: position_number Spalte hinzufuegen falls nicht vorhanden
+    # Migrationen: Spalten hinzufuegen falls nicht vorhanden
     cols = [r[1] for r in conn.execute("PRAGMA table_info(sub_tasks)").fetchall()]
+
+    if "description" not in cols:
+        conn.execute("ALTER TABLE sub_tasks ADD COLUMN description TEXT DEFAULT ''")
+
     if "position_number" not in cols:
         conn.execute("ALTER TABLE sub_tasks ADD COLUMN position_number INTEGER")
         # Bestehende SubTasks nachtraeglich nummerieren (pro Projekt)
