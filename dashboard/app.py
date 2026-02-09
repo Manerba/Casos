@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 import uvicorn
 
 from dashboard.database import init_db
@@ -188,10 +188,10 @@ async def login_page():
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    """Startseite - bei fehlendem Login -> Login-Seite."""
+    """Startseite - bei fehlendem Login -> Redirect zu /login."""
     user = _extract_user_from_request(request)
     if not user:
-        return FileResponse(templates_dir / "login.html")
+        return RedirectResponse(url="/login", status_code=302)
     return FileResponse(templates_dir / "index.html")
 
 
@@ -201,7 +201,7 @@ async def catch_all(path: str, request: Request = None):
     if request:
         user = _extract_user_from_request(request)
         if not user:
-            return FileResponse(templates_dir / "login.html")
+            return RedirectResponse(url="/login", status_code=302)
     return FileResponse(templates_dir / "index.html")
 
 

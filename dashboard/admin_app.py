@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 import uvicorn
 
 from dashboard.database import init_db
@@ -66,10 +66,8 @@ async def admin_login_page():
 async def admin_index(request: Request):
     """Admin-Startseite - prueft Login und Admin-Rechte."""
     user = _extract_user_from_request(request)
-    if not user:
-        return FileResponse(templates_dir / "admin_login.html")
-    if not user["is_admin"]:
-        return FileResponse(templates_dir / "admin_login.html")
+    if not user or not user["is_admin"]:
+        return RedirectResponse(url="/login", status_code=302)
     return FileResponse(templates_dir / "admin.html")
 
 
@@ -79,7 +77,7 @@ async def admin_catch_all(path: str, request: Request = None):
     if request:
         user = _extract_user_from_request(request)
         if not user or not user["is_admin"]:
-            return FileResponse(templates_dir / "admin_login.html")
+            return RedirectResponse(url="/login", status_code=302)
     return FileResponse(templates_dir / "admin.html")
 
 

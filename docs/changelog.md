@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 01:00;0.0.1+13;Bugfix;Login-Redirect: 302 zu /login statt inline login.html (Browser-Cache-Problem behoben)
 10.02.2026 00:55;0.0.1+12;Bugfix;Request Type-Hints in HTML-Routen (app.py, admin_app.py) - FastAPI interpretierte request ohne Hint als Query-Parameter
 10.02.2026 00:45;0.0.1+11;Feature;Authentifizierung: Login/Logout mit Cookie-Sessions (bcrypt + itsdangerous), 401-Redirect
 10.02.2026 00:45;0.0.1+11;Feature;Admin-App auf Port 8505: Benutzerverwaltung (CRUD) mit ExpandableTable
