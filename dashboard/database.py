@@ -111,6 +111,40 @@ def init_db():
     if "created_by" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN created_by INTEGER REFERENCES users(id)")
 
+    # Migration: assigned_to fuer tasks
+    if "assigned_to" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN assigned_to INTEGER REFERENCES users(id)")
+
+    # Migration: created_by und assigned_to fuer sub_tasks
+    sub_cols = [r[1] for r in conn.execute("PRAGMA table_info(sub_tasks)").fetchall()]
+    if "created_by" not in sub_cols:
+        conn.execute("ALTER TABLE sub_tasks ADD COLUMN created_by INTEGER REFERENCES users(id)")
+    if "assigned_to" not in sub_cols:
+        conn.execute("ALTER TABLE sub_tasks ADD COLUMN assigned_to INTEGER REFERENCES users(id)")
+
+    # Migration: Notes-Tabellen
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS task_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            content TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(task_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS sub_task_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            content TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(sub_task_id, user_id)
+        );
+    """)
+
     # Default-Bereiche einfuegen (nur wenn Tabelle leer)
     cursor = conn.execute("SELECT COUNT(*) FROM areas")
     if cursor.fetchone()[0] == 0:

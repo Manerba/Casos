@@ -258,6 +258,23 @@ gehe bitte in den planungsmmodus und plane die implementierung der spezifikation
 
 gehe bitte in den planungsmmodus und plane die implementierung der spezifikationen in docs/TODO/sprint_b_aufgabenzuweisung.md
 
+------------------------------------------------------------------------------------
+
+der login scheint nicht zu funktionieren. mit admin/admin wird beim klick auf login nur die seite neu geladen, es erscheint keine "falsches passwort"-fehlermeldung.
+  
+● Ich sehe das Problem. Wenn der Login erfolgreich ist und auf /aufgaben weiterleitet, wird index.html geladen. Dort laedt app_core.js und ruft
+  loadCurrentUser() auf, das _origFetch('/api/auth/me') aufruft. Aber _origFetch wird vor dem Fetch-Wrapper definiert - also ist es window.fetch zum
+  Zeitpunkt der Zuweisung. Das sollte OK sein...
+
+  Moment - das eigentliche Problem: Die Login-Seite wird von der catch-all Route als login.html ausgeliefert, wenn man /aufgaben aufruft ohne gueltige
+  Session. Das heisst die URL bleibt /aufgaben, das Login-Formular postet zu /api/auth/login, und bei Erfolg wird window.location.href = '/aufgaben'
+  gesetzt - was zur gleichen URL fuehrt. Der Browser cached die Seite!
+
+  Nein, warten. Das ist ein FileResponse, kein Redirect. Lass mich genauer pruefen - vielleicht ist das Problem dass die Login-Seite auf /aufgaben liegt
+  und nach Login auf /aufgaben weiterleitet, was den Browser einfach die gecachte HTML-Antwort zeigen laesst.
+
+  Eigentlich ist das Problem vermutlich anders. Lass mich pruefen ob die HTML-Routen wirklich den Request richtig bekommen:
+ 
 ====================================================================================
 
 

@@ -1,6 +1,13 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 09:00;0.0.1+15;Feature;Aufgabenzuweisung: Aufgaben/Teilaufgaben an andere Benutzer zuweisen
+10.02.2026 09:00;0.0.1+15;Feature;Sichtbarkeitsfilter: Benutzer sehen nur eigene/zugewiesene Aufgaben (+ Altdaten ohne Ersteller)
+10.02.2026 09:00;0.0.1+15;Feature;Notizen-System: Zugewiesene koennen Notizen hinterlassen, Ersteller sehen diese readonly
+10.02.2026 09:00;0.0.1+15;Feature;Bearbeitbarkeitsregeln: Ersteller vs. Zugewiesener (readonly-Felder je nach Rolle)
+10.02.2026 09:00;0.0.1+15;Aenderung;DB-Schema: assigned_to fuer tasks/sub_tasks, task_notes/sub_task_notes Tabellen
+10.02.2026 09:00;0.0.1+15;Aenderung;Tabelle: Neue Spalten "Von" und "Zugewiesen an" in Aufgaben- und Teilaufgabenliste
+10.02.2026 09:00;0.0.1+15;Aenderung;API: /api/users/list, /api/tasks/{id}/notes (GET/PUT), Sichtbarkeitsfilter in GET /api/tasks
 10.02.2026 01:05;0.0.1+14;Bugfix;Admin-Benutzertabelle: Config-Feldnamen an ExpandableTable-Konvention angepasst (apiEndpoint, defaultSort, wildcardFields)
 10.02.2026 01:00;0.0.1+13;Bugfix;Login-Redirect: 302 zu /login statt inline login.html (Browser-Cache-Problem behoben)
 10.02.2026 00:55;0.0.1+12;Bugfix;Request Type-Hints in HTML-Routen (app.py, admin_app.py) - FastAPI interpretierte request ohne Hint als Query-Parameter

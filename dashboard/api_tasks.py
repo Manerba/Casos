@@ -35,6 +35,7 @@ class TaskUpdate(BaseModel):
     task_type: Optional[str] = None
     status: Optional[str] = None
     description: Optional[str] = None
+    assigned_to: Optional[int] = None
 
 
 class SubTaskCreate(BaseModel):
@@ -56,10 +57,15 @@ class SubTaskUpdate(BaseModel):
     position_number: Optional[int] = None
     predecessor_ids: Optional[list[int]] = None
     description: Optional[str] = None
+    assigned_to: Optional[int] = None
 
 
 class AreaCreate(BaseModel):
     name: str
+
+
+class NoteUpdate(BaseModel):
+    content: str
 
 
 # ============================================================
@@ -105,12 +111,20 @@ def _parse_date_input(date_str: Optional[str]) -> Optional[str]:
 # ============================================================
 
 @router.get("/api/tasks")
-async def get_tasks():
-    """Alle Aufgaben abrufen."""
+async def get_tasks(user=Depends(get_current_user)):
+    """Aufgaben abrufen (nur eigene/zugewiesene + Altdaten ohne created_by)."""
     db = get_db()
     try:
         rows = db.execute(
-            "SELECT * FROM tasks ORDER BY priority ASC, created_at DESC"
+            """SELECT t.*,
+                      uc.vorname || ' ' || uc.nachname AS created_by_name,
+                      ua.vorname || ' ' || ua.nachname AS assigned_to_name
+               FROM tasks t
+               LEFT JOIN users uc ON t.created_by = uc.id
+               LEFT JOIN users ua ON t.assigned_to = ua.id
+               WHERE t.created_by = ? OR t.assigned_to = ? OR t.created_by IS NULL
+               ORDER BY t.priority ASC, t.created_at DESC""",
+            (user["id"], user["id"]),
         ).fetchall()
 
         items = []
@@ -124,6 +138,10 @@ async def get_tasks():
                 "task_type": row["task_type"],
                 "status": row["status"],
                 "description": row["description"] or "",
+                "created_by": row["created_by"],
+                "assigned_to": row["assigned_to"],
+                "created_by_name": (row["created_by_name"] or "").strip(),
+                "assigned_to_name": (row["assigned_to_name"] or "").strip(),
             })
 
         return {"items": items, "total": len(items)}
@@ -149,11 +167,13 @@ async def create_task(task: TaskCreate, user=Depends(get_current_user)):
 
 
 @router.put("/api/tasks/{task_id}")
-async def update_task(task_id: int, task: TaskUpdate):
+async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_user)):
     """Aufgabe aktualisieren."""
     db = get_db()
     try:
-        existing = db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        existing = db.execute(
+            "SELECT id, created_by, assigned_to FROM tasks WHERE id = ?", (task_id,)
+        ).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 
@@ -177,6 +197,14 @@ async def update_task(task_id: int, task: TaskUpdate):
         if task.description is not None:
             updates.append("description = ?")
             values.append(task.description)
+
+        # assigned_to: 0 = unassign, >0 = assign
+        if task.assigned_to is not None:
+            if task.assigned_to == 0:
+                updates.append("assigned_to = NULL")
+            else:
+                updates.append("assigned_to = ?")
+                values.append(task.assigned_to)
 
         if updates:
             values.append(task_id)
@@ -217,9 +245,13 @@ async def get_subtasks(task_id: int):
     db = get_db()
     try:
         rows = db.execute(
-            """SELECT st.*, a.name as area_name
+            """SELECT st.*, a.name as area_name,
+                      uc.vorname || ' ' || uc.nachname AS created_by_name,
+                      ua.vorname || ' ' || ua.nachname AS assigned_to_name
                FROM sub_tasks st
                LEFT JOIN areas a ON st.area_id = a.id
+               LEFT JOIN users uc ON st.created_by = uc.id
+               LEFT JOIN users ua ON st.assigned_to = ua.id
                WHERE st.project_id = ?
                ORDER BY st.position_number ASC, st.created_at ASC""",
             (task_id,),
@@ -258,6 +290,10 @@ async def get_subtasks(task_id: int):
                 "predecessor_ids": pred_ids,
                 "predecessors_display": ", ".join(str(p) for p in pred_positions if p),
                 "description": row["description"] or "",
+                "created_by": row["created_by"],
+                "assigned_to": row["assigned_to"],
+                "created_by_name": (row["created_by_name"] or "").strip(),
+                "assigned_to_name": (row["assigned_to_name"] or "").strip(),
             })
 
         return {"items": items, "total": len(items)}
@@ -266,7 +302,7 @@ async def get_subtasks(task_id: int):
 
 
 @router.post("/api/tasks/{task_id}/subtasks")
-async def create_subtask(task_id: int, subtask: SubTaskCreate):
+async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_current_user)):
     """Teilaufgabe anlegen."""
     db = get_db()
     try:
@@ -283,9 +319,9 @@ async def create_subtask(task_id: int, subtask: SubTaskCreate):
 
         deadline = _parse_date_input(subtask.deadline)
         cursor = db.execute(
-            """INSERT INTO sub_tasks (project_id, name, area_id, deadline, priority, status_percent, position_number, description)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            (task_id, subtask.name, subtask.area_id, deadline, subtask.priority, subtask.status_percent, next_pos, subtask.description),
+            """INSERT INTO sub_tasks (project_id, name, area_id, deadline, priority, status_percent, position_number, description, created_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (task_id, subtask.name, subtask.area_id, deadline, subtask.priority, subtask.status_percent, next_pos, subtask.description, user["id"]),
         )
         new_id = cursor.lastrowid
 
@@ -344,6 +380,14 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate):
             updates.append("description = ?")
             values.append(subtask.description)
 
+        # assigned_to: 0 = unassign, >0 = assign
+        if subtask.assigned_to is not None:
+            if subtask.assigned_to == 0:
+                updates.append("assigned_to = NULL")
+            else:
+                updates.append("assigned_to = ?")
+                values.append(subtask.assigned_to)
+
         if updates:
             values.append(subtask_id)
             db.execute(
@@ -380,6 +424,126 @@ async def delete_subtask(subtask_id: int):
         db.execute("DELETE FROM sub_tasks WHERE id = ?", (subtask_id,))
         db.commit()
         return {"message": "Teilaufgabe geloescht"}
+    finally:
+        db.close()
+
+
+# ============================================================
+# Users List
+# ============================================================
+
+@router.get("/api/users/list")
+async def get_users_list():
+    """Alle Benutzer als Liste (fuer Zuweisungs-Dropdown)."""
+    db = get_db()
+    try:
+        rows = db.execute(
+            "SELECT id, vorname, nachname FROM users ORDER BY vorname, nachname"
+        ).fetchall()
+        return {
+            "items": [
+                {"id": r["id"], "vorname": r["vorname"], "nachname": r["nachname"]}
+                for r in rows
+            ]
+        }
+    finally:
+        db.close()
+
+
+# ============================================================
+# Task Notes
+# ============================================================
+
+@router.get("/api/tasks/{task_id}/notes")
+async def get_task_notes(task_id: int):
+    """Notizen fuer eine Aufgabe abrufen."""
+    db = get_db()
+    try:
+        rows = db.execute(
+            """SELECT tn.*, u.vorname || ' ' || u.nachname AS user_name
+               FROM task_notes tn
+               JOIN users u ON tn.user_id = u.id
+               WHERE tn.task_id = ?
+               ORDER BY tn.updated_at DESC""",
+            (task_id,),
+        ).fetchall()
+        return {
+            "items": [
+                {
+                    "user_id": r["user_id"],
+                    "user_name": (r["user_name"] or "").strip(),
+                    "content": r["content"] or "",
+                    "updated_at": _format_date(r["updated_at"]),
+                }
+                for r in rows
+            ]
+        }
+    finally:
+        db.close()
+
+
+@router.put("/api/tasks/{task_id}/notes")
+async def upsert_task_note(task_id: int, note: NoteUpdate, user=Depends(get_current_user)):
+    """Eigene Notiz fuer eine Aufgabe erstellen/aktualisieren."""
+    db = get_db()
+    try:
+        db.execute(
+            """INSERT INTO task_notes (task_id, user_id, content, updated_at)
+               VALUES (?, ?, ?, datetime('now'))
+               ON CONFLICT(task_id, user_id) DO UPDATE SET
+                   content = excluded.content,
+                   updated_at = datetime('now')""",
+            (task_id, user["id"], note.content),
+        )
+        db.commit()
+        return {"message": "Notiz gespeichert"}
+    finally:
+        db.close()
+
+
+@router.get("/api/tasks/{task_id}/subtasks/{subtask_id}/notes")
+async def get_subtask_notes(task_id: int, subtask_id: int):
+    """Notizen fuer eine Teilaufgabe abrufen."""
+    db = get_db()
+    try:
+        rows = db.execute(
+            """SELECT sn.*, u.vorname || ' ' || u.nachname AS user_name
+               FROM sub_task_notes sn
+               JOIN users u ON sn.user_id = u.id
+               WHERE sn.sub_task_id = ?
+               ORDER BY sn.updated_at DESC""",
+            (subtask_id,),
+        ).fetchall()
+        return {
+            "items": [
+                {
+                    "user_id": r["user_id"],
+                    "user_name": (r["user_name"] or "").strip(),
+                    "content": r["content"] or "",
+                    "updated_at": _format_date(r["updated_at"]),
+                }
+                for r in rows
+            ]
+        }
+    finally:
+        db.close()
+
+
+@router.put("/api/tasks/{task_id}/subtasks/{subtask_id}/notes")
+async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, user=Depends(get_current_user)):
+    """Eigene Notiz fuer eine Teilaufgabe erstellen/aktualisieren."""
+    db = get_db()
+    try:
+        db.execute(
+            """INSERT INTO sub_task_notes (sub_task_id, user_id, content, updated_at)
+               VALUES (?, ?, ?, datetime('now'))
+               ON CONFLICT(sub_task_id, user_id) DO UPDATE SET
+                   content = excluded.content,
+                   updated_at = datetime('now')""",
+            (subtask_id, user["id"], note.content),
+        )
+        db.commit()
+        return {"message": "Notiz gespeichert"}
     finally:
         db.close()
 
@@ -429,6 +593,8 @@ async def get_tasks_config():
             Column("Typ", "task_type", width=90, sortable=True, renderer="badge"),
             Column("Status", "status", width=90, sortable=True, renderer="badge"),
             Column("Prioritaet", "priority", width=80, sortable=True, align="center"),
+            Column("Von", "created_by_name", width=120, sortable=True),
+            Column("Zugewiesen an", "assigned_to_name", width=120, sortable=True),
             Column("Erstellt", "created_at", width=100, sortable=True),
             Column("Deadline", "deadline", width=100, sortable=True),
         ],
