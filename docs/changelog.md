@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 02:00;0.0.1+34;Feature;Auto-Save: Alle Aenderungen an Aufgaben, Projekten und Teilaufgaben werden sofort gespeichert
+11.02.2026 02:00;0.0.1+34;Aenderung;Speichern-Button bei Aufgaben, Projekten und Teilaufgaben entfernt (Loeschen-Button bleibt)
 11.02.2026 01:15;0.0.1+33;Feature;Dateiablage auch fuer Aufgaben (nicht nur Projekte) verfuegbar
 11.02.2026 01:15;0.0.1+33;Feature;Projektstatus zeigt Teilaufgaben-Fortschritt (n/n) in der Aufgabentabelle
 11.02.2026 01:15;0.0.1+33;Aenderung;Bestaetigung vor Aenderung einer bereits zugeordneten Dateiablage

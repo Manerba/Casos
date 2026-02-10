@@ -12,6 +12,13 @@ let cachedUsers = [];
 let ncConfigured = false;
 let ncDirectories = [];
 
+// Auto-Save: Debounce-Timer pro Feld
+const _autoSaveTimers = {};
+function autoSaveDebounced(key, fn, delay = 1500) {
+    clearTimeout(_autoSaveTimers[key]);
+    _autoSaveTimers[key] = setTimeout(fn, delay);
+}
+
 // ========================================
 // Tab Initialisierung
 // ========================================
@@ -330,12 +337,11 @@ async function onTaskRowExpanded(rowId, detailElement) {
     }
 
     // Aktions-Buttons
-    html += `<div class="detail-edit-actions">
-        <button class="action-btn primary" onclick="saveTask(${row.id})">Speichern</button>`;
     if (perm.isCreator || perm.isOwnTask || perm.isLegacy) {
-        html += `<button class="action-btn danger" onclick="deleteTask(${row.id})">Loeschen</button>`;
+        html += `<div class="detail-edit-actions">
+            <button class="action-btn danger" onclick="deleteTask(${row.id})">Loeschen</button>
+        </div>`;
     }
-    html += `</div>`;
 
     html += `</div>`;
 
@@ -371,6 +377,30 @@ async function onTaskRowExpanded(rowId, detailElement) {
     } else {
         // WYSIWYG-Editor fuer Beschreibung
         new WysiwygEditor(`wysiwygEditor_${row.id}`, row.description || '');
+    }
+
+    // Auto-Save: Metadaten-Felder bei Aenderung sofort speichern
+    ['editName', 'editDeadline', 'editPriority', 'editStatus', 'editAssignedTo'].forEach(prefix => {
+        const el = document.getElementById(`${prefix}_${row.id}`);
+        if (el && !el.disabled) {
+            el.addEventListener('change', () => saveTask(row.id, true));
+        }
+    });
+
+    // Auto-Save: WYSIWYG-Editor mit Debounce
+    const wysiwygContent = document.querySelector(`#wysiwygEditor_${row.id} .wysiwyg-content`);
+    if (wysiwygContent) {
+        wysiwygContent.addEventListener('input', () => {
+            autoSaveDebounced(`task_${row.id}`, () => saveTask(row.id, true));
+        });
+    }
+
+    // Auto-Save: Notizen-Editor mit Debounce
+    const notesContent = document.querySelector(`#notesEditor_${row.id} .wysiwyg-content`);
+    if (notesContent) {
+        notesContent.addEventListener('input', () => {
+            autoSaveDebounced(`taskNotes_${row.id}`, () => saveTask(row.id, true));
+        });
     }
 
     // File Browser initialisieren wenn Verzeichnis zugeordnet
@@ -427,12 +457,12 @@ function initColumnResize(taskId) {
 // Task CRUD
 // ========================================
 
-async function saveTask(taskId) {
+async function saveTask(taskId, silent = false) {
     const row = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
 
     // Subtask-View: an eigene Speicherfunktion weiterleiten (negative ID = Pseudo-Task)
     if (row && (row._type === 'assigned_subtask' || row.id < 0)) {
-        return saveSubtaskView(row);
+        return saveSubtaskView(row, silent);
     }
 
     const perm = row ? getTaskPermissions(row) : { isOwnTask: true, isLegacy: true, isAssignee: false, isCreator: true, isAssigned: false };
@@ -488,8 +518,10 @@ async function saveTask(taskId) {
             }
         }
 
-        showNotification('Aufgabe gespeichert', 'success');
-        await aufgabenTable.loadData();
+        if (!silent) {
+            showNotification('Aufgabe gespeichert', 'success');
+            await aufgabenTable.loadData();
+        }
     } catch (error) {
         console.error('Speichern fehlgeschlagen:', error);
         showNotification('Fehler beim Speichern', 'error');
@@ -542,11 +574,6 @@ async function onSubtaskViewExpanded(row, detailElement) {
         <div id="stViewNotes_${stId}"></div>
     </div>`;
 
-    // Aktions-Buttons
-    html += `<div class="detail-edit-actions">
-        <button class="action-btn primary" onclick="saveTask(${row.id})">Speichern</button>
-    </div>`;
-
     html += `</div>`;
     detailElement.innerHTML = html;
 
@@ -563,9 +590,23 @@ async function onSubtaskViewExpanded(row, detailElement) {
     } else {
         new WysiwygEditor(`stViewNotes_${stId}`, '');
     }
+
+    // Auto-Save: Status-Feld
+    const stViewStatusEl = document.getElementById(`stViewStatus_${stId}`);
+    if (stViewStatusEl) {
+        stViewStatusEl.addEventListener('change', () => saveSubtaskView(row, true));
+    }
+
+    // Auto-Save: Notizen-Editor mit Debounce
+    const stViewNotesContent = document.querySelector(`#stViewNotes_${stId} .wysiwyg-content`);
+    if (stViewNotesContent) {
+        stViewNotesContent.addEventListener('input', () => {
+            autoSaveDebounced(`stViewNotes_${stId}`, () => saveSubtaskView(row, true));
+        });
+    }
 }
 
-async function saveSubtaskView(row) {
+async function saveSubtaskView(row, silent = false) {
     const stId = row._subtask_id || Math.abs(row.id);
     const projectId = row._project_id;
     const statusPercent = parseInt(document.getElementById(`stViewStatus_${stId}`)?.value) || 0;
@@ -592,8 +633,10 @@ async function saveSubtaskView(row) {
             }
         }
 
-        showNotification('Teilaufgabe gespeichert', 'success');
-        await aufgabenTable.loadData();
+        if (!silent) {
+            showNotification('Teilaufgabe gespeichert', 'success');
+            await aufgabenTable.loadData();
+        }
     } catch (error) {
         console.error('Speichern fehlgeschlagen:', error);
         showNotification('Fehler beim Speichern', 'error');
@@ -807,12 +850,7 @@ function renderSubTasks(taskId, subtasks) {
             html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
         }
 
-        html += `<div class="detail-edit-actions">`;
-        if (canEdit) {
-            html += `<button class="action-btn primary" onclick="event.stopPropagation(); saveSubTask(${taskId}, ${st.id})">Speichern</button>`;
-        }
         html += `</div>
-                </div>
             </td>
         </tr>`;
     });
@@ -880,10 +918,30 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
                 notesContent.innerHTML = '<em>Fehler beim Laden</em>';
             }
         }
+
+        // Auto-Save: Metadaten-Felder bei Aenderung sofort speichern
+        const detailRow = document.querySelector(`tr.subtask-detail-row[data-subtask-detail-id="${subtaskId}"]`);
+        if (detailRow && !detailRow._autoSaveInit) {
+            detailRow._autoSaveInit = true;
+            ['stEditName', 'stEditArea', 'stEditDeadline', 'stEditPriority', 'stEditStatus', 'stEditAssigned'].forEach(prefix => {
+                const el = document.getElementById(`${prefix}_${subtaskId}`);
+                if (el && !el.disabled) {
+                    el.addEventListener('change', () => saveSubTask(taskId, subtaskId, true));
+                }
+            });
+
+            // Auto-Save: WYSIWYG-Editor mit Debounce
+            const stEditorContent = document.querySelector(`#stWysiwyg_${subtaskId} .wysiwyg-content`);
+            if (stEditorContent) {
+                stEditorContent.addEventListener('input', () => {
+                    autoSaveDebounced(`subtask_${subtaskId}`, () => saveSubTask(taskId, subtaskId, true));
+                });
+            }
+        }
     }
 }
 
-async function saveSubTask(taskId, subtaskId) {
+async function saveSubTask(taskId, subtaskId, silent = false) {
     const container = document.getElementById(`subtaskContainer_${taskId}`);
     const subtasks = container?._subtasksData || [];
     const st = subtasks.find(s => s.id === subtaskId);
@@ -929,8 +987,10 @@ async function saveSubTask(taskId, subtaskId) {
         });
         if (!resp.ok) throw new Error('Fehler beim Speichern');
 
-        showNotification('Teilaufgabe gespeichert', 'success');
-        await loadSubTasks(taskId);
+        if (!silent) {
+            showNotification('Teilaufgabe gespeichert', 'success');
+            await loadSubTasks(taskId);
+        }
     } catch (error) {
         console.error('SubTask speichern fehlgeschlagen:', error);
         showNotification('Fehler beim Speichern', 'error');
