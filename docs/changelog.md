@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 23:30;0.0.1+30;Aenderung;Projektverzeichnis: Dropdown im Header ersetzt durch Button "Projektverzeichnis" neben Netzplan/Team (nur fuer Ersteller)
+10.02.2026 23:30;0.0.1+30;Feature;Projektverzeichnis-Dialog: Klickbare Verzeichnisliste mit Ordner-Icons, Auswahl-Haken, Zuordnung-Entfernen-Button
 10.02.2026 23:50;0.0.1+29;Feature;Nextcloud-Dateiablage: WebDAV-Proxy-Integration fuer Projektverzeichnisse (browsen, oeffnen, hochladen, loeschen, ordner erstellen, umbenennen)
 10.02.2026 23:50;0.0.1+29;Feature;Admin-UI: Neuer Tab "Nextcloud" mit Verbindungskonfiguration (Server-URL, Benutzer, Passwort, Wurzelverzeichnis) und Verbindungstest
 10.02.2026 23:50;0.0.1+29;Feature;Dateiablage-Ansichten: Umschaltbare Baumansicht (Explorer-Stil, Lazy-Load) und Icon-Grid (Doppelklick-Navigation)

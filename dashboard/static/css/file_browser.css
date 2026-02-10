@@ -381,19 +381,60 @@
     white-space: nowrap;
 }
 
-/* --- Nextcloud-Verzeichnis Dropdown im Detail --- */
-.nc-dir-field {
+/* --- Projektverzeichnis-Button (aktiv-Zustand) --- */
+.control-btn.nc-active {
+    border-color: var(--accent-primary, #3498db);
+    color: var(--accent-primary, #3498db);
+    background: rgba(52, 152, 219, 0.08);
+}
+
+/* --- Projektverzeichnis-Dialog --- */
+.nc-dir-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.nc-dir-item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 14px;
 }
 
-.nc-dir-field select {
-    min-width: 160px;
+.nc-dir-item:hover {
+    background: var(--bg-hover, #e9ecef);
+    border-color: var(--accent-primary, #3498db);
 }
 
-.nc-dir-label {
-    font-size: 12px;
-    color: var(--text-secondary, #666);
+.nc-dir-selected {
+    background: rgba(52, 152, 219, 0.1);
+    border-color: var(--accent-primary, #3498db);
+}
+
+.nc-dir-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.nc-dir-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+    color: var(--text-primary, #333);
+}
+
+.nc-dir-check {
+    color: var(--accent-primary, #3498db);
+    font-weight: bold;
+    font-size: 16px;
+    flex-shrink: 0;
 }

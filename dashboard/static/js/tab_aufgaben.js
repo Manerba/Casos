@@ -254,16 +254,6 @@ async function onTaskRowExpanded(rowId, detailElement) {
         </div>`;
     }
 
-    // Nextcloud-Verzeichniszuordnung (nur Projekte, nur wenn NC konfiguriert, nur Ersteller)
-    if (row.task_type === 'projekt' && ncConfigured && (perm.isCreator || perm.isLegacy)) {
-        html += `<div class="detail-edit-field">
-            <label>Dateiablage</label>
-            <select id="editNcPath_${row.id}" onchange="saveNcPath(${row.id}, this.value)">
-                <option value="">-- Keine --</option>
-            </select>
-        </div>`;
-    }
-
     html += `</div>`;
 
     // Beschreibung: WYSIWYG fuer Ersteller/eigene, readonly fuer Zugewiesene
@@ -310,6 +300,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <div class="subtask-section-actions">
                     <button class="control-btn" onclick="event.stopPropagation(); openNetzplan(${row.id})">Netzplan</button>
                     ${perm.isCreator ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">Team</button>` : ''}
+                    ${ncConfigured && (perm.isCreator || perm.isLegacy) ? `<button class="control-btn${row.nextcloud_path ? ' nc-active' : ''}" onclick="event.stopPropagation(); openNcDirDialog(${row.id}, '${escapeAttr(row.nextcloud_path || '')}')">${row.nextcloud_path ? '&#128194; ' + escapeHtml(row.nextcloud_path) : 'Projektverzeichnis'}</button>` : ''}
                 </div>
             </div>
             <div id="subtaskContainer_${row.id}">
@@ -377,11 +368,6 @@ async function onTaskRowExpanded(rowId, detailElement) {
     // SubTasks laden wenn Projekt
     if (row.task_type === 'projekt') {
         loadSubTasks(row.id);
-
-        // Nextcloud-Verzeichnis-Dropdown laden
-        if (ncConfigured && (perm.isCreator || perm.isLegacy)) {
-            loadNcDirectories(row.id, row.nextcloud_path || '');
-        }
 
         // File Browser initialisieren wenn Verzeichnis zugeordnet
         if (row.nextcloud_path && ncConfigured) {
@@ -1719,29 +1705,72 @@ function openNetzplan(taskId) {
 // Nextcloud-Integration
 // ========================================
 
-async function loadNcDirectories(taskId, currentPath) {
-    const select = document.getElementById(`editNcPath_${taskId}`);
-    if (!select) return;
+async function openNcDirDialog(taskId, currentPath) {
+    const existing = document.querySelector('.modal-overlay');
+    if (existing) existing.remove();
 
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">Projektverzeichnis</div>
+            <div class="modal-body">
+                <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary, #666);">
+                    Waehle ein Unterverzeichnis aus der Nextcloud-Dateiablage fuer dieses Projekt.
+                </p>
+                <div id="ncDirList">
+                    <div class="table-loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                ${currentPath ? `<button class="action-btn danger" onclick="saveNcPath(${taskId}, '', this.closest('.modal-overlay'))">Zuordnung entfernen</button>` : ''}
+                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // Verzeichnisse laden
+    const listContainer = document.getElementById('ncDirList');
     try {
         const resp = await fetch('/api/nextcloud/directories');
-        if (!resp.ok) throw new Error('Fehler');
+        if (!resp.ok) throw new Error('Fehler beim Laden der Verzeichnisse');
         const data = await resp.json();
-        ncDirectories = data.directories || [];
+        const dirs = data.directories || [];
 
-        ncDirectories.forEach(d => {
-            const option = document.createElement('option');
-            option.value = d.name;
-            option.textContent = d.name;
-            if (d.name === currentPath) option.selected = true;
-            select.appendChild(option);
+        if (dirs.length === 0) {
+            listContainer.innerHTML = '<p style="color:var(--text-muted,#999)">Keine Unterverzeichnisse im Wurzelverzeichnis gefunden.</p>';
+            return;
+        }
+
+        let html = '<div class="nc-dir-grid">';
+        dirs.forEach(d => {
+            const isSelected = d.name === currentPath;
+            html += `<div class="nc-dir-item${isSelected ? ' nc-dir-selected' : ''}" onclick="saveNcPath(${taskId}, '${escapeAttr(d.name)}', this.closest('.modal-overlay'))">
+                <span class="nc-dir-icon">&#128194;</span>
+                <span class="nc-dir-name">${escapeHtml(d.name)}</span>
+                ${isSelected ? '<span class="nc-dir-check">&#10003;</span>' : ''}
+            </div>`;
         });
-    } catch (e) {
-        // Dropdown bleibt mit "-- Keine --" Option
+        html += '</div>';
+        listContainer.innerHTML = html;
+    } catch (error) {
+        listContainer.innerHTML = `<p style="color:var(--color-bearish,#e74c3c)">${escapeHtml(error.message)}</p>`;
     }
 }
 
-async function saveNcPath(taskId, value) {
+async function saveNcPath(taskId, value, overlayEl) {
     try {
         const resp = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
@@ -1750,6 +1779,9 @@ async function saveNcPath(taskId, value) {
         });
         if (!resp.ok) throw new Error('Fehler');
         showNotification(value ? `Dateiablage "${value}" zugeordnet` : 'Dateiablage entfernt', 'success');
+
+        // Modal schliessen
+        if (overlayEl) overlayEl.remove();
 
         // Tabelle neu laden damit das Detail mit/ohne File Browser aktualisiert wird
         await aufgabenTable.loadData();
