@@ -344,25 +344,9 @@ beide punkte funktioieren noch nicht. ich habe eben als benutzer "mir" ein proje
   - das, was derjenige, welchem die aufgabe zugewiesen wurde, über diese textbox eingegeben hat, soll beim zuweisenden ebenfalls als nicht bearbeitbarer text mit einem rahmen darum unter dem aufgaben-text angezeigt werden.
 stelle bitte rückfragen, um sicherzustellen, dass wir die selben vorstellungen zu den anforderungen haben.
 
+------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+beim speichern einer notiz als zugewiesener erhalte ich eine fehlermeldung (kurze einblendung eines roten kastens oben rechts).
 
 ====================================================================================
 LDAP-ANBINDUNG
@@ -380,6 +364,30 @@ gehe bitte in den planungsmodus für den nächsten sprint: mehrbenutzerfähigkei
 		- von den aufgelisteten gruppen soll eine gruppe über einen +-button ausgewählt werden können. 
 		- alle ad-benutzer, welche mitglied dieser gruppe sind, sollen als benutzer der benutzerverwaltung hinzugefügt werden (nur anzeige, keine änderungen am bentzer erlauben, da quelle das ldap ist) und sich mit benutzername und passwort ihres ad-benutzerkontos in tareas anmelden dürfen.
 }
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
+
+====================================================================================
+
+
 
 ====================================================================================
 

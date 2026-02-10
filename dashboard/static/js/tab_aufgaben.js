@@ -192,8 +192,8 @@ async function onTaskRowExpanded(rowId, detailElement) {
     const row = aufgabenTable.filteredData.find(r => String(r.id) === String(rowId));
     if (!row) return;
 
-    // Zugewiesene Subtask-Ansicht
-    if (row._type === 'assigned_subtask') {
+    // Zugewiesene Subtask-Ansicht (negative ID = Pseudo-Task fuer zugewiesene Subtask)
+    if (row._type === 'assigned_subtask' || row.id < 0) {
         return onSubtaskViewExpanded(row, detailElement);
     }
 
@@ -343,8 +343,8 @@ async function onTaskRowExpanded(rowId, detailElement) {
 async function saveTask(taskId) {
     const row = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
 
-    // Subtask-View: an eigene Speicherfunktion weiterleiten
-    if (row && row._type === 'assigned_subtask') {
+    // Subtask-View: an eigene Speicherfunktion weiterleiten (negative ID = Pseudo-Task)
+    if (row && (row._type === 'assigned_subtask' || row.id < 0)) {
         return saveSubtaskView(row);
     }
 
@@ -414,7 +414,8 @@ async function saveTask(taskId) {
 // ========================================
 
 async function onSubtaskViewExpanded(row, detailElement) {
-    const stId = row._subtask_id;
+    const stId = row._subtask_id || Math.abs(row.id);
+    const projectId = row._project_id;
     const deadlineISO = convertToISO(row.deadline);
 
     let html = `<div class="detail-edit" data-task-id="${row.id}">`;
@@ -463,18 +464,23 @@ async function onSubtaskViewExpanded(row, detailElement) {
     detailElement.innerHTML = html;
 
     // Notizen laden und Editor initialisieren
-    try {
-        const notesResp = await fetch(`/api/tasks/${row._project_id}/subtasks/${stId}/notes`);
-        const notesData = await notesResp.json();
-        const myNote = (notesData.items || []).find(n => n.user_id === currentUser.id);
-        new WysiwygEditor(`stViewNotes_${stId}`, myNote ? myNote.content : '');
-    } catch (e) {
+    if (projectId) {
+        try {
+            const notesResp = await fetch(`/api/tasks/${projectId}/subtasks/${stId}/notes`);
+            const notesData = await notesResp.json();
+            const myNote = (notesData.items || []).find(n => n.user_id === currentUser.id);
+            new WysiwygEditor(`stViewNotes_${stId}`, myNote ? myNote.content : '');
+        } catch (e) {
+            new WysiwygEditor(`stViewNotes_${stId}`, '');
+        }
+    } else {
         new WysiwygEditor(`stViewNotes_${stId}`, '');
     }
 }
 
 async function saveSubtaskView(row) {
-    const stId = row._subtask_id;
+    const stId = row._subtask_id || Math.abs(row.id);
+    const projectId = row._project_id;
     const statusPercent = parseInt(document.getElementById(`stViewStatus_${stId}`)?.value) || 0;
 
     try {
@@ -486,15 +492,17 @@ async function saveSubtaskView(row) {
         });
         if (!resp.ok) throw new Error('Fehler beim Speichern');
 
-        // 2. Notizen speichern
-        const notesContainer = document.getElementById(`stViewNotes_${stId}`);
-        const notesContent = notesContainer?.querySelector('.wysiwyg-content');
-        if (notesContent) {
-            await fetch(`/api/tasks/${row._project_id}/subtasks/${stId}/notes`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: notesContent.innerHTML }),
-            });
+        // 2. Notizen speichern (nur wenn project_id bekannt)
+        if (projectId) {
+            const notesContainer = document.getElementById(`stViewNotes_${stId}`);
+            const notesContent = notesContainer?.querySelector('.wysiwyg-content');
+            if (notesContent) {
+                await fetch(`/api/tasks/${projectId}/subtasks/${stId}/notes`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: notesContent.innerHTML }),
+                });
+            }
         }
 
         showNotification('Teilaufgabe gespeichert', 'success');
