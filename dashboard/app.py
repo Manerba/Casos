@@ -19,6 +19,7 @@ import uvicorn
 from dashboard.database import init_db
 from dashboard.api_tasks import router as tasks_router
 from dashboard.api_auth import router as auth_router
+from dashboard.api_teams import router as teams_router
 from dashboard.auth import get_current_user, _extract_user_from_request
 
 
@@ -36,6 +37,9 @@ app.include_router(auth_router)
 
 # Tasks-Router MIT auth Dependency
 app.include_router(tasks_router, dependencies=[Depends(get_current_user)])
+
+# Teams-Router MIT auth Dependency
+app.include_router(teams_router, dependencies=[Depends(get_current_user)])
 
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"

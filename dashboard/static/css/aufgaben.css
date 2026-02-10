@@ -862,6 +862,163 @@
 }
 
 /* ----------------------------------------
+   Team-Dialog (Sprint C)
+   ---------------------------------------- */
+
+.modal-wide {
+    width: 650px;
+    max-width: 95vw;
+}
+
+.team-info-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    border-left: 3px solid var(--accent-primary);
+}
+
+.team-add-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.team-add-row select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 13px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.team-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.team-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background-color: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.team-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.team-table tr:hover {
+    background-color: var(--bg-row-hover);
+}
+
+.team-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-primary);
+}
+
+.team-table .team-remove-btn {
+    padding: 2px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.team-table .team-remove-btn:hover {
+    background-color: var(--color-bearish);
+    color: white;
+    border-color: var(--color-bearish);
+}
+
+.team-empty {
+    text-align: center;
+    padding: 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* Subtask-Section-Header mit Team-Button */
+.subtask-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.subtask-section-header h4 {
+    margin-bottom: 0;
+}
+
+.team-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all var(--transition-speed);
+}
+
+.team-btn:hover {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+/* Berechtigungs-Icon Spalte (Subtask-Tabelle) */
+.perm-icon-cell {
+    width: 30px;
+    text-align: center;
+}
+
+.perm-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    line-height: 1;
+}
+
+.perm-icon-default {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.perm-icon-override {
+    color: var(--accent-primary);
+}
+
+.override-indicator {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--accent-primary);
+    margin-left: 4px;
+}
+
+/* ----------------------------------------
    Responsive
    ---------------------------------------- */
 

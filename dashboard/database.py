@@ -143,6 +143,27 @@ def init_db():
             updated_at TEXT DEFAULT (datetime('now')),
             UNIQUE(sub_task_id, user_id)
         );
+
+        CREATE TABLE IF NOT EXISTS project_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            can_read INTEGER DEFAULT 1,
+            can_edit INTEGER DEFAULT 0,
+            can_create INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(project_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS subtask_permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            can_read INTEGER DEFAULT 1,
+            can_edit INTEGER DEFAULT 0,
+            added_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(sub_task_id, user_id)
+        );
     """)
 
     # Default-Bereiche einfuegen (nur wenn Tabelle leer)

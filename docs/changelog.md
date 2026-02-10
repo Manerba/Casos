@@ -1,6 +1,14 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 12:00;0.0.1+16;Feature;Teams: Projekte koennen Teammitglieder mit konfigurierbaren Berechtigungen (Lesen/Bearbeiten/Erstellen) haben
+10.02.2026 12:00;0.0.1+16;Feature;Granulare Subtask-Berechtigungen: Ueberschreibungen pro Teilaufgabe fuer einzelne Teammitglieder
+10.02.2026 12:00;0.0.1+16;Feature;Team-Dialog: Overlay zum Verwalten von Teammitgliedern (hinzufuegen, Berechtigungen aendern, entfernen)
+10.02.2026 12:00;0.0.1+16;Feature;Subtask-Berechtigungs-Dialog: Schloss-Icon pro Teilaufgabe, Override setzen/entfernen
+10.02.2026 12:00;0.0.1+16;Feature;Sichtbarkeit: Teammitglieder sehen Projekte in der Aufgabenliste, nicht-lesbare Teilaufgaben werden gefiltert
+10.02.2026 12:00;0.0.1+16;Aenderung;DB-Schema: project_members + subtask_permissions Tabellen
+10.02.2026 12:00;0.0.1+16;Aenderung;API: Neuer Router api_teams.py (Team-CRUD + Subtask-Permissions), Berechtigungschecks in bestehenden Subtask-Endpoints
+10.02.2026 12:00;0.0.1+16;Aenderung;Frontend: Readonly-Erzwingung basierend auf Backend-Permissions, Team-Button nur fuer Ersteller
 10.02.2026 09:00;0.0.1+15;Feature;Aufgabenzuweisung: Aufgaben/Teilaufgaben an andere Benutzer zuweisen
 10.02.2026 09:00;0.0.1+15;Feature;Sichtbarkeitsfilter: Benutzer sehen nur eigene/zugewiesene Aufgaben (+ Altdaten ohne Ersteller)
 10.02.2026 09:00;0.0.1+15;Feature;Notizen-System: Zugewiesene koennen Notizen hinterlassen, Ersteller sehen diese readonly

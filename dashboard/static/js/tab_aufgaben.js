@@ -163,8 +163,9 @@ function getTaskPermissions(row) {
     const isOwnTask = isCreator && !isAssigned;
     // Altdaten ohne created_by: alles editierbar
     const isLegacy = !row.created_by;
+    const isTeamMember = !!row.is_team_member;
 
-    return { isCreator, isAssignee, isAssigned, isOwnTask, isLegacy };
+    return { isCreator, isAssignee, isAssigned, isOwnTask, isLegacy, isTeamMember };
 }
 
 // ========================================
@@ -270,7 +271,10 @@ async function onTaskRowExpanded(rowId, detailElement) {
     // SubTask-Bereich fuer Projekte
     if (row.task_type === 'projekt') {
         html += `<div class="subtask-section" id="subtaskSection_${row.id}">
-            <h4>Teilaufgaben</h4>
+            <div class="subtask-section-header">
+                <h4>Teilaufgaben</h4>
+                ${perm.isCreator ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">Team</button>` : ''}
+            </div>
             <div id="subtaskContainer_${row.id}">
                 <div class="table-loading"><div class="spinner"></div></div>
             </div>
@@ -441,8 +445,10 @@ function renderSubTasks(taskId, subtasks) {
 
     // Parent-Task Permissions bestimmen
     const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
+    const parentPerm = parentRow ? getTaskPermissions(parentRow) : { isCreator: false, isLegacy: true };
 
     const areasOptions = buildAreaOptions();
+    const colCount = parentPerm.isCreator ? 12 : 11;
 
     let html = `<table class="subtask-table">
         <thead>
@@ -457,6 +463,7 @@ function renderSubTasks(taskId, subtasks) {
                 <th>Deadline</th>
                 <th>Prioritaet</th>
                 <th>Status (%)</th>
+                ${parentPerm.isCreator ? '<th class="perm-icon-cell"></th>' : ''}
                 <th></th>
             </tr>
         </thead>
@@ -466,6 +473,8 @@ function renderSubTasks(taskId, subtasks) {
         const predIds = st.predecessor_ids || [];
         const predDisplay = st.predecessors_display || '';
         const statusPct = st.status_percent || 0;
+        const stPerms = st.permissions || { can_read: true, can_edit: true, can_create: true, has_override: false };
+        const canEdit = stPerms.can_edit;
 
         // Daten-Zeile (klickbar, reiner Text)
         html += `<tr class="subtask-row" data-subtask-id="${st.id}" onclick="toggleSubTaskDetail(${taskId}, ${st.id})">
@@ -478,13 +487,23 @@ function renderSubTasks(taskId, subtasks) {
             <td>${escapeHtml(st.created_at)}</td>
             <td>${escapeHtml(st.deadline || '-')}</td>
             <td>${renderPriority(st.priority)}</td>
-            <td><span class="subtask-status-text"><span class="subtask-status-bar"><span class="subtask-status-fill" style="width:${statusPct}%"></span></span>${statusPct}%</span></td>
-            <td>
-                <div class="subtask-actions">
+            <td><span class="subtask-status-text"><span class="subtask-status-bar"><span class="subtask-status-fill" style="width:${statusPct}%"></span></span>${statusPct}%</span></td>`;
+
+        // Berechtigungs-Icon (nur Ersteller sieht es)
+        if (parentPerm.isCreator) {
+            const iconClass = stPerms.has_override ? 'perm-icon-override' : 'perm-icon-default';
+            const icon = stPerms.has_override ? '&#128274;' : '&#128275;';
+            html += `<td class="perm-icon-cell"><button class="perm-btn ${iconClass}" onclick="event.stopPropagation(); openSubtaskPermDialog(${taskId}, ${st.id})" title="Berechtigungen">${icon}</button></td>`;
+        }
+
+        // Delete-Button (nur Ersteller/Legacy)
+        html += `<td>`;
+        if (parentPerm.isCreator || parentPerm.isLegacy) {
+            html += `<div class="subtask-actions">
                     <button class="subtask-btn delete" onclick="event.stopPropagation(); deleteSubTask(${taskId}, ${st.id})">x</button>
-                </div>
-            </td>
-        </tr>`;
+                </div>`;
+        }
+        html += `</td></tr>`;
 
         // Detail-Zeile (versteckt, wird bei Klick eingeblendet)
         const dlISO = convertToISO(st.deadline);
@@ -499,56 +518,54 @@ function renderSubTasks(taskId, subtasks) {
             return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="event.stopPropagation(); removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
         }).join('');
 
-        // SubTask Permissions
-        const stPerm = getTaskPermissions(st);
-        const stNameRO = stPerm.isAssignee ? 'disabled' : '';
-        const stDeadlineRO = stPerm.isAssignee ? 'disabled' : '';
-        const stPrioRO = stPerm.isAssignee ? 'disabled' : '';
+        // Readonly-Status basierend auf Backend-Permissions
+        const fieldRO = !canEdit ? 'disabled' : '';
+        const fieldROClass = !canEdit ? 'field-readonly' : '';
 
         html += `<tr class="subtask-detail-row" data-subtask-detail-id="${st.id}">
-            <td colspan="11">
+            <td colspan="${colCount}">
                 <div class="subtask-detail-content">
                     <div class="detail-edit-header">
                         <div class="detail-edit-field flex-grow">
                             <label>Name</label>
-                            <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" ${stNameRO} class="${stNameRO ? 'field-readonly' : ''}">
+                            <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" ${fieldRO} class="${fieldROClass}">
                         </div>
                         <div class="detail-edit-field">
                             <label>Vorgaenger</label>
                             <div class="predecessor-input">
-                                <select id="predSelect_${st.id}">
+                                <select id="predSelect_${st.id}" ${fieldRO} class="${fieldROClass}">
                                     <option value="">--</option>
                                     ${predOptions}
                                 </select>
-                                <button onclick="event.stopPropagation(); addPredecessor(${taskId}, ${st.id})">+</button>
+                                <button onclick="event.stopPropagation(); addPredecessor(${taskId}, ${st.id})" ${fieldRO}>+</button>
                             </div>
                         </div>
                         <div class="predecessor-chips-inline" id="predChips_${st.id}">${predChips}</div>
                         <div class="detail-edit-field">
                             <label>Bereich</label>
                             <div class="area-select-wrapper">
-                                <select id="stEditArea_${st.id}">
+                                <select id="stEditArea_${st.id}" ${fieldRO} class="${fieldROClass}">
                                     <option value="">-</option>
                                     ${areasOptions.map(a => `<option value="${a.id}" ${a.id === st.area_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}
                                 </select>
-                                <button class="area-add-btn" onclick="event.stopPropagation(); addNewAreaInDetail(this, ${taskId}, ${st.id})" title="Neuer Bereich">+</button>
+                                ${canEdit ? `<button class="area-add-btn" onclick="event.stopPropagation(); addNewAreaInDetail(this, ${taskId}, ${st.id})" title="Neuer Bereich">+</button>` : ''}
                             </div>
                         </div>
                         <div class="detail-edit-field">
                             <label>Deadline</label>
-                            <input type="date" id="stEditDeadline_${st.id}" value="${dlISO}" ${stDeadlineRO} class="${stDeadlineRO ? 'field-readonly' : ''}">
+                            <input type="date" id="stEditDeadline_${st.id}" value="${dlISO}" ${fieldRO} class="${fieldROClass}">
                         </div>
                         <div class="detail-edit-field">
                             <label>Prioritaet</label>
-                            <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px" ${stPrioRO} class="${stPrioRO ? 'field-readonly' : ''}">
+                            <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px" ${fieldRO} class="${fieldROClass}">
                         </div>
                         <div class="detail-edit-field">
                             <label>Status (%)</label>
-                            <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px">
+                            <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px" ${fieldRO} class="${fieldROClass}">
                         </div>`;
 
         // Zuweisungs-Dropdown fuer SubTasks (nur Ersteller)
-        if (stPerm.isCreator || stPerm.isOwnTask || stPerm.isLegacy) {
+        if (parentPerm.isCreator || parentPerm.isLegacy) {
             html += `<div class="detail-edit-field">
                 <label>Zuweisen an</label>
                 <select id="stEditAssigned_${st.id}">
@@ -557,11 +574,20 @@ function renderSubTasks(taskId, subtasks) {
             </div>`;
         }
 
+        html += `</div>`;
+
+        // WYSIWYG oder Readonly-Beschreibung
+        if (canEdit) {
+            html += `<div id="stWysiwyg_${st.id}"></div>`;
+        } else {
+            html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
+        }
+
+        html += `<div class="detail-edit-actions">`;
+        if (canEdit) {
+            html += `<button class="action-btn primary" onclick="event.stopPropagation(); saveSubTask(${taskId}, ${st.id})">Speichern</button>`;
+        }
         html += `</div>
-                    <div id="stWysiwyg_${st.id}"></div>
-                    <div class="detail-edit-actions">
-                        <button class="action-btn primary" onclick="event.stopPropagation(); saveSubTask(${taskId}, ${st.id})">Speichern</button>
-                    </div>
                 </div>
             </td>
         </tr>`;
@@ -569,9 +595,14 @@ function renderSubTasks(taskId, subtasks) {
 
     html += `</tbody></table>`;
 
-    html += `<div class="subtask-add-row">
-        <button class="control-btn" onclick="addSubTask(${taskId})">+ Teilaufgabe</button>
-    </div>`;
+    // "+ Teilaufgabe"-Button: nur fuer Ersteller, Legacy, oder Teammitglieder mit can_create
+    const firstSt = subtasks[0];
+    const canCreate = parentPerm.isCreator || parentPerm.isLegacy || (firstSt && firstSt.permissions && firstSt.permissions.can_create);
+    if (canCreate || subtasks.length === 0) {
+        html += `<div class="subtask-add-row">
+            <button class="control-btn" onclick="addSubTask(${taskId})">+ Teilaufgabe</button>
+        </div>`;
+    }
 
     container.innerHTML = html;
 }
@@ -593,15 +624,17 @@ function toggleSubTaskDetail(taskId, subtaskId) {
         window.scrollBy(0, newRowTop - rowTop);
     }
 
-    // WYSIWYG-Editor beim ersten Aufklappen initialisieren
+    // WYSIWYG-Editor beim ersten Aufklappen initialisieren (nur wenn canEdit)
     if (isExpanding) {
         const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
         if (editorContainer && !editorContainer._editorInit) {
-            // Subtask-Daten aus dem Container holen
             const container = document.getElementById(`subtaskContainer_${taskId}`);
             const subtasks = container?._subtasksData || [];
             const st = subtasks.find(s => s.id === subtaskId);
-            new WysiwygEditor(`stWysiwyg_${subtaskId}`, st?.description || '');
+            const stPerms = st?.permissions || { can_edit: true };
+            if (stPerms.can_edit) {
+                new WysiwygEditor(`stWysiwyg_${subtaskId}`, st?.description || '');
+            }
             editorContainer._editorInit = true;
         }
     }
@@ -928,6 +961,309 @@ async function createNewTask() {
     } catch (error) {
         console.error('Erstellen fehlgeschlagen:', error);
         showNotification('Fehler beim Erstellen', 'error');
+    }
+}
+
+// ========================================
+// Team-Dialog (Sprint C)
+// ========================================
+
+async function openTeamDialog(projectId) {
+    const existing = document.querySelector('.modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="modal-content modal-wide">
+            <div class="modal-header">Teammitglieder</div>
+            <div class="modal-body">
+                <div class="team-info-text">Sie sind der Ersteller und haben vollen Zugriff.</div>
+                <div class="team-add-row">
+                    <select id="teamAddUserSelect">
+                        <option value="">-- Benutzer auswaehlen --</option>
+                    </select>
+                    <button class="control-btn primary" onclick="addTeamMember(${projectId})">+ Mitglied</button>
+                </div>
+                <div id="teamMembersContainer">
+                    <div class="table-loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Schliessen</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    await loadTeamMembers(projectId);
+}
+
+async function loadTeamMembers(projectId) {
+    const container = document.getElementById('teamMembersContainer');
+    if (!container) return;
+
+    try {
+        const resp = await fetch(`/api/tasks/${projectId}/members`);
+        if (!resp.ok) throw new Error('Fehler beim Laden');
+        const data = await resp.json();
+        const members = data.items || [];
+
+        // User-Dropdown aktualisieren (ohne Ersteller und bestehende Mitglieder)
+        const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(projectId));
+        const creatorId = parentRow ? parentRow.created_by : null;
+        const memberIds = members.map(m => m.user_id);
+
+        const select = document.getElementById('teamAddUserSelect');
+        if (select) {
+            select.innerHTML = '<option value="">-- Benutzer auswaehlen --</option>';
+            cachedUsers.forEach(u => {
+                if (u.id === creatorId || memberIds.includes(u.id)) return;
+                const name = `${u.vorname} ${u.nachname}`.trim() || `User ${u.id}`;
+                select.innerHTML += `<option value="${u.id}">${escapeHtml(name)}</option>`;
+            });
+        }
+
+        if (members.length === 0) {
+            container.innerHTML = '<div class="team-empty">Noch keine Teammitglieder hinzugefuegt.</div>';
+            return;
+        }
+
+        let html = `<table class="team-table">
+            <thead>
+                <tr>
+                    <th>Nachname</th>
+                    <th>Vorname</th>
+                    <th>E-Mail</th>
+                    <th style="text-align:center">Lesen</th>
+                    <th style="text-align:center">Bearbeiten</th>
+                    <th style="text-align:center">Erstellen</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        members.forEach(m => {
+            html += `<tr data-member-uid="${m.user_id}">
+                <td>${escapeHtml(m.nachname)}</td>
+                <td>${escapeHtml(m.vorname)}</td>
+                <td>${escapeHtml(m.email)}</td>
+                <td style="text-align:center"><input type="checkbox" ${m.can_read ? 'checked' : ''} onchange="updateTeamMember(${projectId}, ${m.user_id}, this.closest('tr'))"></td>
+                <td style="text-align:center"><input type="checkbox" ${m.can_edit ? 'checked' : ''} onchange="updateTeamMember(${projectId}, ${m.user_id}, this.closest('tr'))"></td>
+                <td style="text-align:center"><input type="checkbox" ${m.can_create ? 'checked' : ''} onchange="updateTeamMember(${projectId}, ${m.user_id}, this.closest('tr'))"></td>
+                <td><button class="team-remove-btn" onclick="removeTeamMember(${projectId}, ${m.user_id})">x</button></td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Team laden fehlgeschlagen:', error);
+        container.innerHTML = '<div class="table-error">Fehler beim Laden</div>';
+    }
+}
+
+async function addTeamMember(projectId) {
+    const select = document.getElementById('teamAddUserSelect');
+    if (!select || !select.value) {
+        showNotification('Bitte Benutzer auswaehlen', 'error');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/tasks/${projectId}/members`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: parseInt(select.value), can_read: true }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.detail || 'Fehler');
+        }
+
+        showNotification('Mitglied hinzugefuegt', 'success');
+        await loadTeamMembers(projectId);
+    } catch (error) {
+        showNotification(error.message || 'Fehler beim Hinzufuegen', 'error');
+    }
+}
+
+async function updateTeamMember(projectId, userId, row) {
+    if (!row) return;
+    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+    const can_read = checkboxes[0]?.checked || false;
+    const can_edit = checkboxes[1]?.checked || false;
+    const can_create = checkboxes[2]?.checked || false;
+
+    try {
+        const resp = await fetch(`/api/tasks/${projectId}/members/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ can_read, can_edit, can_create }),
+        });
+        if (!resp.ok) throw new Error('Fehler');
+    } catch (error) {
+        showNotification('Fehler beim Aktualisieren', 'error');
+    }
+}
+
+async function removeTeamMember(projectId, userId) {
+    if (!await msgbox('cancel/yes', 'confirm', 'Mitglied wirklich entfernen?')) return;
+
+    try {
+        const resp = await fetch(`/api/tasks/${projectId}/members/${userId}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Fehler');
+
+        showNotification('Mitglied entfernt', 'success');
+        await loadTeamMembers(projectId);
+    } catch (error) {
+        showNotification('Fehler beim Entfernen', 'error');
+    }
+}
+
+// ========================================
+// Subtask-Berechtigungs-Dialog (Sprint C)
+// ========================================
+
+async function openSubtaskPermDialog(projectId, subtaskId) {
+    const existing = document.querySelector('.modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    // Subtask-Name ermitteln
+    const container = document.getElementById(`subtaskContainer_${projectId}`);
+    const subtasks = container?._subtasksData || [];
+    const st = subtasks.find(s => s.id === subtaskId);
+    const stName = st ? st.name : `Teilaufgabe #${subtaskId}`;
+
+    overlay.innerHTML = `
+        <div class="modal-content modal-wide">
+            <div class="modal-header">Berechtigungen: ${escapeHtml(stName)}</div>
+            <div class="modal-body">
+                <div class="team-info-text">Ueberschreibungen gelten nur fuer diese Teilaufgabe. Ohne Ueberschreibung gelten die Projekt-Standardberechtigungen.</div>
+                <div id="subtaskPermContainer">
+                    <div class="table-loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Schliessen</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // Parallel laden: Mitglieder + Permissions
+    try {
+        const [membersResp, permsResp] = await Promise.all([
+            fetch(`/api/tasks/${projectId}/members`),
+            fetch(`/api/subtasks/${subtaskId}/permissions`),
+        ]);
+        const membersData = await membersResp.json();
+        const permsData = await permsResp.json();
+        const members = membersData.items || [];
+        const perms = permsData.items || [];
+
+        const permContainer = document.getElementById('subtaskPermContainer');
+        if (!permContainer) return;
+
+        if (members.length === 0) {
+            permContainer.innerHTML = '<div class="team-empty">Keine Teammitglieder vorhanden.</div>';
+            return;
+        }
+
+        // Permissions als Map
+        const permMap = {};
+        perms.forEach(p => { permMap[p.user_id] = p; });
+
+        let html = `<table class="team-table">
+            <thead>
+                <tr>
+                    <th>Nachname</th>
+                    <th>Vorname</th>
+                    <th style="text-align:center">Lesen</th>
+                    <th style="text-align:center">Bearbeiten</th>
+                    <th style="text-align:center">Override</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        members.forEach(m => {
+            const override = permMap[m.user_id];
+            const hasOverride = !!override;
+            const canRead = hasOverride ? override.can_read : m.can_read;
+            const canEdit = hasOverride ? override.can_edit : m.can_edit;
+
+            html += `<tr data-perm-uid="${m.user_id}">
+                <td>${escapeHtml(m.nachname)}</td>
+                <td>${escapeHtml(m.vorname)}</td>
+                <td style="text-align:center"><input type="checkbox" ${canRead ? 'checked' : ''} onchange="updateSubtaskPerm(${subtaskId}, ${m.user_id}, this.closest('tr'))"></td>
+                <td style="text-align:center"><input type="checkbox" ${canEdit ? 'checked' : ''} onchange="updateSubtaskPerm(${subtaskId}, ${m.user_id}, this.closest('tr'))"></td>
+                <td style="text-align:center">${hasOverride ? '<span class="override-indicator"></span>' : '-'}</td>
+                <td>${hasOverride ? `<button class="team-remove-btn" onclick="resetSubtaskPerm(${projectId}, ${subtaskId}, ${m.user_id})">Reset</button>` : ''}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table>';
+        permContainer.innerHTML = html;
+    } catch (error) {
+        console.error('Subtask-Berechtigungen laden fehlgeschlagen:', error);
+        const permContainer = document.getElementById('subtaskPermContainer');
+        if (permContainer) permContainer.innerHTML = '<div class="table-error">Fehler beim Laden</div>';
+    }
+}
+
+async function updateSubtaskPerm(subtaskId, userId, row) {
+    if (!row) return;
+    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
+    const can_read = checkboxes[0]?.checked || false;
+    const can_edit = checkboxes[1]?.checked || false;
+
+    try {
+        const resp = await fetch(`/api/subtasks/${subtaskId}/permissions/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ can_read, can_edit }),
+        });
+        if (!resp.ok) throw new Error('Fehler');
+    } catch (error) {
+        showNotification('Fehler beim Aktualisieren', 'error');
+    }
+}
+
+async function resetSubtaskPerm(projectId, subtaskId, userId) {
+    try {
+        const resp = await fetch(`/api/subtasks/${subtaskId}/permissions/${userId}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Fehler');
+
+        showNotification('Ueberschreibung entfernt', 'success');
+        // Dialog neu laden
+        await openSubtaskPermDialog(projectId, subtaskId);
+    } catch (error) {
+        showNotification('Fehler beim Entfernen', 'error');
     }
 }
 
