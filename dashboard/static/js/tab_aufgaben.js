@@ -9,6 +9,8 @@ let aufgabenConfig = null;
 let allExpanded = false;
 let cachedAreas = null;
 let cachedUsers = [];
+let ncConfigured = false;
+let ncDirectories = [];
 
 // ========================================
 // Tab Initialisierung
@@ -21,17 +23,26 @@ async function initAufgabenTab() {
     container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
 
     try {
-        // Config, Areas und Users parallel laden
-        const [configResp, areasResp, usersResp] = await Promise.all([
+        // Config, Areas, Users und Nextcloud-Status parallel laden
+        const [configResp, areasResp, usersResp, ncStatusResp] = await Promise.all([
             fetch('/api/tasks/config'),
             fetch('/api/areas'),
             fetch('/api/users/list'),
+            fetch('/api/nextcloud/status').catch(() => ({ ok: false })),
         ]);
         aufgabenConfig = await configResp.json();
         const areasData = await areasResp.json();
         cachedAreas = areasData.items || [];
         const usersData = await usersResp.json();
         cachedUsers = usersData.items || [];
+
+        // Nextcloud-Status
+        if (ncStatusResp.ok) {
+            const ncData = await ncStatusResp.json();
+            ncConfigured = ncData.configured || false;
+        } else {
+            ncConfigured = false;
+        }
 
         // Control-Bar aufbauen
         buildControlBar();
@@ -243,6 +254,16 @@ async function onTaskRowExpanded(rowId, detailElement) {
         </div>`;
     }
 
+    // Nextcloud-Verzeichniszuordnung (nur Projekte, nur wenn NC konfiguriert, nur Ersteller)
+    if (row.task_type === 'projekt' && ncConfigured && (perm.isCreator || perm.isLegacy)) {
+        html += `<div class="detail-edit-field">
+            <label>Dateiablage</label>
+            <select id="editNcPath_${row.id}" onchange="saveNcPath(${row.id}, this.value)">
+                <option value="">-- Keine --</option>
+            </select>
+        </div>`;
+    }
+
     html += `</div>`;
 
     // Beschreibung: WYSIWYG fuer Ersteller/eigene, readonly fuer Zugewiesene
@@ -273,8 +294,16 @@ async function onTaskRowExpanded(rowId, detailElement) {
         html += `<div id="wysiwygEditor_${row.id}"></div>`;
     }
 
-    // SubTask-Bereich fuer Projekte
+    // SubTask-Bereich fuer Projekte (ggf. mit Dateiablage in Zwei-Spalten)
     if (row.task_type === 'projekt') {
+        const hasNcPath = !!row.nextcloud_path;
+
+        // Zwei-Spalten-Layout starten wenn Dateiablage zugeordnet
+        if (hasNcPath && ncConfigured) {
+            html += `<div class="project-detail-columns">`;
+            html += `<div class="project-detail-left">`;
+        }
+
         html += `<div class="subtask-section" id="subtaskSection_${row.id}">
             <div class="subtask-section-header">
                 <h4>Teilaufgaben</h4>
@@ -287,6 +316,18 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <div class="table-loading"><div class="spinner"></div></div>
             </div>
         </div>`;
+
+        // Dateiablage-Spalte
+        if (hasNcPath && ncConfigured) {
+            html += `</div>`; // project-detail-left
+            html += `<div class="project-detail-right">
+                <div class="subtask-section">
+                    <div class="subtask-section-header"><h4>Dateiablage</h4></div>
+                    <div id="fileBrowserContainer_${row.id}"></div>
+                </div>
+            </div>`;
+            html += `</div>`; // project-detail-columns
+        }
     }
 
     // Aktions-Buttons
@@ -336,6 +377,19 @@ async function onTaskRowExpanded(rowId, detailElement) {
     // SubTasks laden wenn Projekt
     if (row.task_type === 'projekt') {
         loadSubTasks(row.id);
+
+        // Nextcloud-Verzeichnis-Dropdown laden
+        if (ncConfigured && (perm.isCreator || perm.isLegacy)) {
+            loadNcDirectories(row.id, row.nextcloud_path || '');
+        }
+
+        // File Browser initialisieren wenn Verzeichnis zugeordnet
+        if (row.nextcloud_path && ncConfigured) {
+            const fbContainer = document.getElementById(`fileBrowserContainer_${row.id}`);
+            if (fbContainer) {
+                new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
+            }
+        }
     }
 }
 
@@ -1659,4 +1713,47 @@ function openNetzplan(taskId) {
 
     overlay.querySelector('.netzplan-close-btn').addEventListener('click', closeOverlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
+}
+
+// ========================================
+// Nextcloud-Integration
+// ========================================
+
+async function loadNcDirectories(taskId, currentPath) {
+    const select = document.getElementById(`editNcPath_${taskId}`);
+    if (!select) return;
+
+    try {
+        const resp = await fetch('/api/nextcloud/directories');
+        if (!resp.ok) throw new Error('Fehler');
+        const data = await resp.json();
+        ncDirectories = data.directories || [];
+
+        ncDirectories.forEach(d => {
+            const option = document.createElement('option');
+            option.value = d.name;
+            option.textContent = d.name;
+            if (d.name === currentPath) option.selected = true;
+            select.appendChild(option);
+        });
+    } catch (e) {
+        // Dropdown bleibt mit "-- Keine --" Option
+    }
+}
+
+async function saveNcPath(taskId, value) {
+    try {
+        const resp = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nextcloud_path: value }),
+        });
+        if (!resp.ok) throw new Error('Fehler');
+        showNotification(value ? `Dateiablage "${value}" zugeordnet` : 'Dateiablage entfernt', 'success');
+
+        // Tabelle neu laden damit das Detail mit/ohne File Browser aktualisiert wird
+        await aufgabenTable.loadData();
+    } catch (error) {
+        showNotification('Fehler beim Speichern der Verzeichniszuordnung', 'error');
+    }
 }

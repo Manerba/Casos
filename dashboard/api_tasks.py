@@ -36,6 +36,7 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     description: Optional[str] = None
     assigned_to: Optional[int] = None
+    nextcloud_path: Optional[str] = None
 
 
 class SubTaskCreate(BaseModel):
@@ -146,6 +147,7 @@ async def get_tasks(user=Depends(get_current_user)):
                 "created_by_name": (row["created_by_name"] or "").strip(),
                 "assigned_to_name": (row["assigned_to_name"] or "").strip(),
                 "is_team_member": bool(row["is_team_member"]),
+                "nextcloud_path": row["nextcloud_path"] or "",
             })
 
         # Zugewiesene Teilaufgaben als Aufgaben-Eintraege
@@ -253,6 +255,14 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
             else:
                 updates.append("assigned_to = ?")
                 values.append(task.assigned_to)
+
+        # nextcloud_path: leerer String = entfernen, sonst setzen
+        if task.nextcloud_path is not None:
+            if task.nextcloud_path == "":
+                updates.append("nextcloud_path = NULL")
+            else:
+                updates.append("nextcloud_path = ?")
+                values.append(task.nextcloud_path)
 
         if updates:
             values.append(task_id)

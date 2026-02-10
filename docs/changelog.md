@@ -1,6 +1,16 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 23:50;0.0.1+29;Feature;Nextcloud-Dateiablage: WebDAV-Proxy-Integration fuer Projektverzeichnisse (browsen, oeffnen, hochladen, loeschen, ordner erstellen, umbenennen)
+10.02.2026 23:50;0.0.1+29;Feature;Admin-UI: Neuer Tab "Nextcloud" mit Verbindungskonfiguration (Server-URL, Benutzer, Passwort, Wurzelverzeichnis) und Verbindungstest
+10.02.2026 23:50;0.0.1+29;Feature;Dateiablage-Ansichten: Umschaltbare Baumansicht (Explorer-Stil, Lazy-Load) und Icon-Grid (Doppelklick-Navigation)
+10.02.2026 23:50;0.0.1+29;Feature;Breadcrumb-Navigation, Drag-and-Drop Upload, Upload-Fortschritt, Rechtsklick-Kontextmenue (Herunterladen, In Nextcloud oeffnen, Umbenennen, Loeschen)
+10.02.2026 23:50;0.0.1+29;Feature;Verzeichniszuordnung: Projekt-Ersteller waehlt Unterverzeichnis aus Nextcloud-Wurzelverzeichnis per Dropdown
+10.02.2026 23:50;0.0.1+29;Feature;Zwei-Spalten-Layout im Projekt-Detail: Links Editor+Teilaufgaben, rechts Dateiablage (responsive: untereinander ab 900px)
+10.02.2026 23:50;0.0.1+29;Feature;Datei-Icons: SVG-basiert nach Dateityp (Ordner, Bilder, PDF, Office, Text/Code, Archive, Video, Audio)
+10.02.2026 23:50;0.0.1+29;Aenderung;DB-Schema: nextcloud_config Tabelle, nextcloud_path Spalte in tasks
+10.02.2026 23:50;0.0.1+29;Aenderung;requirements.txt: httpx + python-multipart hinzugefuegt
+10.02.2026 23:50;0.0.1+29;Aenderung;Neue Dateien: webdav.py (WebDAV-Modul), api_nextcloud.py (Admin+Datei-API), file_browser.js, file_browser.css, tab_nextcloud.js
 10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Interaktiver Projekt-Aufgabengraph als Fullscreen-Overlay (vis-network)
 10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Hierarchisches Layout (links-nach-rechts), Knoten nach Status farbcodiert (Offen/In Arbeit/Erledigt)
 10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Zoom, Pan, Tooltips (Name, Status, Deadline, Bereich), Fit-Button, ESC/X schliessen

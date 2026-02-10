@@ -191,7 +191,21 @@ def init_db():
             last_sync_at TEXT,
             created_at TEXT DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS nextcloud_config (
+            id INTEGER PRIMARY KEY,
+            server_url TEXT NOT NULL,
+            username TEXT NOT NULL,
+            password TEXT NOT NULL,
+            base_path TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
     """)
+
+    # Migration: nextcloud_path fuer tasks
+    task_cols2 = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
+    if "nextcloud_path" not in task_cols2:
+        conn.execute("ALTER TABLE tasks ADD COLUMN nextcloud_path TEXT")
 
     # Default-Bereiche einfuegen (nur wenn Tabelle leer)
     cursor = conn.execute("SELECT COUNT(*) FROM areas")

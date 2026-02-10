@@ -41,6 +41,7 @@
     <nav class="tabs main-tabs">
         <a class="tab active" href="#" data-tab="benutzer">Benutzerverwaltung</a>
         <a class="tab" href="#" data-tab="ldap">LDAP</a>
+        <a class="tab" href="#" data-tab="nextcloud">Nextcloud</a>
     </nav>
 
     <!-- Filter Bar -->
@@ -58,6 +59,7 @@
     <script src="/static/js/app_core.js"></script>
     <script src="/static/js/tab_benutzer.js"></script>
     <script src="/static/js/tab_ldap.js"></script>
+    <script src="/static/js/tab_nextcloud.js"></script>
     <script>
         // Admin-App: User laden und Tab initialisieren
         let adminCurrentTab = 'benutzer';
@@ -77,6 +79,8 @@
             const path = window.location.pathname.replace(/\/+$/, '');
             if (path === '/ldap') {
                 switchAdminTab('ldap');
+            } else if (path === '/nextcloud') {
+                switchAdminTab('nextcloud');
             } else {
                 switchAdminTab('benutzer');
             }
@@ -92,7 +96,7 @@
             });
 
             // URL aktualisieren
-            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap' };
+            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap', 'nextcloud': '/nextcloud' };
             history.replaceState({}, '', pathMap[tab] || '/benutzer');
 
             // Tab-Inhalt laden
@@ -100,6 +104,8 @@
                 initBenutzerTab();
             } else if (tab === 'ldap') {
                 initLdapTab();
+            } else if (tab === 'nextcloud') {
+                initNextcloudTab();
             }
         }
     </script>

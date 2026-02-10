@@ -19,6 +19,7 @@ from dashboard.database import init_db
 from dashboard.api_auth import router as auth_router
 from dashboard.api_admin import router as admin_router
 from dashboard.api_ldap import router as ldap_router
+from dashboard.api_nextcloud import admin_router as nextcloud_admin_router
 from dashboard.auth import _extract_user_from_request
 
 
@@ -39,6 +40,9 @@ app.include_router(admin_router)
 
 # LDAP-Router (hat eigene get_admin_user Dependency pro Endpoint)
 app.include_router(ldap_router)
+
+# Nextcloud-Router (hat eigene get_admin_user Dependency pro Endpoint)
+app.include_router(nextcloud_admin_router)
 
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"

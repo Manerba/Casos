@@ -3,3 +3,5 @@ uvicorn[standard]
 bcrypt
 itsdangerous
 ldap3
+httpx
+python-multipart
