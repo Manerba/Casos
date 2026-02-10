@@ -134,29 +134,33 @@ def authenticate_user(config, username, password):
         # Service-Account: DN des Benutzers suchen
         conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
                                 config["use_ssl"])
+
+        search_filter = f'(&(objectClass=user)(sAMAccountName={_escape_ldap_filter(username)}))'
         conn.search(
             config["search_base"],
-            f'(&(objectClass=user)(sAMAccountName={_escape_ldap_filter(username)}))',
+            search_filter,
             search_scope=SUBTREE,
             attributes=['distinguishedName'],
         )
 
         if not conn.entries:
             conn.unbind()
-            return False, "Benutzer im LDAP nicht gefunden"
+            return False, (f"Benutzer '{username}' im LDAP nicht gefunden. "
+                           f"Search-Base: {config['search_base']}, Filter: {search_filter}")
 
         user_dn = str(conn.entries[0].distinguishedName)
         conn.unbind()
 
         # Bind mit Benutzer-Credentials
-        user_conn = _bind_connection(srv, user_dn, password, config["use_ssl"])
-        user_conn.unbind()
-        return True, None
+        try:
+            user_conn = _bind_connection(srv, user_dn, password, config["use_ssl"])
+            user_conn.unbind()
+            return True, None
+        except Exception as bind_err:
+            return False, f"Bind fehlgeschlagen fuer DN '{user_dn}': {bind_err}"
 
     except Exception as e:
         error_msg = str(e)
-        if "invalidCredentials" in error_msg:
-            return False, "Falsches Passwort"
         return False, f"LDAP-Authentifizierung fehlgeschlagen: {error_msg}"
 
 

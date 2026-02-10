@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 21:30;0.0.1+26;Bugfix;LDAP-Login: Detaillierte Fehlermeldungen statt generisches "Ungueltige Anmeldedaten" (zeigt Search-Base, DN, LDAP-Fehler)
 10.02.2026 21:15;0.0.1+25;Bugfix;LDAP: Blockierende LDAP-Aufrufe via asyncio.to_thread() in Thread-Pool ausgelagert (behebt "Failed to fetch" bei langsamer DC-Verbindung)
 10.02.2026 21:15;0.0.1+25;Bugfix;Admin-Benutzertabelle: showHeader + gridTemplate ergaenzt (Header fehlte, Spalten waren untereinander statt nebeneinander)
 10.02.2026 20:45;0.0.1+24;Bugfix;LDAP: get_info=NONE statt ALL (Samba-DC Schema-Query nach Bind schlug fehl mit raise_exceptions)

@@ -92,7 +92,7 @@ async def login(data: LoginRequest):
             raise HTTPException(status_code=503, detail="LDAP-Server nicht erreichbar")
 
         if not success:
-            raise HTTPException(status_code=401, detail="Ungueltige Anmeldedaten")
+            raise HTTPException(status_code=401, detail=f"LDAP-Login fehlgeschlagen: {error}")
     else:
         # Lokaler Benutzer: Passwort-Hash pruefen
         if not verify_password(data.password, row["password_hash"]):
