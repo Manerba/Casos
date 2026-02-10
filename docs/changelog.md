@@ -1,6 +1,14 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 17:00;0.0.1+19;Feature;LDAP-Integration: Active-Directory-Anbindung, AD-Benutzer automatisch synchronisieren
+10.02.2026 17:00;0.0.1+19;Feature;LDAP-Login: AD-Benutzer melden sich mit AD-Zugangsdaten an (LDAP-Bind), lokale Benutzer als Fallback
+10.02.2026 17:00;0.0.1+19;Feature;Admin-UI: Neuer Tab "LDAP" mit Server-Konfiguration, Verbindungstest, Gruppenauswahl
+10.02.2026 17:00;0.0.1+19;Feature;Admin-UI: Benutzerverwaltung zeigt Quelle (Lokal/LDAP) und Status (Aktiv/Deaktiviert)
+10.02.2026 17:00;0.0.1+19;Feature;LDAP-Sync: Manuell via Button + periodisch via systemd-Timer (15 Min.)
+10.02.2026 17:00;0.0.1+19;Aenderung;DB-Schema: auth_source, ldap_dn, is_active in users; neue Tabelle ldap_config
+10.02.2026 17:00;0.0.1+19;Aenderung;LDAP-Benutzer in Benutzerverwaltung: Felder readonly (ausser Admin-Checkbox), Loeschen nur wenn deaktiviert
+10.02.2026 17:00;0.0.1+19;Aenderung;requirements.txt: ldap3 hinzugefuegt
 10.02.2026 16:15;0.0.1+18;Bugfix;Subtask-View Save: Negative ID als strukturelles Signal (robust gegen Browser-Cache mit altem JS)
 10.02.2026 15:00;0.0.1+17;Bugfix;Zugewiesene Teilaufgaben erscheinen jetzt in der Aufgabenliste des Zugewiesenen (als Pseudo-Aufgabe mit Projekt-Info)
 10.02.2026 15:00;0.0.1+17;Bugfix;Readonly-Logik korrigiert: Deadline+Prioritaet bleiben fuer Ersteller nach Zuweisung editierbar

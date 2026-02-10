@@ -52,8 +52,48 @@ async def login(data: LoginRequest):
     finally:
         db.close()
 
-    if not row or not verify_password(data.password, row["password_hash"]):
-        raise HTTPException(status_code=401, detail="Ungueltige Anmeldedaten")
+    if not row:
+        raise HTTPException(status_code=401, detail="Benutzer nicht gefunden")
+
+    auth_source = row["auth_source"] if "auth_source" in row.keys() else "local"
+    is_active = row["is_active"] if "is_active" in row.keys() else 1
+
+    if auth_source == "ldap":
+        # LDAP-Benutzer: Pruefen ob aktiv
+        if not is_active:
+            raise HTTPException(status_code=401, detail="Benutzer deaktiviert")
+
+        # LDAP-Config laden und Authentifizierung
+        config_db = get_db()
+        try:
+            config_row = config_db.execute("SELECT * FROM ldap_config WHERE id = 1").fetchone()
+        finally:
+            config_db.close()
+
+        if not config_row:
+            raise HTTPException(status_code=503, detail="LDAP-Server nicht konfiguriert")
+
+        config = {
+            "server": config_row["server"],
+            "port": config_row["port"],
+            "use_ssl": config_row["use_ssl"],
+            "bind_dn": config_row["bind_dn"],
+            "bind_password": config_row["bind_password"],
+            "search_base": config_row["search_base"],
+        }
+
+        try:
+            from dashboard.ldap_utils import authenticate_user
+            success, error = authenticate_user(config, data.username, data.password)
+        except Exception:
+            raise HTTPException(status_code=503, detail="LDAP-Server nicht erreichbar")
+
+        if not success:
+            raise HTTPException(status_code=401, detail="Ungueltige Anmeldedaten")
+    else:
+        # Lokaler Benutzer: Passwort-Hash pruefen
+        if not verify_password(data.password, row["password_hash"]):
+            raise HTTPException(status_code=401, detail="Ungueltige Anmeldedaten")
 
     token = create_session(row["id"])
 

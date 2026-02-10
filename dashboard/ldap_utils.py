@@ -1,0 +1,170 @@
+"""
+Tareas - LDAP Hilfsfunktionen
+Verbindung, Gruppen, Mitglieder, Authentifizierung via ldap3.
+"""
+
+from ldap3 import Server, Connection, ALL, SUBTREE, Tls
+import ssl
+
+
+def _create_server(server_addr, port, use_ssl):
+    """Erstellt ein ldap3.Server-Objekt."""
+    if use_ssl:
+        tls = Tls(validate=ssl.CERT_NONE)
+        return Server(server_addr, port=port, use_ssl=True, tls=tls, get_info=ALL, connect_timeout=10)
+    return Server(server_addr, port=port, use_ssl=False, get_info=ALL, connect_timeout=10)
+
+
+def test_connection(server_addr, port, use_ssl, bind_dn, bind_password, search_base):
+    """
+    Verbindungstest mit den angegebenen Parametern.
+    Liefert (True, None) bei Erfolg, (False, Fehlermeldung) bei Fehler.
+    """
+    try:
+        srv = _create_server(server_addr, port, use_ssl)
+        conn = Connection(srv, user=bind_dn, password=bind_password, auto_bind=True,
+                          receive_timeout=10)
+        # Teste ob search_base erreichbar ist
+        conn.search(search_base, '(objectClass=*)', search_scope=SUBTREE,
+                    size_limit=1, attributes=[])
+        conn.unbind()
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def list_groups(config):
+    """
+    Alle Gruppen im search_base auflisten.
+    config: dict mit server, port, use_ssl, bind_dn, bind_password, search_base
+    Liefert Liste von {dn, name}.
+    """
+    try:
+        srv = _create_server(config["server"], config["port"], config["use_ssl"])
+        conn = Connection(srv, user=config["bind_dn"], password=config["bind_password"],
+                          auto_bind=True, receive_timeout=10)
+        conn.search(
+            config["search_base"],
+            '(objectClass=group)',
+            search_scope=SUBTREE,
+            attributes=['cn', 'distinguishedName'],
+        )
+        groups = []
+        for entry in conn.entries:
+            groups.append({
+                "dn": str(entry.distinguishedName),
+                "name": str(entry.cn),
+            })
+        conn.unbind()
+        groups.sort(key=lambda g: g["name"].lower())
+        return groups
+    except Exception as e:
+        raise RuntimeError(f"Gruppen konnten nicht geladen werden: {e}")
+
+
+def get_group_members(config):
+    """
+    Alle Benutzer der konfigurierten Gruppe abrufen.
+    config: dict mit server, port, use_ssl, bind_dn, bind_password, search_base, group_dn
+    Liefert Liste von {dn, sAMAccountName, sn, givenName, mail}.
+    """
+    try:
+        srv = _create_server(config["server"], config["port"], config["use_ssl"])
+        conn = Connection(srv, user=config["bind_dn"], password=config["bind_password"],
+                          auto_bind=True, receive_timeout=30)
+
+        # Mitglieder der Gruppe abrufen
+        conn.search(
+            config["group_dn"],
+            '(objectClass=group)',
+            search_scope=SUBTREE,
+            attributes=['member'],
+        )
+
+        if not conn.entries:
+            conn.unbind()
+            return []
+
+        members_dns = conn.entries[0].member.values if conn.entries[0].member else []
+
+        members = []
+        for member_dn in members_dns:
+            conn.search(
+                str(member_dn),
+                '(objectClass=user)',
+                search_scope=SUBTREE,
+                attributes=['sAMAccountName', 'sn', 'givenName', 'mail', 'distinguishedName'],
+            )
+            if conn.entries:
+                entry = conn.entries[0]
+                members.append({
+                    "dn": str(entry.distinguishedName),
+                    "sAMAccountName": str(entry.sAMAccountName) if entry.sAMAccountName else "",
+                    "sn": str(entry.sn) if entry.sn else "",
+                    "givenName": str(entry.givenName) if entry.givenName else "",
+                    "mail": str(entry.mail) if entry.mail else "",
+                })
+
+        conn.unbind()
+        return members
+    except Exception as e:
+        raise RuntimeError(f"Gruppenmitglieder konnten nicht geladen werden: {e}")
+
+
+def authenticate_user(config, username, password):
+    """
+    LDAP-Bind mit Benutzer-DN.
+    1. DN des Benutzers anhand sAMAccountName finden (mit Service-Account)
+    2. Bind-Versuch mit gefundenem DN + eingegebenem Passwort
+    Liefert (True, None) bei Erfolg, (False, Fehlermeldung) bei Fehler.
+    """
+    try:
+        srv = _create_server(config["server"], config["port"], config["use_ssl"])
+
+        # Service-Account: DN des Benutzers suchen
+        conn = Connection(srv, user=config["bind_dn"], password=config["bind_password"],
+                          auto_bind=True, receive_timeout=10)
+        conn.search(
+            config["search_base"],
+            f'(&(objectClass=user)(sAMAccountName={_escape_ldap_filter(username)}))',
+            search_scope=SUBTREE,
+            attributes=['distinguishedName'],
+        )
+
+        if not conn.entries:
+            conn.unbind()
+            return False, "Benutzer im LDAP nicht gefunden"
+
+        user_dn = str(conn.entries[0].distinguishedName)
+        conn.unbind()
+
+        # Bind mit Benutzer-Credentials
+        user_conn = Connection(srv, user=user_dn, password=password, auto_bind=True,
+                               receive_timeout=10)
+        user_conn.unbind()
+        return True, None
+
+    except Exception as e:
+        error_msg = str(e)
+        if "invalidCredentials" in error_msg:
+            return False, "Falsches Passwort"
+        return False, f"LDAP-Authentifizierung fehlgeschlagen: {error_msg}"
+
+
+def _escape_ldap_filter(value):
+    """Escaped Sonderzeichen fuer LDAP-Filter (RFC 4515)."""
+    result = ""
+    for char in value:
+        if char == '\\':
+            result += '\\5c'
+        elif char == '*':
+            result += '\\2a'
+        elif char == '(':
+            result += '\\28'
+        elif char == ')':
+            result += '\\29'
+        elif char == '\x00':
+            result += '\\00'
+        else:
+            result += char
+    return result

@@ -365,9 +365,20 @@ gehe bitte in den planungsmodus für den nächsten sprint: mehrbenutzerfähigkei
 		- alle ad-benutzer, welche mitglied dieser gruppe sind, sollen als benutzer der benutzerverwaltung hinzugefügt werden (nur anzeige, keine änderungen am bentzer erlauben, da quelle das ldap ist) und sich mit benutzername und passwort ihres ad-benutzerkontos in tareas anmelden dürfen.
 }
 
+------------------------------------------------------------------------------------
+
+Python-Library      : ldap3
+LDAPS (SSL)?        : Port 389 vs. 636 - im Prompt nur "IP + Port", SSL fehlt -> SSL-Checkbox, bei aktivierung wird port als vorschlag in textbox ergänzt
+Sync-Strategie      : Periodisch (intervall kann in minuten angegeben werden -> soll über service gehen, ein cron-job) und Button "Jetzt synchronisieren"
+Benutzer-Entfernung : Was passiert wenn jemand aus der AD-Gruppe entfernt wird? -> Deaktivieren mit Loeschen-button für manuelles bereinigen der liste
+Koexistenz          : Lokale Benutzer (admin) + LDAP-Benutzer parallel? -> Login-Fallback wenn LDAP down
+Mehrere Gruppen?    : Nur eine Gruppe
+Auth-Flow           : Bei Login: ad-benutzer immer gegen LDAP, lokale benutzer gegen lokale db
+Welche Attribute?   : benutzername (SamAccountName), Nachname (sn), Vorname (GivenName), E-Mail (mail)
+
 ====================================================================================
 
-
+Implementiere bitte den Plan aus docs/TODO/sprint_ldap_integration.md
 
 ====================================================================================
 

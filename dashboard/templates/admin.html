@@ -40,6 +40,7 @@
     <!-- Tabs -->
     <nav class="tabs main-tabs">
         <a class="tab active" href="#" data-tab="benutzer">Benutzerverwaltung</a>
+        <a class="tab" href="#" data-tab="ldap">LDAP</a>
     </nav>
 
     <!-- Filter Bar -->
@@ -56,12 +57,51 @@
     <script src="/static/js/expandable_table.js"></script>
     <script src="/static/js/app_core.js"></script>
     <script src="/static/js/tab_benutzer.js"></script>
+    <script src="/static/js/tab_ldap.js"></script>
     <script>
         // Admin-App: User laden und Tab initialisieren
+        let adminCurrentTab = 'benutzer';
+
         document.addEventListener('DOMContentLoaded', async function() {
             await loadCurrentUser();
-            initBenutzerTab();
+
+            // Tab-Klick-Handler
+            document.querySelectorAll('.main-tabs .tab').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    switchAdminTab(this.dataset.tab);
+                });
+            });
+
+            // URL-basierter Tab
+            const path = window.location.pathname.replace(/\/+$/, '');
+            if (path === '/ldap') {
+                switchAdminTab('ldap');
+            } else {
+                switchAdminTab('benutzer');
+            }
         });
+
+        function switchAdminTab(tab) {
+            adminCurrentTab = tab;
+
+            // Tab-Buttons aktualisieren
+            document.querySelectorAll('.main-tabs .tab').forEach(t => {
+                t.classList.remove('active');
+                if (t.dataset.tab === tab) t.classList.add('active');
+            });
+
+            // URL aktualisieren
+            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap' };
+            history.replaceState({}, '', pathMap[tab] || '/benutzer');
+
+            // Tab-Inhalt laden
+            if (tab === 'benutzer') {
+                initBenutzerTab();
+            } else if (tab === 'ldap') {
+                initLdapTab();
+            }
+        }
     </script>
 </body>
 </html>

@@ -648,3 +648,174 @@ a.tab {
         flex-wrap: wrap;
     }
 }
+
+/* ========================================
+   LDAP Tab Styles
+   ======================================== */
+
+.ldap-container {
+    padding: 20px;
+    max-width: 900px;
+}
+
+.ldap-section {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.ldap-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.ldap-form-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.ldap-form-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ldap-form-field label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.ldap-form-field input[type="text"],
+.ldap-form-field input[type="password"],
+.ldap-form-field input[type="number"],
+.ldap-form-field input[type="email"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+.ldap-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    padding-top: 4px;
+}
+
+.ldap-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.ldap-status-info {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.ldap-group-selected {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.ldap-group-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ldap-group-dn {
+    font-size: 11px;
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+.ldap-sync-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.ldap-last-sync {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.ldap-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 8px 0;
+}
+
+.ldap-groups-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ldap-groups-table th,
+.ldap-groups-table td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ldap-groups-table th {
+    background: var(--bg-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.badge-admin {
+    background-color: rgba(52, 152, 219, 0.2);
+    color: var(--accent-primary);
+}
+
+.badge-ldap {
+    background-color: rgba(142, 68, 173, 0.2);
+    color: #8e44ad;
+}
+
+.badge-local {
+    background-color: rgba(108, 117, 125, 0.2);
+    color: var(--color-neutral);
+}
+
+.badge-active {
+    background-color: rgba(40, 167, 69, 0.2);
+    color: var(--color-bullish);
+}
+
+.badge-inactive {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: var(--color-bearish);
+}
+
+[data-theme="dark"] .badge-ldap {
+    background-color: rgba(142, 68, 173, 0.3);
+    color: #bb6bd9;
+}

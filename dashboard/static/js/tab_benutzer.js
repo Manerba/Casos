@@ -37,11 +37,13 @@ async function initBenutzerTab() {
         expandable: true,
         columns: [
             { label: 'Nachname', field: 'nachname', width: 0, sortable: true },
-            { label: 'Vorname', field: 'vorname', width: 150, sortable: true },
-            { label: 'Benutzername', field: 'username', width: 150, sortable: true },
-            { label: 'E-Mail', field: 'email', width: 200, sortable: true },
+            { label: 'Vorname', field: 'vorname', width: 130, sortable: true },
+            { label: 'Benutzername', field: 'username', width: 130, sortable: true },
+            { label: 'E-Mail', field: 'email', width: 180, sortable: true },
+            { label: 'Quelle', field: 'auth_source', width: 70, sortable: true, align: 'center', renderer: 'sourceBadge' },
+            { label: 'Status', field: 'is_active', width: 80, sortable: true, align: 'center', renderer: 'statusBadge' },
             { label: 'Admin', field: 'is_admin', width: 70, sortable: true, align: 'center', renderer: 'adminBadge' },
-            { label: 'Erstellt', field: 'created_at', width: 120, sortable: true },
+            { label: 'Erstellt', field: 'created_at', width: 100, sortable: true },
         ],
         detailFields: [],
         defaultSort: { field: 'nachname', direction: 'asc' },
@@ -64,6 +66,8 @@ async function initBenutzerTab() {
     });
 
     benutzerTable.renderers['adminBadge'] = renderAdminBadge;
+    benutzerTable.renderers['sourceBadge'] = renderSourceBadge;
+    benutzerTable.renderers['statusBadge'] = renderStatusBadge;
 
     if (typeof window.tables === 'undefined') window.tables = {};
     window.tables['benutzer'] = benutzerTable;
@@ -87,6 +91,20 @@ function renderAdminBadge(value) {
     return '';
 }
 
+function renderSourceBadge(value) {
+    if (value === 'ldap') {
+        return '<span class="badge badge-ldap">LDAP</span>';
+    }
+    return '<span class="badge badge-local">Lokal</span>';
+}
+
+function renderStatusBadge(value) {
+    if (value === 0) {
+        return '<span class="badge badge-inactive">Deaktiviert</span>';
+    }
+    return '<span class="badge badge-active">Aktiv</span>';
+}
+
 // ========================================
 // Detail-Bereich
 // ========================================
@@ -97,19 +115,23 @@ function onUserRowExpanded(rowId, detailElement) {
     const row = benutzerTable.filteredData.find(r => String(r.id) === String(rowId));
     if (!row) return;
 
-    const html = `<div class="detail-edit" data-user-id="${row.id}">
+    const isLdap = row.auth_source === 'ldap';
+    const readonly = isLdap ? 'readonly' : '';
+    const readonlyStyle = isLdap ? 'opacity:0.6;' : '';
+
+    let html = `<div class="detail-edit" data-user-id="${row.id}">
         <div class="detail-edit-header">
             <div class="detail-edit-field">
                 <label>Nachname</label>
-                <input type="text" id="editNachname_${row.id}" value="${escapeAttr(row.nachname)}">
+                <input type="text" id="editNachname_${row.id}" value="${escapeAttr(row.nachname)}" ${readonly} style="${readonlyStyle}">
             </div>
             <div class="detail-edit-field">
                 <label>Vorname</label>
-                <input type="text" id="editVorname_${row.id}" value="${escapeAttr(row.vorname)}">
+                <input type="text" id="editVorname_${row.id}" value="${escapeAttr(row.vorname)}" ${readonly} style="${readonlyStyle}">
             </div>
             <div class="detail-edit-field">
                 <label>E-Mail</label>
-                <input type="email" id="editEmail_${row.id}" value="${escapeAttr(row.email)}">
+                <input type="email" id="editEmail_${row.id}" value="${escapeAttr(row.email)}" ${readonly} style="${readonlyStyle}">
             </div>
             <div class="detail-edit-field">
                 <label>Admin</label>
@@ -118,18 +140,29 @@ function onUserRowExpanded(rowId, detailElement) {
                     Administrator
                 </label>
             </div>
-        </div>
+        </div>`;
+
+    // Passwort-Feld nur fuer lokale Benutzer
+    if (!isLdap) {
+        html += `
         <div class="detail-edit-header" style="margin-top:12px">
             <div class="detail-edit-field">
                 <label>Neues Passwort (leer = nicht aendern)</label>
                 <input type="password" id="editPassword_${row.id}" placeholder="Neues Passwort..." autocomplete="new-password">
             </div>
-        </div>
-        <div class="detail-edit-actions">
-            <button class="action-btn primary" onclick="saveUser(${row.id})">Speichern</button>
-            <button class="action-btn danger" onclick="deleteUser(${row.id}, '${escapeAttr(row.username)}')">Loeschen</button>
-        </div>
-    </div>`;
+        </div>`;
+    }
+
+    // Buttons
+    html += '<div class="detail-edit-actions">';
+    html += `<button class="action-btn primary" onclick="saveUser(${row.id})">Speichern</button>`;
+
+    // Loeschen-Button: LDAP-User nur wenn deaktiviert, lokale immer
+    if (!isLdap || !row.is_active) {
+        html += ` <button class="action-btn danger" onclick="deleteUser(${row.id}, '${escapeAttr(row.username)}')">Loeschen</button>`;
+    }
+
+    html += '</div></div>';
 
     detailElement.innerHTML = html;
 }
@@ -149,14 +182,21 @@ function escapeAttr(text) {
 // ========================================
 
 async function saveUser(userId) {
-    const vorname = document.getElementById(`editVorname_${userId}`)?.value || '';
-    const nachname = document.getElementById(`editNachname_${userId}`)?.value || '';
-    const email = document.getElementById(`editEmail_${userId}`)?.value || '';
-    const is_admin = document.getElementById(`editAdmin_${userId}`)?.checked ? 1 : 0;
-    const password = document.getElementById(`editPassword_${userId}`)?.value || '';
+    // Pruefen ob LDAP-User (dann nur is_admin senden)
+    const row = benutzerTable?.filteredData?.find(r => String(r.id) === String(userId));
+    const isLdap = row?.auth_source === 'ldap';
 
-    const body = { vorname, nachname, email, is_admin };
-    if (password) body.password = password;
+    const is_admin = document.getElementById(`editAdmin_${userId}`)?.checked ? 1 : 0;
+
+    const body = { is_admin };
+
+    if (!isLdap) {
+        body.vorname = document.getElementById(`editVorname_${userId}`)?.value || '';
+        body.nachname = document.getElementById(`editNachname_${userId}`)?.value || '';
+        body.email = document.getElementById(`editEmail_${userId}`)?.value || '';
+        const password = document.getElementById(`editPassword_${userId}`)?.value || '';
+        if (password) body.password = password;
+    }
 
     try {
         const resp = await fetch(`/api/admin/users/${userId}`, {

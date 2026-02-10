@@ -166,6 +166,33 @@ def init_db():
         );
     """)
 
+    # Migration: LDAP-Felder fuer users-Tabelle
+    user_cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+    if "auth_source" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN auth_source TEXT DEFAULT 'local'")
+    if "ldap_dn" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN ldap_dn TEXT")
+    if "is_active" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
+
+    # LDAP-Config Tabelle
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS ldap_config (
+            id INTEGER PRIMARY KEY,
+            server TEXT NOT NULL,
+            port INTEGER DEFAULT 389,
+            use_ssl INTEGER DEFAULT 0,
+            bind_dn TEXT NOT NULL,
+            bind_password TEXT NOT NULL,
+            search_base TEXT NOT NULL,
+            group_dn TEXT,
+            group_name TEXT,
+            sync_interval_minutes INTEGER DEFAULT 60,
+            last_sync_at TEXT,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+    """)
+
     # Default-Bereiche einfuegen (nur wenn Tabelle leer)
     cursor = conn.execute("SELECT COUNT(*) FROM areas")
     if cursor.fetchone()[0] == 0:

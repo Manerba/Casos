@@ -45,7 +45,9 @@ async def get_users(user=Depends(get_admin_user)):
     db = get_db()
     try:
         rows = db.execute(
-            "SELECT id, username, vorname, nachname, email, is_admin, created_at FROM users ORDER BY username"
+            """SELECT id, username, vorname, nachname, email, is_admin, created_at,
+                      auth_source, is_active
+               FROM users ORDER BY username"""
         ).fetchall()
         return {
             "items": [
@@ -57,6 +59,8 @@ async def get_users(user=Depends(get_admin_user)):
                     "email": r["email"],
                     "is_admin": r["is_admin"],
                     "created_at": r["created_at"],
+                    "auth_source": r["auth_source"] or "local",
+                    "is_active": r["is_active"] if r["is_active"] is not None else 1,
                 }
                 for r in rows
             ],
