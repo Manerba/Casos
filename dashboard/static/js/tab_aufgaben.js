@@ -256,44 +256,50 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
     html += `</div>`;
 
+    // Beschreibung + Dateiablage: Zwei-Spalten-Layout wenn NC-Verzeichnis zugeordnet
+    const isProjektWithNc = row.task_type === 'projekt' && !!row.nextcloud_path && ncConfigured;
+
+    if (isProjektWithNc) {
+        html += `<div class="project-detail-columns">`;
+        html += `<div class="project-detail-left">`;
+    }
+
     // Beschreibung: WYSIWYG fuer Ersteller/eigene, readonly fuer Zugewiesene
     if (perm.isAssignee && !perm.isCreator) {
-        // Zugewiesener: Beschreibung des Erstellers readonly
         html += `<div class="notes-section">
             <h5>Beschreibung von ${escapeHtml(row.created_by_name || 'Ersteller')}</h5>
             <div class="description-readonly">${row.description || '<em>Keine Beschreibung</em>'}</div>
         </div>`;
-        // Eigener Notiz-Editor
         html += `<div class="notes-section">
             <h5>Meine Notizen</h5>
             <div id="notesEditor_${row.id}"></div>
         </div>`;
     } else if (perm.isCreator && perm.isAssigned) {
-        // Ersteller mit Zuweisung: Beschreibung readonly
         html += `<div class="notes-section">
             <h5>Beschreibung</h5>
             <div class="description-readonly">${row.description || '<em>Keine Beschreibung</em>'}</div>
         </div>`;
-        // Notizen des Zugewiesenen readonly (geladen via API)
         html += `<div class="notes-section" id="assigneeNotes_${row.id}">
             <h5>Notizen von ${escapeHtml(row.assigned_to_name || 'Zugewiesenem')}</h5>
             <div class="description-readonly" id="assigneeNotesContent_${row.id}"><em>Laden...</em></div>
         </div>`;
     } else {
-        // Eigene Aufgabe / Altdaten: WYSIWYG-Editor
         html += `<div id="wysiwygEditor_${row.id}"></div>`;
     }
 
-    // SubTask-Bereich fuer Projekte (ggf. mit Dateiablage in Zwei-Spalten)
+    if (isProjektWithNc) {
+        html += `</div>`; // project-detail-left
+        html += `<div class="project-detail-right">
+            <div class="subtask-section">
+                <div class="subtask-section-header"><h4>Dateiablage</h4></div>
+                <div id="fileBrowserContainer_${row.id}"></div>
+            </div>
+        </div>`;
+        html += `</div>`; // project-detail-columns
+    }
+
+    // SubTask-Bereich fuer Projekte
     if (row.task_type === 'projekt') {
-        const hasNcPath = !!row.nextcloud_path;
-
-        // Zwei-Spalten-Layout starten wenn Dateiablage zugeordnet
-        if (hasNcPath && ncConfigured) {
-            html += `<div class="project-detail-columns">`;
-            html += `<div class="project-detail-left">`;
-        }
-
         html += `<div class="subtask-section" id="subtaskSection_${row.id}">
             <div class="subtask-section-header">
                 <h4>Teilaufgaben</h4>
@@ -307,18 +313,6 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <div class="table-loading"><div class="spinner"></div></div>
             </div>
         </div>`;
-
-        // Dateiablage-Spalte
-        if (hasNcPath && ncConfigured) {
-            html += `</div>`; // project-detail-left
-            html += `<div class="project-detail-right">
-                <div class="subtask-section">
-                    <div class="subtask-section-header"><h4>Dateiablage</h4></div>
-                    <div id="fileBrowserContainer_${row.id}"></div>
-                </div>
-            </div>`;
-            html += `</div>`; // project-detail-columns
-        }
     }
 
     // Aktions-Buttons
@@ -1714,17 +1708,15 @@ async function openNcDirDialog(taskId, currentPath) {
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
     overlay.innerHTML = `
-        <div class="modal-content">
+        <div class="modal-content modal-wide">
             <div class="modal-header">Projektverzeichnis</div>
             <div class="modal-body">
-                <p style="margin:0 0 12px; font-size:13px; color:var(--text-secondary, #666);">
-                    Waehle ein Unterverzeichnis aus der Nextcloud-Dateiablage fuer dieses Projekt.
-                </p>
+                <div class="nc-browse-breadcrumb" id="ncBrowseBc"></div>
                 <div id="ncDirList">
                     <div class="table-loading"><div class="spinner"></div></div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="ncDirFooter">
                 ${currentPath ? `<button class="action-btn danger" onclick="saveNcPath(${taskId}, '', this.closest('.modal-overlay'))">Zuordnung entfernen</button>` : ''}
                 <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
             </div>
@@ -1741,26 +1733,63 @@ async function openNcDirDialog(taskId, currentPath) {
     };
     document.addEventListener('keydown', escHandler);
 
-    // Verzeichnisse laden
+    // Browse starten bei Root
+    ncBrowseDir(taskId, '', currentPath);
+}
+
+async function ncBrowseDir(taskId, browsePath, selectedPath) {
     const listContainer = document.getElementById('ncDirList');
+    const bcContainer = document.getElementById('ncBrowseBc');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
+
+    // Breadcrumb aktualisieren
+    if (bcContainer) {
+        const parts = browsePath ? browsePath.split('/').filter(Boolean) : [];
+        let bcHtml = `<span class="nc-bc-item" onclick="ncBrowseDir(${taskId}, '', '${escapeAttr(selectedPath)}')">&#127968; Wurzelverzeichnis</span>`;
+        let accumulated = '';
+        parts.forEach(part => {
+            accumulated += (accumulated ? '/' : '') + part;
+            const p = accumulated;
+            bcHtml += `<span class="nc-bc-sep">/</span>`;
+            bcHtml += `<span class="nc-bc-item" onclick="ncBrowseDir(${taskId}, '${escapeAttr(p)}', '${escapeAttr(selectedPath)}')">${escapeHtml(part)}</span>`;
+        });
+        bcContainer.innerHTML = bcHtml;
+    }
+
+    // "Diesen Ordner waehlen"-Button anzeigen wenn wir nicht in Root sind
+    const footer = document.getElementById('ncDirFooter');
+    if (footer && browsePath) {
+        // Bestehende "waehlen"-Buttons entfernen
+        footer.querySelectorAll('.nc-select-btn').forEach(b => b.remove());
+        const selectBtn = document.createElement('button');
+        selectBtn.className = 'action-btn primary nc-select-btn';
+        selectBtn.textContent = `"${browsePath.split('/').pop()}" waehlen`;
+        selectBtn.onclick = () => saveNcPath(taskId, browsePath, footer.closest('.modal-overlay'));
+        footer.insertBefore(selectBtn, footer.firstChild);
+    } else if (footer) {
+        footer.querySelectorAll('.nc-select-btn').forEach(b => b.remove());
+    }
+
     try {
-        const resp = await fetch('/api/nextcloud/directories');
+        const resp = await fetch(`/api/nextcloud/directories?path=${encodeURIComponent(browsePath)}`);
         if (!resp.ok) throw new Error('Fehler beim Laden der Verzeichnisse');
         const data = await resp.json();
         const dirs = data.directories || [];
 
         if (dirs.length === 0) {
-            listContainer.innerHTML = '<p style="color:var(--text-muted,#999)">Keine Unterverzeichnisse im Wurzelverzeichnis gefunden.</p>';
+            listContainer.innerHTML = '<div class="nc-dir-empty">Keine Unterverzeichnisse vorhanden</div>';
             return;
         }
 
         let html = '<div class="nc-dir-grid">';
         dirs.forEach(d => {
-            const isSelected = d.name === currentPath;
-            html += `<div class="nc-dir-item${isSelected ? ' nc-dir-selected' : ''}" onclick="saveNcPath(${taskId}, '${escapeAttr(d.name)}', this.closest('.modal-overlay'))">
-                <span class="nc-dir-icon">&#128194;</span>
-                <span class="nc-dir-name">${escapeHtml(d.name)}</span>
-                ${isSelected ? '<span class="nc-dir-check">&#10003;</span>' : ''}
+            const isSelected = d.path === selectedPath;
+            html += `<div class="nc-dir-item${isSelected ? ' nc-dir-selected' : ''}">
+                <span class="nc-dir-icon" onclick="event.stopPropagation(); ncBrowseDir(${taskId}, '${escapeAttr(d.path)}', '${escapeAttr(selectedPath)}')">&#128194;</span>
+                <span class="nc-dir-name" onclick="event.stopPropagation(); ncBrowseDir(${taskId}, '${escapeAttr(d.path)}', '${escapeAttr(selectedPath)}')">${escapeHtml(d.name)}</span>
+                <button class="nc-dir-select-btn" onclick="event.stopPropagation(); saveNcPath(${taskId}, '${escapeAttr(d.path)}', this.closest('.modal-overlay'))">${isSelected ? '&#10003; Gewaehlt' : 'Waehlen'}</button>
             </div>`;
         });
         html += '</div>';

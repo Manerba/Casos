@@ -157,15 +157,19 @@ async def delete_nextcloud_config(user=Depends(get_admin_user)):
 # ============================================================
 
 @files_router.get("/api/nextcloud/directories")
-async def get_nextcloud_directories(user=Depends(get_current_user)):
-    """Alle Unterordner des Wurzelverzeichnisses auflisten (fuer Dropdown)."""
+async def get_nextcloud_directories(
+    path: str = "",
+    user=Depends(get_current_user),
+):
+    """Unterordner auflisten (optional ab Unterpfad, fuer Browse-Dialog)."""
     try:
-        dirs = await asyncio.to_thread(webdav.list_subdirectories)
+        dirs = await asyncio.to_thread(webdav.list_subdirectories, path)
         return {
             "directories": [
-                {"name": d["name"], "path": d["name"]}
+                {"name": d["name"], "path": f"{path}/{d['name']}".strip("/")}
                 for d in dirs
-            ]
+            ],
+            "current_path": path,
         }
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))

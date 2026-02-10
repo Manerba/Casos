@@ -389,6 +389,36 @@
 }
 
 /* --- Projektverzeichnis-Dialog --- */
+.nc-browse-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    margin-bottom: 10px;
+    padding: 6px 8px;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 4px;
+}
+
+.nc-bc-item {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    color: var(--text-secondary, #555);
+}
+
+.nc-bc-item:hover {
+    background: var(--bg-hover, #e9ecef);
+    color: var(--accent-primary, #3498db);
+}
+
+.nc-bc-sep {
+    color: var(--text-muted, #999);
+    margin: 0 1px;
+}
+
 .nc-dir-grid {
     display: flex;
     flex-direction: column;
@@ -404,7 +434,6 @@
     padding: 8px 12px;
     border: 1px solid var(--border-color, #ddd);
     border-radius: 6px;
-    cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
     font-size: 14px;
 }
@@ -422,6 +451,7 @@
 .nc-dir-icon {
     font-size: 20px;
     flex-shrink: 0;
+    cursor: pointer;
 }
 
 .nc-dir-name {
@@ -430,11 +460,41 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--text-primary, #333);
+    cursor: pointer;
 }
 
-.nc-dir-check {
+.nc-dir-name:hover,
+.nc-dir-icon:hover {
     color: var(--accent-primary, #3498db);
-    font-weight: bold;
-    font-size: 16px;
+}
+
+.nc-dir-select-btn {
     flex-shrink: 0;
+    padding: 3px 10px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    white-space: nowrap;
+}
+
+.nc-dir-select-btn:hover {
+    border-color: var(--accent-primary, #3498db);
+    color: var(--accent-primary, #3498db);
+    background: rgba(52, 152, 219, 0.05);
+}
+
+.nc-dir-selected .nc-dir-select-btn {
+    border-color: var(--accent-primary, #3498db);
+    color: var(--accent-primary, #3498db);
+    font-weight: 600;
+}
+
+.nc-dir-empty {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted, #999);
+    font-size: 13px;
 }

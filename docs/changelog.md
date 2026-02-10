@@ -1,6 +1,9 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 23:45;0.0.1+31;Aenderung;Dateiablage neben WYSIWYG-Editor statt neben Teilaufgaben-Tabelle (Zwei-Spalten-Layout umpositioniert)
+10.02.2026 23:45;0.0.1+31;Feature;Projektverzeichnis-Dialog: Browse-Funktion zum Navigieren in tiefere Unterverzeichnisse mit Breadcrumb
+10.02.2026 23:45;0.0.1+31;Aenderung;Jedes Verzeichnis zeigt "Waehlen"-Button + Ordner-Klick navigiert hinein (statt direkter Auswahl)
 10.02.2026 23:30;0.0.1+30;Aenderung;Projektverzeichnis: Dropdown im Header ersetzt durch Button "Projektverzeichnis" neben Netzplan/Team (nur fuer Ersteller)
 10.02.2026 23:30;0.0.1+30;Feature;Projektverzeichnis-Dialog: Klickbare Verzeichnisliste mit Ordner-Icons, Auswahl-Haken, Zuordnung-Entfernen-Button
 10.02.2026 23:50;0.0.1+29;Feature;Nextcloud-Dateiablage: WebDAV-Proxy-Integration fuer Projektverzeichnisse (browsen, oeffnen, hochladen, loeschen, ordner erstellen, umbenennen)
