@@ -1,0 +1,30 @@
+#!/bin/bash
+set -e
+
+APP_DIR="/opt/tareas"
+SERVICE_USER="tareas"
+
+# Service-Dateien entfernen
+rm -f /etc/systemd/system/tareas.service
+rm -f /etc/systemd/system/tareas-admin.service
+rm -f /etc/systemd/system/tareas-ldap-sync.service
+rm -f /etc/systemd/system/tareas-ldap-sync.timer
+systemctl daemon-reload
+
+if [ "$1" = "purge" ]; then
+    # Datenverzeichnis loeschen
+    rm -rf "$APP_DIR/data"
+    echo "Datenverzeichnis geloescht."
+
+    # venv loeschen
+    rm -rf "$APP_DIR/venv"
+
+    # User entfernen
+    if id "$SERVICE_USER" &>/dev/null; then
+        userdel "$SERVICE_USER" 2>/dev/null || true
+        echo "Benutzer '$SERVICE_USER' entfernt."
+    fi
+
+    # Leeres Verzeichnis aufraeumen
+    rmdir "$APP_DIR" 2>/dev/null || true
+fi

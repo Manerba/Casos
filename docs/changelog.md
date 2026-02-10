@@ -1,6 +1,11 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 20:00;0.0.1+21;Feature;APT-Packaging: .deb-Paket-Bau mit packaging/DEBIAN (control, postinst, prerm, postrm)
+10.02.2026 20:00;0.0.1+21;Feature;publish.sh: Build + Upload + Repo-Index-Aktualisierung + GPG-Signierung auf Repo-Server
+10.02.2026 20:00;0.0.1+21;Feature;install.sh: Bootstrap-Script fuer Einzeiler-Installation (curl | bash)
+10.02.2026 20:00;0.0.1+21;Feature;APT-Repository auf 188.245.43.207 eingerichtet (Apache-Alias, Verzeichnisstruktur, GPG-Key)
+10.02.2026 20:00;0.0.1+21;Aenderung;Angepasste Service-Dateien fuer Paket (User tareas, /opt/tareas Pfade, venv)
 10.02.2026 17:15;0.0.1+20;Bugfix;LDAP: StartTLS auf Port 389 wenn SSL nicht aktiviert (behebt strongerAuthRequired bei Samba-DCs)
 10.02.2026 17:15;0.0.1+20;Bugfix;LDAP: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte/abgelaufene Zertifikate
 10.02.2026 17:00;0.0.1+19;Feature;LDAP-Integration: Active-Directory-Anbindung, AD-Benutzer automatisch synchronisieren

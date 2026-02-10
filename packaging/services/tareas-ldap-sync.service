@@ -1,0 +1,12 @@
+[Unit]
+Description=Tareas LDAP Sync
+After=network.target
+
+[Service]
+Type=oneshot
+User=tareas
+Group=tareas
+WorkingDirectory=/opt/tareas
+ExecStart=/opt/tareas/venv/bin/python scripts/ldap_sync_cron.py
+StandardOutput=journal
+StandardError=journal

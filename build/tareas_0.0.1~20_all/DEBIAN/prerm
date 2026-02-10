@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+# Services stoppen und deaktivieren
+systemctl stop tareas.service 2>/dev/null || true
+systemctl stop tareas-admin.service 2>/dev/null || true
+systemctl stop tareas-ldap-sync.timer 2>/dev/null || true
+systemctl stop tareas-ldap-sync.service 2>/dev/null || true
+
+systemctl disable tareas.service 2>/dev/null || true
+systemctl disable tareas-admin.service 2>/dev/null || true
+systemctl disable tareas-ldap-sync.timer 2>/dev/null || true
+systemctl disable tareas-ldap-sync.service 2>/dev/null || true
+
+echo "Tareas Services gestoppt und deaktiviert."

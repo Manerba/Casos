@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tareas - Anmeldung</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-secondary);
+        }
+
+        .login-container {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 40px;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .login-title {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-field {
+            margin-bottom: 18px;
+        }
+
+        .login-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .login-field input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        .login-field input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 8px;
+        }
+
+        .login-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--color-bearish);
+            border: 1px solid var(--color-bearish);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 18px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-title">Tareas</div>
+        <div class="login-subtitle">Bitte anmelden</div>
+
+        <div class="login-error" id="loginError"></div>
+
+        <div class="login-field">
+            <label>Benutzername</label>
+            <input type="text" id="loginUsername" autocomplete="username" autofocus>
+        </div>
+
+        <div class="login-field">
+            <label>Passwort</label>
+            <input type="password" id="loginPassword" autocomplete="current-password">
+        </div>
+
+        <button class="login-btn" id="loginBtn">Anmelden</button>
+    </div>
+
+    <script>
+        // Theme laden
+        const savedTheme = localStorage.getItem('dashboard-theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        const usernameInput = document.getElementById('loginUsername');
+        const passwordInput = document.getElementById('loginPassword');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorDiv = document.getElementById('loginError');
+
+        usernameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') passwordInput.focus();
+        });
+
+        passwordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        loginBtn.addEventListener('click', doLogin);
+
+        async function doLogin() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                showError('Bitte Benutzername und Passwort eingeben');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Wird angemeldet...';
+            errorDiv.style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+
+                if (!resp.ok) {
+                    const data = await resp.json().catch(() => ({}));
+                    throw new Error(data.detail || 'Anmeldung fehlgeschlagen');
+                }
+
+                window.location.href = '/aufgaben';
+            } catch (error) {
+                showError(error.message);
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Anmelden';
+            }
+        }
+
+        function showError(msg) {
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
