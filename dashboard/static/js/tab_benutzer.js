@@ -33,7 +33,7 @@ async function initBenutzerTab() {
     // Config client-seitig
     const config = {
         id: 'benutzer',
-        api_endpoint: '/api/admin/users',
+        apiEndpoint: '/api/admin/users',
         expandable: true,
         columns: [
             { label: 'Nachname', field: 'nachname', width: 0, sortable: true },
@@ -43,8 +43,8 @@ async function initBenutzerTab() {
             { label: 'Admin', field: 'is_admin', width: 70, sortable: true, align: 'center', renderer: 'adminBadge' },
             { label: 'Erstellt', field: 'created_at', width: 120, sortable: true },
         ],
-        detail_fields: [],
-        default_sort: ['nachname', 'asc'],
+        detailFields: [],
+        defaultSort: { field: 'nachname', direction: 'asc' },
         filters: [
             {
                 id: 'userSearch',
@@ -52,7 +52,7 @@ async function initBenutzerTab() {
                 type: 'input',
                 field: 'username',
                 wildcard: true,
-                wildcard_fields: ['vorname', 'nachname', 'email'],
+                wildcardFields: ['vorname', 'nachname', 'email'],
             },
         ],
     };
