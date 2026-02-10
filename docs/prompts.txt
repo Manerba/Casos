@@ -46,6 +46,11 @@ ein einfaches tool zum planen und tracken von aufgaben.
 		- von den aufgelisteten gruppen soll eine gruppe über einen +-button ausgewählt werden können. 
 		- alle ad-benutzer, welche mitglied dieser gruppe sind, sollen als benutzer der benutzerverwaltung hinzugefügt werden (nur anzeige, keine änderungen am bentzer erlauben, da quelle das ldap ist) und sich mit benutzername und passwort ihres ad-benutzerkontos in tareas anmelden dürfen.
 - installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
+  - erstelle bitte das script publish.sh im projektverzeichnis. es soll alle quellen des projekts auf folgendem server veröffentlichen
+    IP: 188.245.43.207
+	Login: root/<lege mir bitte eine passwortabfrage auf die shell>
+	- auf dem server läuft ein apache-webserver, eine nextcloud instanz und er hostet ein apt-repo über welches updates für KLAPP (ein anderes projekt) verteilt werden. zusätzlich soll nun auch Tareas über diesen server veröffentlicht werden.
+  - ZIEL der veröffentlichung: installation von Tareas auf einem ubuntu 24.04-server (standard-installation) mit einem einzeiligen befehl, ohne repo-quellen aktualisieren zu müssen.
 - schnittstellen für für dateiablage: nextcloud und sharepoint online
 - schnittstellen für mailversand: exchange online (imap mit authentifizierung)
 }
@@ -406,11 +411,90 @@ ja, mach das bitte
 
 ====================================================================================
 
+die implementierung der ldap-integration ist abgeschlossen. als nächstes möchte ich das push-script und den installationsbefehl entwickeln. folgenden prompt habe ich vorbereitet. mache bitte verbesserungsvorschläge, wenn du es für nötig ansiehst:{
+- installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
+  - erstelle bitte das script publish.sh im projektverzeichnis. es soll alle quellen des projekts auf folgendem server veröffentlichen
+    IP: 188.245.43.207
+	Login: root/<lege mir bitte eine passwortabfrage auf die shell>
+	- auf dem server läuft ein apache-webserver, eine nextcloud instanz und er hostet ein apt-repo über welches updates für KLAPP (ein anderes projekt) verteilt werden. zusätzlich soll nun auch Tareas über diesen server veröffentlicht werden.
+  - ZIEL der veröffentlichung: installation von Tareas auf einem ubuntu 24.04-server (standard-installation) mit einem einzeiligen befehl, ohne repo-quellen aktualisieren zu müssen.
+}
 
+------------------------------------------------------------------------------------
+
+ich würde ein apt-repo bevorzugen, da sich updates so leichter verteilen ließen. lass uns das besprechen. wäre es mit einem apt-repo möglich, eine initiale installation von tareas auf dem zielsystem durchzuführen inkl. installation und konfiguration des webservers für das frontend? dazu würden wir ein installationsskript benötigen, das auf dem zielsystem ausgeführt wird, oder gibt es alernativen? etwas initiale installation über tar-archiv und updates über apt-repo? was schlägst du vor?
 
 ====================================================================================
 
+Implementiere bitte den Plan aus docs/TODO/sprint_packaging_deployment.md
 
+====================================================================================
+
+perfekt, das projekt lief wie am schnürchen! ich habe ein paar fragen dazu, was noch alles möglich ist:
+- integration von Tareas in MS-Teams, sodass es als aufgabenplanung innerhalb eines teams in MS-Teams genutzt werden kann?
+- einfacher und moderner netzplan, in welchem die einzelnen aufgaben eines projekts als knoten dargestellt werden und mit den vorgänger-aufgaben über geschweifte linien miteinander verbunden sind. darstellung als overlay über einen button im detail-bereich eines projekts?
+
+====================================================================================
+
+Implementiere bitte den Plan aus docs/TODO/sprint_netzplan.md
+
+====================================================================================
+
+wie sieht es mit einer dateiablage auf nextclaud aus? mir schweb vor, in aufgaben und projekten neben dem wysiwyg-editor eine baumansicht eines auf nextcloud gespeicherten verzeichnisses zu haben. welche möglichkeiten haben wir, das sauber über schnittstellen von nextclaud zu machen, ohne eine erweiterung für nextcloud entwickeln zu müssen?
+
+------------------------------------------------------------------------------------
+
+ok, lass uns option a besprechen. wäre folgendes denkbar: tareas bekommt die zugangsdaten eines nextcloud-benutzers und verbindet sich mit nextcloud in dessen kontext (dem benutzer gehört ein projekt-wurzel-verzeichnis mit mehreren projekt-verzeichnissen darin, auf welche andere benutzer zugriff haben und auf das gleichzeitig über smb zugegriffen werden kann). der eigentümer des projekts in tareas soll nun ein projekt-verzeichniss aus dem projekt-wurzel-verzeichnis auswählen können, welches dann in tareas als wurzelverzeichnis für dieses projekt in tareas dient, unter welchem dann dessen inhalt in einer baumstruktur oder auch im "desktop-item"-stil, dargestellt wird?
+
+====================================================================================
+
+Implementiere bitte den Plan aus docs/TODO/sprint_nextcloud_dateiablage.md
+
+------------------------------------------------------------------------------------
+
+perfekt! die anbindung an eine nextcloud-instanz über die admin-ui funktioniert. leider finde ich die funktion zum wählen eines verzeichnisses durch den projekt-ersteller nicht. neben dem netzplan-button sollte eine schaltfläche "projektverzeichnis" sein, über das der projekt-ersteller (nur ihm soll diese schaltfläche angezeigt werden) ein unterverzeichnis aus dem von nextcloud eingebenundenen verzeichnis, wählen kann.
+
+------------------------------------------------------------------------------------
+
+sehr gut, funktioniert! ein paar kleine kossmetische änderungen:
+- die datei-ablage soll neben dem wysiwyg-editor des projekt-textes sein. jetzt ist er neben der nested-tabelle für die teilaufgaben.
+- bei der auswahl des projektverzeichnisses soll durch die verzeichnisse gebrowst werden können, sodass auch tiefere unterverzeichnisse als wurzel-verzeichnis für das projekt gewählt werden können.
+
+------------------------------------------------------------------------------------
+
+zwei änderungen am detailbereich:
+- wysiwyg-editor und datei-ablage sollen nach unten hin ausziehbar sein, so dass sie in der höhe vergrößert und verkleinert werden können (wie desktop-fenster). beim vergrößern/verkleinern soll sich die höhe beider elemente gleichermaßen ändern, sodass immer beide gleich hoch dargestellt werden.
+- entferne bitte den titel dateiablage 
+
+------------------------------------------------------------------------------------
+
+ausgezeichnet, funktioniert! noch zwei änderungen:
+- wysiwyg-editor und datei-ablage sollen nach unten hin ausziehbar sein, so dass sie in der höhe vergrößert und verkleinert werden können (wie desktop-fenster). beim vergrößern/verkleinern soll sich die höhe beider elemente gleichermaßen ändern, sodass immer beide gleich hoch dargestellt werden.
+- entferne bitte den titel dateiablage
+
+------------------------------------------------------------------------------------
+
+gut. leider ändert sich nur die höhe des wysiwyg-editors. die der dateiablage bleibt gleich und wird bei verringerung der höhe abgeschnitten.
+
+------------------------------------------------------------------------------------
+
+perfekt. noch eine kleine kosmetische korrektur: passe bitte die höhe des headers der dateiablage an die höhe des headers des wysiwyg-editors (wo die textformatierungs-kontrollen angezeigt werden) an.
+
+------------------------------------------------------------------------------------
+
+ich sehe keine veränderung. haben die elemente im header vielleicht ein margin? ich sehe auch, dass der name des wurzelverzeichnisses im header der dateiablage raltiv zum ordner-symbol nach unten versetzt ist.
+
+------------------------------------------------------------------------------------
+
+passe jetzt bitte noch die höhe des team-button an die des netzplan-buttons an.
+
+====================================================================================
+
+neues feature: filter "team/zugewiesene/vergebene/eigene" im control-bereich des aufgaben-tabs. es sollen 3 schaltflächen sein. wenn alle deaktiviert sind, soll alles angezeigt werden, wenn mehrere aktiviert sind, mit UND verknüpfen, also alle aufgaben aller gewählter kategorien anzeigen:
+- team: projekte, welche aufgrund von team-zugehörigkeit angezeigt werden.
+- zugewiesene: aufgaben, die der benutzer von anderen zugewiesen bekommen hat.
+- vergebene: aufgaben, die vom benutzer an andere vergeben wurde.
+- eigene: alle aufgaben, die vom benutzer selbst erstellt und nicht an andere vergeben wurden.
 
 ====================================================================================
 

@@ -993,8 +993,8 @@
 }
 
 .team-btn {
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 6px 12px;
+    font-size: 12px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
     cursor: pointer;

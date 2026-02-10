@@ -1,6 +1,9 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 00:30;0.0.1+32;Feature;Editor und Dateiablage synchron in der Hoehe vergroesserbar/verkleinerbar (Resize-Handle)
+11.02.2026 00:30;0.0.1+32;Aenderung;Dateiablage-Titel entfernt, Header-Hoehen von Editor und Dateiablage angeglichen
+11.02.2026 00:30;0.0.1+32;Kosmetik;Team-Button Groesse an Netzplan-Button angeglichen, Ober-/Unterkanten beider Spalten pixelgenau ausgerichtet
 10.02.2026 23:45;0.0.1+31;Aenderung;Dateiablage neben WYSIWYG-Editor statt neben Teilaufgaben-Tabelle (Zwei-Spalten-Layout umpositioniert)
 10.02.2026 23:45;0.0.1+31;Feature;Projektverzeichnis-Dialog: Browse-Funktion zum Navigieren in tiefere Unterverzeichnisse mit Breadcrumb
 10.02.2026 23:45;0.0.1+31;Aenderung;Jedes Verzeichnis zeigt "Waehlen"-Button + Ordner-Klick navigiert hinein (statt direkter Auswahl)

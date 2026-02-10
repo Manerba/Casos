@@ -290,12 +290,10 @@ async function onTaskRowExpanded(rowId, detailElement) {
     if (isProjektWithNc) {
         html += `</div>`; // project-detail-left
         html += `<div class="project-detail-right">
-            <div class="subtask-section">
-                <div class="subtask-section-header"><h4>Dateiablage</h4></div>
-                <div id="fileBrowserContainer_${row.id}"></div>
-            </div>
+            <div id="fileBrowserContainer_${row.id}"></div>
         </div>`;
         html += `</div>`; // project-detail-columns
+        html += `<div class="project-detail-resize" id="pdResize_${row.id}"></div>`;
     }
 
     // SubTask-Bereich fuer Projekte
@@ -369,8 +367,45 @@ async function onTaskRowExpanded(rowId, detailElement) {
             if (fbContainer) {
                 new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
             }
+            // Resize-Handle initialisieren
+            initColumnResize(row.id);
         }
     }
+}
+
+
+/**
+ * Resize-Handle fuer Zwei-Spalten-Layout (Editor + Dateiablage).
+ * Zieht man den Handle nach unten/oben, aendert sich die Hoehe beider Spalten synchron.
+ */
+function initColumnResize(taskId) {
+    const handle = document.getElementById(`pdResize_${taskId}`);
+    if (!handle) return;
+    const columns = handle.previousElementSibling;
+    if (!columns || !columns.classList.contains('project-detail-columns')) return;
+
+    let startY = 0;
+    let startH = 0;
+
+    function onMouseMove(e) {
+        const newH = Math.max(200, startH + (e.clientY - startY));
+        columns.style.height = newH + 'px';
+    }
+    function onMouseUp() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+    }
+    handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startY = e.clientY;
+        startH = columns.offsetHeight;
+        document.body.style.userSelect = 'none';
+        document.body.style.cursor = 'ns-resize';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    });
 }
 
 // ========================================
