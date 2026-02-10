@@ -3,7 +3,7 @@ Tareas - LDAP Hilfsfunktionen
 Verbindung, Gruppen, Mitglieder, Authentifizierung via ldap3.
 """
 
-from ldap3 import Server, Connection, ALL, SUBTREE, Tls
+from ldap3 import Server, Connection, NONE, SUBTREE, Tls
 import ssl
 
 
@@ -11,7 +11,7 @@ def _create_server(server_addr, port, use_ssl):
     """Erstellt ein ldap3.Server-Objekt. TLS-Objekt immer dabei (fuer StartTLS oder LDAPS)."""
     tls = Tls(validate=ssl.CERT_NONE)
     return Server(server_addr, port=port, use_ssl=bool(use_ssl), tls=tls,
-                  get_info=ALL, connect_timeout=10)
+                  get_info=NONE, connect_timeout=10)
 
 
 def _bind_connection(server, bind_dn, bind_password, use_ssl, receive_timeout=10):
