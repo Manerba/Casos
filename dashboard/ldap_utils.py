@@ -135,9 +135,11 @@ def authenticate_user(config, username, password):
         conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
                                 config["use_ssl"])
 
+        # Domain-Root fuer Benutzersuche (Search-Base kann auf OU=Gruppen zeigen)
+        domain_root = _get_domain_root(config["search_base"])
         search_filter = f'(&(objectClass=user)(sAMAccountName={_escape_ldap_filter(username)}))'
         conn.search(
-            config["search_base"],
+            domain_root,
             search_filter,
             search_scope=SUBTREE,
             attributes=['distinguishedName'],
@@ -146,7 +148,7 @@ def authenticate_user(config, username, password):
         if not conn.entries:
             conn.unbind()
             return False, (f"Benutzer '{username}' im LDAP nicht gefunden. "
-                           f"Search-Base: {config['search_base']}, Filter: {search_filter}")
+                           f"Search-Base: {domain_root}, Filter: {search_filter}")
 
         user_dn = str(conn.entries[0].distinguishedName)
         conn.unbind()
@@ -162,6 +164,14 @@ def authenticate_user(config, username, password):
     except Exception as e:
         error_msg = str(e)
         return False, f"LDAP-Authentifizierung fehlgeschlagen: {error_msg}"
+
+
+def _get_domain_root(search_base):
+    """Extrahiert den Domain-Root (DC-Komponenten) aus einem DN.
+    z.B. 'OU=Gruppen,DC=himel,DC=local' -> 'DC=himel,DC=local'"""
+    parts = [p.strip() for p in search_base.split(',')]
+    dc_parts = [p for p in parts if p.upper().startswith('DC=')]
+    return ','.join(dc_parts) if dc_parts else search_base
 
 
 def _escape_ldap_filter(value):
