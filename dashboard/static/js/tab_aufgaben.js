@@ -192,16 +192,21 @@ async function onTaskRowExpanded(rowId, detailElement) {
     const row = aufgabenTable.filteredData.find(r => String(r.id) === String(rowId));
     if (!row) return;
 
+    // Zugewiesene Subtask-Ansicht
+    if (row._type === 'assigned_subtask') {
+        return onSubtaskViewExpanded(row, detailElement);
+    }
+
     const perm = getTaskPermissions(row);
 
     // Deadline fuer date input: DD.MM.YYYY -> YYYY-MM-DD
     const deadlineISO = convertToISO(row.deadline);
 
-    // Felder readonly wenn Zugewiesener oder Ersteller mit Zuweisung
+    // Felder readonly je nach Rolle
     const nameReadonly = perm.isAssignee || (perm.isCreator && perm.isAssigned) ? 'disabled' : '';
-    const deadlineReadonly = perm.isAssignee || (perm.isCreator && perm.isAssigned) ? 'disabled' : '';
-    const prioReadonly = perm.isAssignee || (perm.isCreator && perm.isAssigned) ? 'disabled' : '';
-    const statusReadonly = (perm.isCreator && perm.isAssigned) ? 'disabled' : '';
+    const deadlineReadonly = perm.isAssignee ? 'disabled' : '';
+    const prioReadonly = perm.isAssignee ? 'disabled' : '';
+    const statusReadonly = perm.isAssignee ? '' : ((perm.isCreator && perm.isAssigned) ? 'disabled' : '');
 
     let html = `<div class="detail-edit" data-task-id="${row.id}">`;
 
@@ -337,6 +342,12 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
 async function saveTask(taskId) {
     const row = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
+
+    // Subtask-View: an eigene Speicherfunktion weiterleiten
+    if (row && row._type === 'assigned_subtask') {
+        return saveSubtaskView(row);
+    }
+
     const perm = row ? getTaskPermissions(row) : { isOwnTask: true, isLegacy: true, isAssignee: false, isCreator: true, isAssigned: false };
 
     const body = {};
@@ -352,6 +363,10 @@ async function saveTask(taskId) {
         const editorContainer = document.getElementById(`wysiwygEditor_${taskId}`);
         const editorContent = editorContainer?.querySelector('.wysiwyg-content');
         body.description = editorContent ? editorContent.innerHTML : '';
+    } else if (perm.isCreator && perm.isAssigned) {
+        // Ersteller mit Zuweisung: nur Deadline + Prioritaet
+        body.deadline = document.getElementById(`editDeadline_${taskId}`)?.value;
+        body.priority = parseInt(document.getElementById(`editPriority_${taskId}`)?.value) || 50;
     } else if (perm.isAssignee) {
         // Zugewiesener darf nur Status aendern
         body.status = document.getElementById(`editStatus_${taskId}`)?.value;
@@ -387,6 +402,102 @@ async function saveTask(taskId) {
         }
 
         showNotification('Aufgabe gespeichert', 'success');
+        await aufgabenTable.loadData();
+    } catch (error) {
+        console.error('Speichern fehlgeschlagen:', error);
+        showNotification('Fehler beim Speichern', 'error');
+    }
+}
+
+// ========================================
+// Subtask-View (zugewiesene Teilaufgabe als Aufgabe)
+// ========================================
+
+async function onSubtaskViewExpanded(row, detailElement) {
+    const stId = row._subtask_id;
+    const deadlineISO = convertToISO(row.deadline);
+
+    let html = `<div class="detail-edit" data-task-id="${row.id}">`;
+
+    // Info-Hinweis
+    html += `<div class="subtask-view-info">Teilaufgabe aus Projekt: <strong>${escapeHtml(row._project_name)}</strong></div>`;
+
+    // Header-Felder (alle readonly ausser Status)
+    html += `<div class="detail-edit-header">
+        <div class="detail-edit-field flex-grow">
+            <label>Name</label>
+            <input type="text" value="${escapeAttr(row.name)}" disabled class="field-readonly">
+        </div>
+        <div class="detail-edit-field">
+            <label>Deadline</label>
+            <input type="date" value="${deadlineISO}" disabled class="field-readonly">
+        </div>
+        <div class="detail-edit-field">
+            <label>Prioritaet</label>
+            <input type="number" value="${row.priority}" disabled class="field-readonly" style="width:70px">
+        </div>
+        <div class="detail-edit-field">
+            <label>Status (%)</label>
+            <input type="number" id="stViewStatus_${stId}" value="${row._status_percent}" min="0" max="100" style="width:70px">
+        </div>
+    </div>`;
+
+    // Beschreibung readonly
+    html += `<div class="notes-section">
+        <h5>Beschreibung von ${escapeHtml(row.created_by_name || 'Ersteller')}</h5>
+        <div class="description-readonly">${row.description || '<em>Keine Beschreibung</em>'}</div>
+    </div>`;
+
+    // Eigene Notizen (WYSIWYG)
+    html += `<div class="notes-section">
+        <h5>Meine Notizen</h5>
+        <div id="stViewNotes_${stId}"></div>
+    </div>`;
+
+    // Aktions-Buttons
+    html += `<div class="detail-edit-actions">
+        <button class="action-btn primary" onclick="saveTask(${row.id})">Speichern</button>
+    </div>`;
+
+    html += `</div>`;
+    detailElement.innerHTML = html;
+
+    // Notizen laden und Editor initialisieren
+    try {
+        const notesResp = await fetch(`/api/tasks/${row._project_id}/subtasks/${stId}/notes`);
+        const notesData = await notesResp.json();
+        const myNote = (notesData.items || []).find(n => n.user_id === currentUser.id);
+        new WysiwygEditor(`stViewNotes_${stId}`, myNote ? myNote.content : '');
+    } catch (e) {
+        new WysiwygEditor(`stViewNotes_${stId}`, '');
+    }
+}
+
+async function saveSubtaskView(row) {
+    const stId = row._subtask_id;
+    const statusPercent = parseInt(document.getElementById(`stViewStatus_${stId}`)?.value) || 0;
+
+    try {
+        // 1. Status speichern
+        const resp = await fetch(`/api/subtasks/${stId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status_percent: statusPercent }),
+        });
+        if (!resp.ok) throw new Error('Fehler beim Speichern');
+
+        // 2. Notizen speichern
+        const notesContainer = document.getElementById(`stViewNotes_${stId}`);
+        const notesContent = notesContainer?.querySelector('.wysiwyg-content');
+        if (notesContent) {
+            await fetch(`/api/tasks/${row._project_id}/subtasks/${stId}/notes`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: notesContent.innerHTML }),
+            });
+        }
+
+        showNotification('Teilaufgabe gespeichert', 'success');
         await aufgabenTable.loadData();
     } catch (error) {
         console.error('Speichern fehlgeschlagen:', error);
@@ -475,6 +586,8 @@ function renderSubTasks(taskId, subtasks) {
         const statusPct = st.status_percent || 0;
         const stPerms = st.permissions || { can_read: true, can_edit: true, can_create: true, has_override: false };
         const canEdit = stPerms.can_edit;
+        const isSubAssigned = !!st.assigned_to;
+        const isSubCreator = parentPerm.isCreator || parentPerm.isLegacy;
 
         // Daten-Zeile (klickbar, reiner Text)
         html += `<tr class="subtask-row" data-subtask-id="${st.id}" onclick="toggleSubTaskDetail(${taskId}, ${st.id})">
@@ -518,9 +631,18 @@ function renderSubTasks(taskId, subtasks) {
             return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="event.stopPropagation(); removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
         }).join('');
 
-        // Readonly-Status basierend auf Backend-Permissions
+        // Differenzierte Readonly-Logik pro Feld
         const fieldRO = !canEdit ? 'disabled' : '';
         const fieldROClass = !canEdit ? 'field-readonly' : '';
+        // Creator mit zugewiesener Subtask: Name readonly, Deadline/Prio editierbar, Status readonly
+        const stNameRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
+        const stNameROClass = stNameRO ? 'field-readonly' : '';
+        const stDeadlineRO = !canEdit ? 'disabled' : '';
+        const stDeadlineROClass = stDeadlineRO ? 'field-readonly' : '';
+        const stPrioRO = !canEdit ? 'disabled' : '';
+        const stPrioROClass = stPrioRO ? 'field-readonly' : '';
+        const stStatusRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
+        const stStatusROClass = stStatusRO ? 'field-readonly' : '';
 
         html += `<tr class="subtask-detail-row" data-subtask-detail-id="${st.id}">
             <td colspan="${colCount}">
@@ -528,7 +650,7 @@ function renderSubTasks(taskId, subtasks) {
                     <div class="detail-edit-header">
                         <div class="detail-edit-field flex-grow">
                             <label>Name</label>
-                            <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" ${fieldRO} class="${fieldROClass}">
+                            <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" ${stNameRO} class="${stNameROClass}">
                         </div>
                         <div class="detail-edit-field">
                             <label>Vorgaenger</label>
@@ -553,15 +675,15 @@ function renderSubTasks(taskId, subtasks) {
                         </div>
                         <div class="detail-edit-field">
                             <label>Deadline</label>
-                            <input type="date" id="stEditDeadline_${st.id}" value="${dlISO}" ${fieldRO} class="${fieldROClass}">
+                            <input type="date" id="stEditDeadline_${st.id}" value="${dlISO}" ${stDeadlineRO} class="${stDeadlineROClass}">
                         </div>
                         <div class="detail-edit-field">
                             <label>Prioritaet</label>
-                            <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px" ${fieldRO} class="${fieldROClass}">
+                            <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px" ${stPrioRO} class="${stPrioROClass}">
                         </div>
                         <div class="detail-edit-field">
                             <label>Status (%)</label>
-                            <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px" ${fieldRO} class="${fieldROClass}">
+                            <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px" ${stStatusRO} class="${stStatusROClass}">
                         </div>`;
 
         // Zuweisungs-Dropdown fuer SubTasks (nur Ersteller)
@@ -577,7 +699,14 @@ function renderSubTasks(taskId, subtasks) {
         html += `</div>`;
 
         // WYSIWYG oder Readonly-Beschreibung
-        if (canEdit) {
+        if (isSubCreator && isSubAssigned) {
+            // Creator mit zugewiesener Subtask: Beschreibung readonly + Zugewiesenen-Notizen
+            html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
+            html += `<div class="notes-section" id="stAssigneeNotes_${st.id}">
+                <h5>Notizen von ${escapeHtml(st.assigned_to_name || 'Zugewiesenem')}</h5>
+                <div class="description-readonly" id="stAssigneeNotesContent_${st.id}"><em>Laden...</em></div>
+            </div>`;
+        } else if (canEdit) {
             html += `<div id="stWysiwyg_${st.id}"></div>`;
         } else {
             html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
@@ -607,7 +736,7 @@ function renderSubTasks(taskId, subtasks) {
     container.innerHTML = html;
 }
 
-function toggleSubTaskDetail(taskId, subtaskId) {
+async function toggleSubTaskDetail(taskId, subtaskId) {
     const dataRow = document.querySelector(`tr.subtask-row[data-subtask-id="${subtaskId}"]`);
     const detailRow = document.querySelector(`tr.subtask-detail-row[data-subtask-detail-id="${subtaskId}"]`);
     if (!dataRow || !detailRow) return;
@@ -624,7 +753,7 @@ function toggleSubTaskDetail(taskId, subtaskId) {
         window.scrollBy(0, newRowTop - rowTop);
     }
 
-    // WYSIWYG-Editor beim ersten Aufklappen initialisieren (nur wenn canEdit)
+    // Beim Aufklappen: Editoren initialisieren + Notizen laden
     if (isExpanding) {
         const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
         if (editorContainer && !editorContainer._editorInit) {
@@ -637,6 +766,25 @@ function toggleSubTaskDetail(taskId, subtaskId) {
             }
             editorContainer._editorInit = true;
         }
+
+        // Zugewiesenen-Notizen lazy laden (fuer Creator mit zugewiesener Subtask)
+        const notesContent = document.getElementById(`stAssigneeNotesContent_${subtaskId}`);
+        if (notesContent && !notesContent._loaded) {
+            notesContent._loaded = true;
+            try {
+                const notesResp = await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}/notes`);
+                const notesData = await notesResp.json();
+                const container = document.getElementById(`subtaskContainer_${taskId}`);
+                const subtasks = container?._subtasksData || [];
+                const st = subtasks.find(s => s.id === subtaskId);
+                const assigneeNote = (notesData.items || []).find(n => n.user_id === st?.assigned_to);
+                notesContent.innerHTML = assigneeNote && assigneeNote.content
+                    ? assigneeNote.content
+                    : '<em>Keine Notizen vorhanden</em>';
+            } catch (e) {
+                notesContent.innerHTML = '<em>Fehler beim Laden</em>';
+            }
+        }
     }
 }
 
@@ -647,16 +795,24 @@ async function saveSubTask(taskId, subtaskId) {
 
     const body = {};
 
-    body.name = document.getElementById(`stEditName_${subtaskId}`)?.value;
-    body.area_id = parseInt(document.getElementById(`stEditArea_${subtaskId}`)?.value) || null;
-    body.deadline = document.getElementById(`stEditDeadline_${subtaskId}`)?.value || '';
-    body.priority = parseInt(document.getElementById(`stEditPriority_${subtaskId}`)?.value) || 50;
-    body.status_percent = parseInt(document.getElementById(`stEditStatus_${subtaskId}`)?.value) || 0;
+    const nameInput = document.getElementById(`stEditName_${subtaskId}`);
+    if (nameInput && !nameInput.disabled) body.name = nameInput.value;
 
-    // WYSIWYG-Content
+    body.area_id = parseInt(document.getElementById(`stEditArea_${subtaskId}`)?.value) || null;
+
+    const dlInput = document.getElementById(`stEditDeadline_${subtaskId}`);
+    if (dlInput && !dlInput.disabled) body.deadline = dlInput.value || '';
+
+    const prioInput = document.getElementById(`stEditPriority_${subtaskId}`);
+    if (prioInput && !prioInput.disabled) body.priority = parseInt(prioInput.value) || 50;
+
+    const statusInput = document.getElementById(`stEditStatus_${subtaskId}`);
+    if (statusInput && !statusInput.disabled) body.status_percent = parseInt(statusInput.value) || 0;
+
+    // WYSIWYG-Content nur senden wenn Editor existiert (nicht bei readonly-Beschreibung)
     const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
     const editorContent = editorContainer?.querySelector('.wysiwyg-content');
-    body.description = editorContent ? editorContent.innerHTML : '';
+    if (editorContent) body.description = editorContent.innerHTML;
 
     // Aktuelle predecessor_ids sammeln
     const chipsContainer = document.getElementById(`predChips_${subtaskId}`);

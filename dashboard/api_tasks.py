@@ -133,6 +133,7 @@ async def get_tasks(user=Depends(get_current_user)):
         for row in rows:
             items.append({
                 "id": row["id"],
+                "_type": "task",
                 "name": row["name"],
                 "created_at": _format_date(row["created_at"]),
                 "deadline": _format_date(row["deadline"]),
@@ -145,6 +146,50 @@ async def get_tasks(user=Depends(get_current_user)):
                 "created_by_name": (row["created_by_name"] or "").strip(),
                 "assigned_to_name": (row["assigned_to_name"] or "").strip(),
                 "is_team_member": bool(row["is_team_member"]),
+            })
+
+        # Zugewiesene Teilaufgaben als Aufgaben-Eintraege
+        st_rows = db.execute(
+            """SELECT st.*, t.name AS project_name,
+                      uc.vorname || ' ' || uc.nachname AS created_by_name,
+                      ua.vorname || ' ' || ua.nachname AS assigned_to_name
+               FROM sub_tasks st
+               JOIN tasks t ON st.project_id = t.id
+               LEFT JOIN users uc ON st.created_by = uc.id
+               LEFT JOIN users ua ON st.assigned_to = ua.id
+               WHERE st.assigned_to = ?
+                 AND (t.created_by IS NULL OR t.created_by != ?)""",
+            (user["id"], user["id"]),
+        ).fetchall()
+
+        for st in st_rows:
+            pct = st["status_percent"] or 0
+            if pct == 0:
+                st_status = "offen"
+            elif pct >= 100:
+                st_status = "erledigt"
+            else:
+                st_status = "in_arbeit"
+
+            items.append({
+                "id": -st["id"],
+                "_type": "assigned_subtask",
+                "_subtask_id": st["id"],
+                "_project_id": st["project_id"],
+                "_project_name": st["project_name"],
+                "_status_percent": pct,
+                "name": st["name"],
+                "created_at": _format_date(st["created_at"]),
+                "deadline": _format_date(st["deadline"]),
+                "priority": st["priority"],
+                "task_type": "aufgabe",
+                "status": st_status,
+                "description": st["description"] or "",
+                "created_by": st["created_by"],
+                "assigned_to": st["assigned_to"],
+                "created_by_name": (st["created_by_name"] or "").strip(),
+                "assigned_to_name": (st["assigned_to_name"] or "").strip(),
+                "is_team_member": False,
             })
 
         return {"items": items, "total": len(items)}

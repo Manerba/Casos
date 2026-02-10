@@ -36,7 +36,15 @@ ein einfaches tool zum planen und tracken von aufgaben.
 - mehrbenutzerfähigkeit
   - benutzer sollen sich untereinander aufgaben zuweisen können. einmal zugewiesen, ist die aufgabe für den zuweisenden nicht mehr bearbeitbar. der, dem die aufgabe zugewiesen wurde, kann priorität, deadline und name der aufgabe nicht bearbeiten. der aufgaben-text wird in einem kasten dargestellt (nicht bearbeitbar), darunter wysiwyg-editor für notizen.
   - bei zuweisung wird die aufgabe im tab "aufgaben" angezeigt, mit dem namen des zuweisenden.
-- ldap-anbindung für benutzermanagement. berechtigungen (teamzugehörigkeiten, wer darf wessen aufgaben sehen, usw.) über ad-gruppen.
+- ldap-anbindung für benutzermanagement. berechtigung zur anmeldung an Tareas über ad-gruppen-zugehörigkeit.
+  - neuer tab in der admin-ui: LDAP
+    - in dem tab soll ein LDAP-Server angegeben werden können (ip + port (socket)); zugangsdaten für einen ad-benutzer (für leserechte auf das ldap); und ein pfad im ldap, in welchem nach ad-objekten geschaut wird
+	- nach einem klickauf "Speichern" soll die konfiguration geprüft werden.
+	  - wenn ldap-server erreichbar ist und objekte liefert:
+	    - soll die konfiguration gespeichert werden (anzeige des servers in einer tabelle unter der ldap-server-konfigurations-sektion.
+		- und alle ad-gruppen im angegebenen verzeichnis aufgelistet werden (nur gruppen!).
+		- von den aufgelisteten gruppen soll eine gruppe über einen +-button ausgewählt werden können. 
+		- alle ad-benutzer, welche mitglied dieser gruppe sind, sollen als benutzer der benutzerverwaltung hinzugefügt werden (nur anzeige, keine änderungen am bentzer erlauben, da quelle das ldap ist) und sich mit benutzername und passwort ihres ad-benutzerkontos in tareas anmelden dürfen.
 - installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
 - schnittstellen für für dateiablage: nextcloud und sharepoint online
 - schnittstellen für mailversand: exchange online (imap mit authentifizierung)
@@ -214,7 +222,10 @@ füge eine "sind sie sicher" abfrage für das löschen von aufgaben/projekten un
 beim zuklappen eines detail-bereichs scrollt die gesamte seite nach oben, wenn die letzte zeile dann nicht mehr außerhalb des anzeigebreichs ist. stattdessen soll alles oberhalb der zeile, deren detailbereich zugeklappt wurde, die zuvor angezeigte position beibehalten und wenn erforderlich, unterhalb der letzten zeile der aufgaben-tabelle, ein lerer bereich angezeigt werden.
 
 ====================================================================================
+MEHRBENUTZER-FÄHIGKEIT
+====================================================================================
 
+die projektmanagement-features sind implementiert. wir beginnen nun mit den enterprise-features. als erstes würde ich mit der mehrbenutzerfähigkeit anfang. folgenden prompt habe ich vorbereitet. mache bitte verbesserungsvorschläge, wenn du es für nötig ansiehst:{
 gehe bitte in den planungsmodus für den nächsten sprint: mehrbenutzerfähigkeit
 - wir brauchen einen anmeldebildschirm, benutzerverwaltung und berechtigungskonzept (für wer darf wessen aufgaben sehen, admin-ui mit pass.
   - die benutzerverwaltung soll über einen eigenen port, 8505, aufgerufen werden können -> admin-ui.
@@ -256,10 +267,6 @@ gehe bitte in den planungsmmodus und plane die implementierung der spezifikation
 
 ====================================================================================
 
-gehe bitte in den planungsmmodus und plane die implementierung der spezifikationen in docs/TODO/sprint_b_aufgabenzuweisung.md
-
-------------------------------------------------------------------------------------
-
 der login scheint nicht zu funktionieren. mit admin/admin wird beim klick auf login nur die seite neu geladen, es erscheint keine "falsches passwort"-fehlermeldung.
   
 ● Ich sehe das Problem. Wenn der Login erfolgreich ist und auf /aufgaben weiterleitet, wird index.html geladen. Dort laedt app_core.js und ruft
@@ -274,10 +281,105 @@ der login scheint nicht zu funktionieren. mit admin/admin wird beim klick auf lo
   und nach Login auf /aufgaben weiterleitet, was den Browser einfach die gecachte HTML-Antwort zeigen laesst.
 
   Eigentlich ist das Problem vermutlich anders. Lass mich pruefen ob die HTML-Routen wirklich den Request richtig bekommen:
+  
+  ---
+  
+  Falscher Chat -> KLAPP
  
 ====================================================================================
 
+projekt-scope:{
+neues projekt: Tareas (Spanisch für "Aufgaben")
+ein einfaches tool zum planen und tracken von aufgaben.
+1. projektphase: CRUD-Implementierung
+- umbennung tab Dashboard in Aufgaben
+- benutze für den view-bereich des tabs die generische tabellen-komponente, je aufgabe eine zeile.
+- spaltenüberschriften: name, erstellungsdatum, deadline, priorität, aufgaben-typ, status.
+- eine aufgabe kann den typ "aufgabe" und den typ "projekt" haben.
+- db-tabellen anlegen und funktionen implementieren.
 
+2. projektphase: db-tabellen anlegen und funktionen implementieren.
+
+3. projektphase: enterprise-features
+- mehrbenutzerfähigkeit
+  - benutzer sollen sich untereinander aufgaben zuweisen können. einmal zugewiesen, ist die aufgabe für den zuweisenden nicht mehr bearbeitbar. der, dem die aufgabe zugewiesen wurde, kann priorität, deadline und name der aufgabe nicht bearbeiten. der aufgaben-text wird in einem kasten dargestellt (nicht bearbeitbar), darunter wysiwyg-editor für notizen.
+  - bei zuweisung wird die aufgabe im tab "aufgaben" angezeigt, mit dem namen des zuweisenden.
+- ldap-anbindung für benutzermanagement. berechtigungen (teamzugehörigkeiten, wer darf wessen aufgaben sehen, usw.) über ad-gruppen.
+- installationsscript für einfache installation der gesamten appliance inkl. datenbank über repo-server -> installation mit einzeiler-bash-befehl.
+- schnittstellen für für dateiablage: nextcloud und sharepoint online
+- schnittstellen für mailversand: exchange online (imap mit authentifizierung)
+}
+stand:{
+es wurde mit phase 3 begonnen, mehrbenutzerfähigkeit ist implementiert aber noch keine trennung der benutzer (alle sehen nach login das selbe).
+}
+frage:{
+was wollen wir als nächstes implementieren, die trennung von benutzern (dass jeder benutzer nur seine eigenen aufgaben sieht) oder die ldap-anbindung?
+}
+
+------------------------------------------------------------------------------------
+
+gehe bitte in den planungsmmodus und plane die implementierung der spezifikationen in docs/TODO/sprint_b_aufgabenzuweisung.md
+
+====================================================================================
+
+gehe bitte in den planungsmmodus und plane die implementierung der spezifikationen in docs/TODO/sprint_c_teams_berechtigungen.md
+
+------------------------------------------------------------------------------------
+
+ok, das dropdown für die benutzerauswahl "zuweisen an" sehe ich. allerdings:
+- wenn ein benutzer ausgewählt und auf speichern geklickt wird, bleibt der aufgabentext immernoch bearbeitbar für den zuweisenden
+- die aufgabe erscheint nicht in der tabelle im tab aufgaben desjenigen, dem die aufgabe zugewiesen wurde. 
+
+------------------------------------------------------------------------------------
+
+beide punkte funktioieren noch nicht. ich habe eben als benutzer "mir" ein projekt erstellt ("test-projekt-2026"), darin habe ich eine tielaufgabe erstellt und sie dem user "test" zugewiesen.
+- im tab aufgaben von user "test" wird die aufgabe NICHT angezeigt.
+  SOLL:
+  - die teilaufgabe soll beim zugewiesenen als aufgabe in der aufgaben-tabelle (also auf erster ebene und nicht als teilaufgabe eines projekts) angezeigt werden.
+- der aufgaben-text ist für benutzer "mir", dem zuweisenden, immer noch bearbeitbar. 
+  SOLL:
+  - wenn eine aufgabe einem anderen benutzer zugewiesen wurde, darf der aufgaben-text NICHT mehr bearbeitbar sein.
+  - stattdessen soll der aufgabentext nur noch als text mit einem rahmen darum angezeigt werden (nicht in einer textbox)
+  - beim zugewiesenen soll eine textbox (wysiwyg-editor) für notizen/rückmeldungen angezeigt werden-
+  - das, was derjenige, welchem die aufgabe zugewiesen wurde, über diese textbox eingegeben hat, soll beim zuweisenden ebenfalls als nicht bearbeitbarer text mit einem rahmen darum unter dem aufgaben-text angezeigt werden.
+stelle bitte rückfragen, um sicherzustellen, dass wir die selben vorstellungen zu den anforderungen haben.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+====================================================================================
+LDAP-ANBINDUNG
+====================================================================================
+
+die implementierung der mehrbenutzerfähigkeit ist abgeschlossen. als nächstes möchte ich die ldap-integration implementieren. folgenden prompt habe ich vorbereitet. mache bitte verbesserungsvorschläge, wenn du es für nötig ansiehst:{
+gehe bitte in den planungsmodus für den nächsten sprint: mehrbenutzerfähigkeit
+- ldap-anbindung für benutzermanagement. berechtigung zur anmeldung an Tareas über ad-gruppen-zugehörigkeit.
+  - neuer tab in der admin-ui: LDAP
+    - in dem tab soll ein LDAP-Server angegeben werden können (ip + port (socket)); zugangsdaten für einen ad-benutzer (für leserechte auf das ldap); und ein pfad im ldap, in welchem nach ad-objekten geschaut wird
+	- nach einem klickauf "Speichern" soll die konfiguration geprüft werden.
+	  - wenn ldap-server erreichbar ist und objekte liefert:
+	    - soll die konfiguration gespeichert werden (anzeige des servers in einer tabelle unter der ldap-server-konfigurations-sektion.
+		- und alle ad-gruppen im angegebenen verzeichnis aufgelistet werden (nur gruppen!).
+		- von den aufgelisteten gruppen soll eine gruppe über einen +-button ausgewählt werden können. 
+		- alle ad-benutzer, welche mitglied dieser gruppe sind, sollen als benutzer der benutzerverwaltung hinzugefügt werden (nur anzeige, keine änderungen am bentzer erlauben, da quelle das ldap ist) und sich mit benutzername und passwort ihres ad-benutzerkontos in tareas anmelden dürfen.
+}
 
 ====================================================================================
 
@@ -289,15 +391,9 @@ der login scheint nicht zu funktionieren. mit admin/admin wird beim klick auf lo
 
 ====================================================================================
 
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
+Zusätzliche spalte in der Aufgaben-tabelle (aufgaben-tab): Status
+- bei aufgaben soll der status wie in der aufgabe eingestellt, angezeigt werden
+- bei projekte soll im format n/n (<erledigt>/<gesamt>) angezeigt werden, wieviele teilaufgaben des projekts bereits abgeschlossen sind.
 
 ====================================================================================
 

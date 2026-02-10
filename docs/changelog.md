@@ -1,6 +1,11 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 15:00;0.0.1+17;Bugfix;Zugewiesene Teilaufgaben erscheinen jetzt in der Aufgabenliste des Zugewiesenen (als Pseudo-Aufgabe mit Projekt-Info)
+10.02.2026 15:00;0.0.1+17;Bugfix;Readonly-Logik korrigiert: Deadline+Prioritaet bleiben fuer Ersteller nach Zuweisung editierbar
+10.02.2026 15:00;0.0.1+17;Bugfix;Name+Beschreibung werden nach Zuweisung fuer den Ersteller readonly
+10.02.2026 15:00;0.0.1+17;Aenderung;Subtask-Detail im Projekt: Creator sieht bei zugewiesener Subtask Beschreibung readonly + Zugewiesenen-Notizen
+10.02.2026 15:00;0.0.1+17;Aenderung;saveSubTask() sendet nur editierbare Felder (respektiert readonly-Status)
 10.02.2026 12:00;0.0.1+16;Feature;Teams: Projekte koennen Teammitglieder mit konfigurierbaren Berechtigungen (Lesen/Bearbeiten/Erstellen) haben
 10.02.2026 12:00;0.0.1+16;Feature;Granulare Subtask-Berechtigungen: Ueberschreibungen pro Teilaufgabe fuer einzelne Teammitglieder
 10.02.2026 12:00;0.0.1+16;Feature;Team-Dialog: Overlay zum Verwalten von Teammitgliedern (hinzufuegen, Berechtigungen aendern, entfernen)
