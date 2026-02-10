@@ -8,11 +8,21 @@ import ssl
 
 
 def _create_server(server_addr, port, use_ssl):
-    """Erstellt ein ldap3.Server-Objekt."""
-    if use_ssl:
-        tls = Tls(validate=ssl.CERT_NONE)
-        return Server(server_addr, port=port, use_ssl=True, tls=tls, get_info=ALL, connect_timeout=10)
-    return Server(server_addr, port=port, use_ssl=False, get_info=ALL, connect_timeout=10)
+    """Erstellt ein ldap3.Server-Objekt. TLS-Objekt immer dabei (fuer StartTLS oder LDAPS)."""
+    tls = Tls(validate=ssl.CERT_NONE)
+    return Server(server_addr, port=port, use_ssl=bool(use_ssl), tls=tls,
+                  get_info=ALL, connect_timeout=10)
+
+
+def _bind_connection(server, bind_dn, bind_password, use_ssl, receive_timeout=10):
+    """Erstellt und bindet eine Connection. Bei nicht-SSL wird StartTLS verwendet."""
+    conn = Connection(server, user=bind_dn, password=bind_password,
+                      auto_bind=False, receive_timeout=receive_timeout)
+    conn.open()
+    if not use_ssl:
+        conn.start_tls()
+    conn.bind()
+    return conn
 
 
 def test_connection(server_addr, port, use_ssl, bind_dn, bind_password, search_base):
@@ -22,8 +32,7 @@ def test_connection(server_addr, port, use_ssl, bind_dn, bind_password, search_b
     """
     try:
         srv = _create_server(server_addr, port, use_ssl)
-        conn = Connection(srv, user=bind_dn, password=bind_password, auto_bind=True,
-                          receive_timeout=10)
+        conn = _bind_connection(srv, bind_dn, bind_password, use_ssl)
         # Teste ob search_base erreichbar ist
         conn.search(search_base, '(objectClass=*)', search_scope=SUBTREE,
                     size_limit=1, attributes=[])
@@ -41,8 +50,8 @@ def list_groups(config):
     """
     try:
         srv = _create_server(config["server"], config["port"], config["use_ssl"])
-        conn = Connection(srv, user=config["bind_dn"], password=config["bind_password"],
-                          auto_bind=True, receive_timeout=10)
+        conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
+                                config["use_ssl"])
         conn.search(
             config["search_base"],
             '(objectClass=group)',
@@ -70,8 +79,8 @@ def get_group_members(config):
     """
     try:
         srv = _create_server(config["server"], config["port"], config["use_ssl"])
-        conn = Connection(srv, user=config["bind_dn"], password=config["bind_password"],
-                          auto_bind=True, receive_timeout=30)
+        conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
+                                config["use_ssl"], receive_timeout=30)
 
         # Mitglieder der Gruppe abrufen
         conn.search(
@@ -122,8 +131,8 @@ def authenticate_user(config, username, password):
         srv = _create_server(config["server"], config["port"], config["use_ssl"])
 
         # Service-Account: DN des Benutzers suchen
-        conn = Connection(srv, user=config["bind_dn"], password=config["bind_password"],
-                          auto_bind=True, receive_timeout=10)
+        conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
+                                config["use_ssl"])
         conn.search(
             config["search_base"],
             f'(&(objectClass=user)(sAMAccountName={_escape_ldap_filter(username)}))',
@@ -139,8 +148,7 @@ def authenticate_user(config, username, password):
         conn.unbind()
 
         # Bind mit Benutzer-Credentials
-        user_conn = Connection(srv, user=user_dn, password=password, auto_bind=True,
-                               receive_timeout=10)
+        user_conn = _bind_connection(srv, user_dn, password, config["use_ssl"])
         user_conn.unbind()
         return True, None
 

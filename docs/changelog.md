@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 17:15;0.0.1+20;Bugfix;LDAP: StartTLS auf Port 389 wenn SSL nicht aktiviert (behebt strongerAuthRequired bei Samba-DCs)
+10.02.2026 17:15;0.0.1+20;Bugfix;LDAP: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte/abgelaufene Zertifikate
 10.02.2026 17:00;0.0.1+19;Feature;LDAP-Integration: Active-Directory-Anbindung, AD-Benutzer automatisch synchronisieren
 10.02.2026 17:00;0.0.1+19;Feature;LDAP-Login: AD-Benutzer melden sich mit AD-Zugangsdaten an (LDAP-Bind), lokale Benutzer als Fallback
 10.02.2026 17:00;0.0.1+19;Feature;Admin-UI: Neuer Tab "LDAP" mit Server-Konfiguration, Verbindungstest, Gruppenauswahl

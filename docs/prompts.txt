@@ -380,6 +380,30 @@ Welche Attribute?   : benutzername (SamAccountName), Nachname (sn), Vorname (Giv
 
 Implementiere bitte den Plan aus docs/TODO/sprint_ldap_integration.md
 
+------------------------------------------------------------------------------------
+
+ich habe eben versucht mich mit einem ldap-server zu verbinden:
+Server: 10.0.12.12
+port: 389
+bind-dn: higa\Administrator
+bind-passwort: Passwort1
+suchpfad: OU=Benutzer,DC=higa,DC=int
+-> Verbindungstest fehlgeschlagen: automatic bind not successful - strongerAuthRequired
+
+10.0.12.12 ist ein linux-server (ubuntu) mit einem samba-dc. du kannst dich auf dem server als root mit passwort dnstuff anmdelden.
+der server ist schon einige jahre alt, akzeptiert also bestimmt auch ältere authentifizierungs-methoden. analysiere das problem bitte und gib mir rückmeldung vor änderungen.
+
+● Die korrekten Verbindungsdaten waeren dann:
+  - Server: 10.0.12.12, Port: 389, SSL-Checkbox: aus (StartTLS wird automatisch verwendet)
+  - Bind-DN: Administrator@higa.int
+  - Suchpfad: OU=Benutzer,DC=higa,DC=int
+
+  Soll ich die Aenderung an ldap_utils.py umsetzen?
+
+------------------------------------------------------------------------------------
+
+ja, mach das bitte
+
 ====================================================================================
 
 
