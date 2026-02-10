@@ -23,5 +23,8 @@ env/
 data/*.db
 data/secret.key
 
+# Build
+build/
+
 # Claude Code
 .claude/
