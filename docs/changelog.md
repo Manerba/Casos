@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 20:30;0.0.1+23;Bugfix;LDAP: Falsches Bind-Passwort wurde nicht erkannt (raise_exceptions=True fuer ldap3 Connection)
+10.02.2026 20:30;0.0.1+23;Bugfix;APT-Repo: GPG-Key im binaeren Format exportieren (statt ASCII-Armor)
 10.02.2026 20:00;0.0.1+21;Feature;APT-Packaging: .deb-Paket-Bau mit packaging/DEBIAN (control, postinst, prerm, postrm)
 10.02.2026 20:00;0.0.1+21;Feature;publish.sh: Build + Upload + Repo-Index-Aktualisierung + GPG-Signierung auf Repo-Server
 10.02.2026 20:00;0.0.1+21;Feature;install.sh: Bootstrap-Script fuer Einzeiler-Installation (curl | bash)

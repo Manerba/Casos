@@ -37,10 +37,16 @@ fi
 
 info "Installiere Tareas auf Ubuntu 24.04..."
 
-# GPG-Key herunterladen
+# GPG-Key herunterladen (falls Armor-Format: automatisch konvertieren)
 info "Lade GPG-Key herunter..."
 mkdir -p /etc/apt/keyrings
-curl -fsSL "$GPG_KEY_URL" -o "$KEYRING_PATH"
+curl -fsSL "$GPG_KEY_URL" -o /tmp/tareas-repo-key.tmp
+if file /tmp/tareas-repo-key.tmp | grep -q "PGP public key"; then
+    cp /tmp/tareas-repo-key.tmp "$KEYRING_PATH"
+else
+    gpg --dearmor -o "$KEYRING_PATH" /tmp/tareas-repo-key.tmp
+fi
+rm -f /tmp/tareas-repo-key.tmp
 
 # APT-Quelle hinzufuegen
 info "Fuege APT-Quelle hinzu..."

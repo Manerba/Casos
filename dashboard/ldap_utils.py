@@ -17,7 +17,8 @@ def _create_server(server_addr, port, use_ssl):
 def _bind_connection(server, bind_dn, bind_password, use_ssl, receive_timeout=10):
     """Erstellt und bindet eine Connection. Bei nicht-SSL wird StartTLS verwendet."""
     conn = Connection(server, user=bind_dn, password=bind_password,
-                      auto_bind=False, receive_timeout=receive_timeout)
+                      auto_bind=False, receive_timeout=receive_timeout,
+                      raise_exceptions=True)
     conn.open()
     if not use_ssl:
         conn.start_tls()

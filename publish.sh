@@ -46,7 +46,7 @@ mkdir -p "$REPO_DIR/dists/noble/main/binary-all"
 mkdir -p "$REPO_DIR/pool/main/t/tareas"
 
 # GPG Public Key exportieren
-gpg --export --armor C818D9020A2F43CEBCE2E7E0BA3D049F6600D868 > "$REPO_DIR/tareas-repo.gpg"
+gpg --export C818D9020A2F43CEBCE2E7E0BA3D049F6600D868 > "$REPO_DIR/tareas-repo.gpg"
 echo "GPG-Key exportiert nach $REPO_DIR/tareas-repo.gpg"
 
 # Apache-Config erstellen
