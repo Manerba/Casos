@@ -1,6 +1,11 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Interaktiver Projekt-Aufgabengraph als Fullscreen-Overlay (vis-network)
+10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Hierarchisches Layout (links-nach-rechts), Knoten nach Status farbcodiert (Offen/In Arbeit/Erledigt)
+10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Zoom, Pan, Tooltips (Name, Status, Deadline, Bereich), Fit-Button, ESC/X schliessen
+10.02.2026 23:00;0.0.1+28;Feature;Netzplan: Theme-Kompatibilitaet (Farben passen sich bei Light/Dark-Wechsel live an)
+10.02.2026 23:00;0.0.1+28;Aenderung;vis-network 9.1.9 als statische Bibliothek eingebunden (JS + CSS)
 10.02.2026 21:45;0.0.1+27;Bugfix;LDAP-Login: Benutzersuche ab Domain-Root statt konfigurierter Search-Base (OU=Gruppen enthielt keine User-Objekte)
 10.02.2026 21:30;0.0.1+26;Bugfix;LDAP-Login: Detaillierte Fehlermeldungen statt generisches "Ungueltige Anmeldedaten" (zeigt Search-Base, DN, LDAP-Fehler)
 10.02.2026 21:15;0.0.1+25;Bugfix;LDAP: Blockierende LDAP-Aufrufe via asyncio.to_thread() in Thread-Pool ausgelagert (behebt "Failed to fetch" bei langsamer DC-Verbindung)

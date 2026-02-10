@@ -278,7 +278,10 @@ async function onTaskRowExpanded(rowId, detailElement) {
         html += `<div class="subtask-section" id="subtaskSection_${row.id}">
             <div class="subtask-section-header">
                 <h4>Teilaufgaben</h4>
-                ${perm.isCreator ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">Team</button>` : ''}
+                <div class="subtask-section-actions">
+                    <button class="control-btn" onclick="event.stopPropagation(); openNetzplan(${row.id})">Netzplan</button>
+                    ${perm.isCreator ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">Team</button>` : ''}
+                </div>
             </div>
             <div id="subtaskContainer_${row.id}">
                 <div class="table-loading"><div class="spinner"></div></div>
@@ -1453,4 +1456,207 @@ function escapeAttr(text) {
         .replace(/'/g, '&#39;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+// ========================================
+// Netzplan (Projekt-Aufgabengraph)
+// ========================================
+
+let netzplanNetwork = null;
+
+function getNetzplanColors() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return {
+        nodeOffen: { background: isDark ? '#4a4a5a' : '#bdc3c7', border: isDark ? '#6a6a7a' : '#95a5a6', font: isDark ? '#e8e8e8' : '#333333' },
+        nodeArbeit: { background: isDark ? '#1a5276' : '#d4e6f1', border: isDark ? '#2980b9' : '#3498db', font: isDark ? '#e8e8e8' : '#333333' },
+        nodeErledigt: { background: isDark ? '#1e5631' : '#d5f5e3', border: isDark ? '#27ae60' : '#28a745', font: isDark ? '#e8e8e8' : '#333333' },
+        edge: isDark ? '#4a4a6a' : '#bbb',
+        highlight: { background: isDark ? '#2980b9' : '#3498db', border: isDark ? '#3498db' : '#2471a3' },
+    };
+}
+
+function getNodeColor(statusPercent, colors) {
+    if (statusPercent >= 100) return colors.nodeErledigt;
+    if (statusPercent > 0) return colors.nodeArbeit;
+    return colors.nodeOffen;
+}
+
+function openNetzplan(taskId) {
+    const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
+    const projectName = parentRow ? parentRow.name : `Projekt #${taskId}`;
+
+    // SubTasks-Daten aus dem gespeicherten Container lesen
+    const container = document.getElementById(`subtaskContainer_${taskId}`);
+    const subtasks = container?._subtasksData || [];
+
+    if (subtasks.length === 0) {
+        showNotification('Keine Teilaufgaben vorhanden', 'error');
+        return;
+    }
+
+    const colors = getNetzplanColors();
+
+    // Overlay erstellen
+    const overlay = document.createElement('div');
+    overlay.className = 'netzplan-overlay';
+    overlay.innerHTML = `
+        <div class="netzplan-header">
+            <div class="netzplan-title">${escapeHtml(projectName)} - Netzplan</div>
+            <div class="netzplan-legend">
+                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-offen"></span> Offen</span>
+                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-arbeit"></span> In Arbeit</span>
+                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-erledigt"></span> Erledigt</span>
+            </div>
+            <button class="netzplan-close-btn" title="Schliessen">&times;</button>
+        </div>
+        <div class="netzplan-body">
+            <div class="netzplan-graph" id="netzplanGraph"></div>
+            <button class="netzplan-fit-btn" id="netzplanFitBtn">Einpassen</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Graph-Daten aufbereiten
+    const nodesArr = [];
+    const edgesArr = [];
+
+    // Level-Berechnung: Knoten ohne Vorgaenger = Level 0
+    const levelMap = {};
+    function computeLevel(st) {
+        if (levelMap[st.id] !== undefined) return levelMap[st.id];
+        const predIds = st.predecessor_ids || [];
+        if (predIds.length === 0) {
+            levelMap[st.id] = 0;
+            return 0;
+        }
+        let maxPredLevel = 0;
+        predIds.forEach(pid => {
+            const pred = subtasks.find(s => s.id === pid);
+            if (pred) {
+                maxPredLevel = Math.max(maxPredLevel, computeLevel(pred));
+            }
+        });
+        levelMap[st.id] = maxPredLevel + 1;
+        return levelMap[st.id];
+    }
+    subtasks.forEach(st => computeLevel(st));
+
+    subtasks.forEach(st => {
+        const statusPct = st.status_percent || 0;
+        const nodeColor = getNodeColor(statusPct, colors);
+        const posLabel = st.position_number ? `${st.position_number}: ` : '';
+        const label = `${posLabel}${st.name}`;
+
+        nodesArr.push({
+            id: st.id,
+            label: label,
+            level: levelMap[st.id],
+            color: {
+                background: nodeColor.background,
+                border: nodeColor.border,
+                highlight: { background: colors.highlight.background, border: colors.highlight.border },
+            },
+            font: { color: nodeColor.font, size: 13, face: "'Segoe UI', Arial, sans-serif" },
+            shape: 'box',
+            margin: { top: 8, right: 12, bottom: 8, left: 12 },
+            borderWidth: 2,
+            borderWidthSelected: 3,
+            title: `${st.name}\nStatus: ${statusPct}%${st.deadline ? '\nDeadline: ' + st.deadline : ''}${st.area_name ? '\nBereich: ' + st.area_name : ''}`,
+        });
+
+        // Kanten fuer Vorgaenger
+        const predIds = st.predecessor_ids || [];
+        predIds.forEach(pid => {
+            edgesArr.push({
+                from: pid,
+                to: st.id,
+                arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+                color: { color: colors.edge, highlight: colors.highlight.border },
+                smooth: { type: 'curvedCW', roundness: 0.15 },
+                width: 1.5,
+            });
+        });
+    });
+
+    // vis-network initialisieren
+    const graphContainer = document.getElementById('netzplanGraph');
+    const data = { nodes: new vis.DataSet(nodesArr), edges: new vis.DataSet(edgesArr) };
+
+    const options = {
+        layout: {
+            hierarchical: {
+                enabled: true,
+                direction: 'LR',
+                sortMethod: 'directed',
+                levelSeparation: 180,
+                nodeSpacing: 60,
+                treeSpacing: 80,
+                blockShifting: true,
+                edgeMinimization: true,
+            },
+        },
+        physics: { enabled: false },
+        interaction: {
+            hover: true,
+            tooltipDelay: 200,
+            zoomView: true,
+            dragView: true,
+        },
+        edges: {
+            smooth: { type: 'curvedCW', roundness: 0.15 },
+        },
+    };
+
+    netzplanNetwork = new vis.Network(graphContainer, data, options);
+
+    // Fit nach Rendering
+    netzplanNetwork.once('afterDrawing', () => {
+        netzplanNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+    });
+
+    // Fit-Button
+    document.getElementById('netzplanFitBtn').addEventListener('click', () => {
+        if (netzplanNetwork) {
+            netzplanNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+        }
+    });
+
+    // Theme-Wechsel: Graph-Farben aktualisieren
+    const themeHandler = () => {
+        if (!netzplanNetwork) return;
+        const newColors = getNetzplanColors();
+        subtasks.forEach(st => {
+            const statusPct = st.status_percent || 0;
+            const nc = getNodeColor(statusPct, newColors);
+            data.nodes.update({
+                id: st.id,
+                color: { background: nc.background, border: nc.border, highlight: { background: newColors.highlight.background, border: newColors.highlight.border } },
+                font: { color: nc.font, size: 13, face: "'Segoe UI', Arial, sans-serif" },
+            });
+        });
+        data.edges.forEach(edge => {
+            data.edges.update({ id: edge.id, color: { color: newColors.edge, highlight: newColors.highlight.border } });
+        });
+    };
+    document.addEventListener('themeChanged', themeHandler);
+
+    // Schliessen-Logik (mit komplettem Cleanup)
+    const closeOverlay = () => {
+        document.removeEventListener('themeChanged', themeHandler);
+        document.removeEventListener('keydown', escHandler);
+        if (netzplanNetwork) {
+            netzplanNetwork.destroy();
+            netzplanNetwork = null;
+        }
+        overlay.remove();
+    };
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') closeOverlay();
+    };
+    document.addEventListener('keydown', escHandler);
+
+    overlay.querySelector('.netzplan-close-btn').addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
 }
