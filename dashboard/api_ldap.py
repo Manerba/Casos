@@ -3,6 +3,7 @@ Tareas - LDAP Admin API-Router
 LDAP-Konfiguration, Gruppen, Synchronisierung.
 """
 
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -77,8 +78,9 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
     if not data.search_base.strip():
         raise HTTPException(status_code=400, detail="Suchpfad ist Pflichtfeld")
 
-    # Verbindungstest
-    success, error = test_connection(
+    # Verbindungstest (in Thread-Pool, blockiert sonst den Event-Loop)
+    success, error = await asyncio.to_thread(
+        test_connection,
         data.server.strip(), data.port, data.use_ssl,
         data.bind_dn.strip(), data.bind_password, data.search_base.strip(),
     )
@@ -161,7 +163,7 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
         db.close()
 
     try:
-        groups = list_groups(config)
+        groups = await asyncio.to_thread(list_groups, config)
         return {"groups": groups}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -185,7 +187,7 @@ async def select_group(data: GroupSelectRequest, user=Depends(get_admin_user)):
         db.close()
 
     # Sofort Sync ausfuehren
-    result = sync_ldap_users()
+    result = await asyncio.to_thread(sync_ldap_users)
 
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
@@ -214,7 +216,7 @@ async def deselect_group(user=Depends(get_admin_user)):
 @router.post("/sync")
 async def manual_sync(user=Depends(get_admin_user)):
     """Manueller Sync ('Jetzt synchronisieren')."""
-    result = sync_ldap_users()
+    result = await asyncio.to_thread(sync_ldap_users)
 
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])

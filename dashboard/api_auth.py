@@ -3,6 +3,7 @@ Tareas - Auth API-Router
 Login, Logout, Me, Passwort-Aenderung.
 """
 
+import asyncio
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -84,7 +85,9 @@ async def login(data: LoginRequest):
 
         try:
             from dashboard.ldap_utils import authenticate_user
-            success, error = authenticate_user(config, data.username, data.password)
+            success, error = await asyncio.to_thread(
+                authenticate_user, config, data.username, data.password
+            )
         except Exception:
             raise HTTPException(status_code=503, detail="LDAP-Server nicht erreichbar")
 

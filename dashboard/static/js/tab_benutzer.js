@@ -35,6 +35,8 @@ async function initBenutzerTab() {
         id: 'benutzer',
         apiEndpoint: '/api/admin/users',
         expandable: true,
+        showHeader: true,
+        gridTemplate: '30px 1fr 130px 130px 180px 70px 80px 70px 100px',
         columns: [
             { label: 'Nachname', field: 'nachname', width: 0, sortable: true },
             { label: 'Vorname', field: 'vorname', width: 130, sortable: true },
