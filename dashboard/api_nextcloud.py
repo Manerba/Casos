@@ -194,8 +194,8 @@ async def get_nextcloud_status(user=Depends(get_current_user)):
 
 def _get_task_nextcloud_path(task_id: int, user: dict) -> str:
     """
-    Nextcloud-Pfad fuer ein Projekt ermitteln und Zugriff pruefen.
-    Gibt den relativen Pfad zum Projektverzeichnis zurueck.
+    Nextcloud-Pfad fuer eine Aufgabe/Projekt ermitteln und Zugriff pruefen.
+    Gibt den relativen Pfad zum Verzeichnis zurueck.
     """
     db = get_db()
     try:
@@ -206,8 +206,6 @@ def _get_task_nextcloud_path(task_id: int, user: dict) -> str:
 
         if not task:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
-        if task["task_type"] != "projekt":
-            raise HTTPException(status_code=400, detail="Dateiablage nur fuer Projekte verfuegbar")
         if not task["nextcloud_path"]:
             raise HTTPException(status_code=400, detail="Kein Nextcloud-Verzeichnis zugeordnet")
 

@@ -120,7 +120,9 @@ async def get_tasks(user=Depends(get_current_user)):
             """SELECT t.*,
                       uc.vorname || ' ' || uc.nachname AS created_by_name,
                       ua.vorname || ' ' || ua.nachname AS assigned_to_name,
-                      (SELECT 1 FROM project_members pm WHERE pm.project_id = t.id AND pm.user_id = ?) AS is_team_member
+                      (SELECT 1 FROM project_members pm WHERE pm.project_id = t.id AND pm.user_id = ?) AS is_team_member,
+                      (SELECT COUNT(*) FROM sub_tasks st WHERE st.project_id = t.id) AS subtask_total,
+                      (SELECT COUNT(*) FROM sub_tasks st WHERE st.project_id = t.id AND st.status_percent >= 100) AS subtask_done
                FROM tasks t
                LEFT JOIN users uc ON t.created_by = uc.id
                LEFT JOIN users ua ON t.assigned_to = ua.id
@@ -148,6 +150,8 @@ async def get_tasks(user=Depends(get_current_user)):
                 "assigned_to_name": (row["assigned_to_name"] or "").strip(),
                 "is_team_member": bool(row["is_team_member"]),
                 "nextcloud_path": row["nextcloud_path"] or "",
+                "subtask_total": row["subtask_total"] or 0,
+                "subtask_done": row["subtask_done"] or 0,
             })
 
         # Zugewiesene Teilaufgaben als Aufgaben-Eintraege

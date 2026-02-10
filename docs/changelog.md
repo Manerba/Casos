@@ -1,6 +1,10 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 01:15;0.0.1+33;Feature;Dateiablage auch fuer Aufgaben (nicht nur Projekte) verfuegbar
+11.02.2026 01:15;0.0.1+33;Feature;Projektstatus zeigt Teilaufgaben-Fortschritt (n/n) in der Aufgabentabelle
+11.02.2026 01:15;0.0.1+33;Aenderung;Bestaetigung vor Aenderung einer bereits zugeordneten Dateiablage
+11.02.2026 01:15;0.0.1+33;Aenderung;Texte von Projektverzeichnis auf Dateiablage vereinheitlicht
 11.02.2026 00:30;0.0.1+32;Feature;Editor und Dateiablage synchron in der Hoehe vergroesserbar/verkleinerbar (Resize-Handle)
 11.02.2026 00:30;0.0.1+32;Aenderung;Dateiablage-Titel entfernt, Header-Hoehen von Editor und Dateiablage angeglichen
 11.02.2026 00:30;0.0.1+32;Kosmetik;Team-Button Groesse an Netzplan-Button angeglichen, Ober-/Unterkanten beider Spalten pixelgenau ausgerichtet

@@ -141,6 +141,15 @@ function toggleAllExpand() {
 
 function renderAufgabenBadge(value, col, row) {
     if (!value) return '-';
+
+    // Projekte: Teilaufgaben-Fortschritt anzeigen
+    if (col.field === 'status' && row.task_type === 'projekt' && row.subtask_total > 0) {
+        const done = row.subtask_done;
+        const total = row.subtask_total;
+        const cssClass = done === total ? 'erledigt' : done > 0 ? 'in_arbeit' : 'offen';
+        return `<span class="badge badge-${cssClass}">${done}/${total}</span>`;
+    }
+
     const cssClass = value.toLowerCase().replace(/\s+/g, '_');
     const labelMap = {
         'offen': 'Offen',
@@ -257,9 +266,9 @@ async function onTaskRowExpanded(rowId, detailElement) {
     html += `</div>`;
 
     // Beschreibung + Dateiablage: Zwei-Spalten-Layout wenn NC-Verzeichnis zugeordnet
-    const isProjektWithNc = row.task_type === 'projekt' && !!row.nextcloud_path && ncConfigured;
+    const hasNcPath = !!row.nextcloud_path && ncConfigured;
 
-    if (isProjektWithNc) {
+    if (hasNcPath) {
         html += `<div class="project-detail-columns">`;
         html += `<div class="project-detail-left">`;
     }
@@ -287,13 +296,20 @@ async function onTaskRowExpanded(rowId, detailElement) {
         html += `<div id="wysiwygEditor_${row.id}"></div>`;
     }
 
-    if (isProjektWithNc) {
+    if (hasNcPath) {
         html += `</div>`; // project-detail-left
         html += `<div class="project-detail-right">
             <div id="fileBrowserContainer_${row.id}"></div>
         </div>`;
         html += `</div>`; // project-detail-columns
         html += `<div class="project-detail-resize" id="pdResize_${row.id}"></div>`;
+    }
+
+    // Dateiablage-Button fuer Aufgaben (nicht-Projekte)
+    if (row.task_type !== 'projekt' && ncConfigured && (perm.isCreator || perm.isLegacy)) {
+        html += `<div class="subtask-section-actions" style="margin-top:8px;display:flex;justify-content:flex-end">
+            <button class="control-btn${row.nextcloud_path ? ' nc-active' : ''}" onclick="event.stopPropagation(); openNcDirDialog(${row.id}, '${escapeAttr(row.nextcloud_path || '')}')">${row.nextcloud_path ? '&#128194; ' + escapeHtml(row.nextcloud_path) : 'Dateiablage'}</button>
+        </div>`;
     }
 
     // SubTask-Bereich fuer Projekte
@@ -304,7 +320,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <div class="subtask-section-actions">
                     <button class="control-btn" onclick="event.stopPropagation(); openNetzplan(${row.id})">Netzplan</button>
                     ${perm.isCreator ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">Team</button>` : ''}
-                    ${ncConfigured && (perm.isCreator || perm.isLegacy) ? `<button class="control-btn${row.nextcloud_path ? ' nc-active' : ''}" onclick="event.stopPropagation(); openNcDirDialog(${row.id}, '${escapeAttr(row.nextcloud_path || '')}')">${row.nextcloud_path ? '&#128194; ' + escapeHtml(row.nextcloud_path) : 'Projektverzeichnis'}</button>` : ''}
+                    ${ncConfigured && (perm.isCreator || perm.isLegacy) ? `<button class="control-btn${row.nextcloud_path ? ' nc-active' : ''}" onclick="event.stopPropagation(); openNcDirDialog(${row.id}, '${escapeAttr(row.nextcloud_path || '')}')">${row.nextcloud_path ? '&#128194; ' + escapeHtml(row.nextcloud_path) : 'Dateiablage'}</button>` : ''}
                 </div>
             </div>
             <div id="subtaskContainer_${row.id}">
@@ -357,19 +373,18 @@ async function onTaskRowExpanded(rowId, detailElement) {
         new WysiwygEditor(`wysiwygEditor_${row.id}`, row.description || '');
     }
 
+    // File Browser initialisieren wenn Verzeichnis zugeordnet
+    if (row.nextcloud_path && ncConfigured) {
+        const fbContainer = document.getElementById(`fileBrowserContainer_${row.id}`);
+        if (fbContainer) {
+            new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
+        }
+        initColumnResize(row.id);
+    }
+
     // SubTasks laden wenn Projekt
     if (row.task_type === 'projekt') {
         loadSubTasks(row.id);
-
-        // File Browser initialisieren wenn Verzeichnis zugeordnet
-        if (row.nextcloud_path && ncConfigured) {
-            const fbContainer = document.getElementById(`fileBrowserContainer_${row.id}`);
-            if (fbContainer) {
-                new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
-            }
-            // Resize-Handle initialisieren
-            initColumnResize(row.id);
-        }
     }
 }
 
@@ -1735,6 +1750,11 @@ function openNetzplan(taskId) {
 // ========================================
 
 async function openNcDirDialog(taskId, currentPath) {
+    if (currentPath) {
+        const confirmed = await msgbox('confirm', 'warning', 'Wollen Sie die Dateiablage wirklich aendern?');
+        if (!confirmed) return;
+    }
+
     const existing = document.querySelector('.modal-overlay');
     if (existing) existing.remove();
 
@@ -1744,7 +1764,7 @@ async function openNcDirDialog(taskId, currentPath) {
 
     overlay.innerHTML = `
         <div class="modal-content modal-wide">
-            <div class="modal-header">Projektverzeichnis</div>
+            <div class="modal-header">Dateiablage</div>
             <div class="modal-body">
                 <div class="nc-browse-breadcrumb" id="ncBrowseBc"></div>
                 <div id="ncDirList">
