@@ -1,6 +1,9 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+12.02.2026 02:00;0.0.1+49;Feature;Mail-Integration: SMTP-Konfiguration, Testmail, Mail-Vorlagen (Admin-Tab), Benutzer-Benachrichtigungs-Einstellungen (Modal), Event-getriggerter Sofort-Versand bei Zuweisung/Statusaenderung, taeglicher Scheduler fuer Faelligkeits-Mails, Einladungsmail an Benutzer
+12.02.2026 02:00;0.0.1+49;Aenderung;DB-Schema: mail_config, mail_templates, user_mail_preferences Tabellen mit Default-Templates (6 Event-Typen)
+12.02.2026 02:00;0.0.1+49;Aenderung;Neue Dateien: mail_service.py (SMTP-Versand, Template-Rendering), api_mail.py (Admin+User API), tab_mail.js (Admin-UI), mail_scheduler.py + systemd-Dateien
 12.02.2026 00:30;0.0.1+48;Feature;Netzplan: Projektknoten (Node 0) als Diamond-Shape mit Projektnamen, persistente Position, Toolbar-Buttons im Header, visuelles Dimmen im Linking-Modus
 11.02.2026 23:55;0.0.1+47;Feature;Netzplan: Persistente Node-Positionen (DB-gespeichert), Auto-Anordnung-Button, Undo/Redo fuer Positionsaenderungen und Abhaengigkeiten (Ctrl+Z/Y)
 11.02.2026 22:30;0.0.1+46;Feature;Dateiablage: Bilddateien (jpg, png, gif, webp, svg, etc.) oeffnen bei Doppelklick im neuen Browser-Tab statt Download, Kontextmenue-Eintrag Anzeigen

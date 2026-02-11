@@ -21,6 +21,7 @@ from dashboard.api_auth import router as auth_router
 from dashboard.api_teams import router as teams_router
 from dashboard.api_nextcloud import files_router as nextcloud_files_router
 from dashboard.api_onlyoffice import wopi_router, editor_router
+from dashboard.api_mail import mail_user_router
 from dashboard.auth import get_current_user, _extract_user_from_request
 
 
@@ -50,6 +51,9 @@ app.include_router(wopi_router)
 
 # ONLYOFFICE Editor-Router MIT auth Dependency
 app.include_router(editor_router, dependencies=[Depends(get_current_user)])
+
+# Mail User-Router MIT auth Dependency
+app.include_router(mail_user_router, dependencies=[Depends(get_current_user)])
 
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"

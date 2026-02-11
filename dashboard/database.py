@@ -242,6 +242,62 @@ def init_db():
     if "nextcloud_path" not in task_cols2:
         conn.execute("ALTER TABLE tasks ADD COLUMN nextcloud_path TEXT")
 
+    # Mail-Tabellen
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS mail_config (
+            id INTEGER PRIMARY KEY,
+            smtp_server TEXT NOT NULL,
+            smtp_port INTEGER DEFAULT 587,
+            encryption TEXT DEFAULT 'starttls',
+            auth_enabled INTEGER DEFAULT 1,
+            username TEXT DEFAULT '',
+            password TEXT DEFAULT '',
+            from_address TEXT NOT NULL,
+            from_name TEXT DEFAULT 'Tareas',
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS mail_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_type TEXT NOT NULL UNIQUE,
+            subject TEXT NOT NULL,
+            body_text TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS user_mail_preferences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            days_before INTEGER DEFAULT 2,
+            UNIQUE(user_id, event_type)
+        );
+    """)
+
+    # Default-Mail-Templates einfuegen (nur wenn Tabelle leer)
+    tmpl_count = conn.execute("SELECT COUNT(*) FROM mail_templates").fetchone()[0]
+    if tmpl_count == 0:
+        default_templates = [
+            ("task_assigned", "Aufgabe zugewiesen: {task_name}",
+             "Hallo {recipient_name},\n\nDir wurde die Aufgabe \"{task_name}\" von {actor_name} zugewiesen.\n\nDeadline: {deadline}\nPrioritaet: {priority}\n\nViele Gruesse\nTareas"),
+            ("status_change", "Status geaendert: {task_name}",
+             "Hallo {recipient_name},\n\nDer Status der Aufgabe \"{task_name}\" wurde von {actor_name} auf \"{new_status}\" geaendert.\n\nViele Gruesse\nTareas"),
+            ("deadline_reached", "Faelligkeit heute: {task_name}",
+             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist heute faellig.\n\nBitte pruefe den aktuellen Stand.\n\nViele Gruesse\nTareas"),
+            ("deadline_warning", "Faelligkeit in {days_before} Tagen: {task_name}",
+             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist in {days_before} Tagen faellig (Deadline: {deadline}).\n\nViele Gruesse\nTareas"),
+            ("invite", "Einladung zu Tareas",
+             "Hallo {recipient_name},\n\nDu wurdest zu Tareas eingeladen.\n\nBenutzername: {username}\nURL: {app_url}\n\nBitte melde dich an und aendere dein Passwort.\n\nViele Gruesse\nTareas"),
+            ("test", "Testmail von Tareas",
+             "Dies ist eine Testmail von Tareas.\n\nWenn du diese Mail erhaeltst, funktioniert der Mailversand korrekt."),
+        ]
+        for event_type, subject, body_text in default_templates:
+            conn.execute(
+                "INSERT INTO mail_templates (event_type, subject, body_text) VALUES (?, ?, ?)",
+                (event_type, subject, body_text),
+            )
+
     # Default-Bereiche einfuegen (nur wenn Tabelle leer)
     cursor = conn.execute("SELECT COUNT(*) FROM areas")
     if cursor.fetchone()[0] == 0:

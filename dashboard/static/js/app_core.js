@@ -78,6 +78,12 @@ function initEventListeners() {
         changePasswordBtn.addEventListener('click', openPasswordChangeModal);
     }
 
+    // Mail-Benachrichtigungen-Button
+    const mailPrefsBtn = document.getElementById('mailPrefsBtn');
+    if (mailPrefsBtn) {
+        mailPrefsBtn.addEventListener('click', openMailPreferencesModal);
+    }
+
     // Tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function(e) {
@@ -505,6 +511,119 @@ function debounce(func, wait) {
 function formatPercent(value) {
     if (value === null || value === undefined) return '-';
     return Math.round(value) + '%';
+}
+
+// ========================================
+// Mail-Benachrichtigungen Modal
+// ========================================
+
+async function openMailPreferencesModal() {
+    toggleSettingsDropdown(false);
+
+    const existing = document.querySelector('.modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-width:500px">
+            <div class="modal-header">Mail-Benachrichtigungen</div>
+            <div class="modal-body">
+                <div class="table-loading"><div class="spinner"></div></div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+                <button class="action-btn primary" id="mailPrefsSaveBtn" disabled>Speichern</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const escHandler = (e) => {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    // Prefs laden
+    try {
+        const resp = await fetch('/api/user/mail/preferences');
+        if (!resp.ok) throw new Error('Fehler beim Laden');
+        const data = await resp.json();
+        const prefs = data.preferences || [];
+
+        const eventLabels = {
+            'task_assigned': 'Aufgabe zugewiesen',
+            'status_change': 'Status geaendert',
+            'deadline_reached': 'Faelligkeit erreicht',
+            'deadline_warning': 'Faelligkeits-Vorwarnung',
+        };
+
+        let html = '<div class="mail-prefs-list">';
+        for (const pref of prefs) {
+            const label = eventLabels[pref.event_type] || pref.event_type;
+            const checked = pref.enabled ? 'checked' : '';
+
+            html += `<div class="mail-pref-item">
+                <label>
+                    <input type="checkbox" data-event="${pref.event_type}" ${checked}>
+                    ${escapeHtml(label)}
+                </label>`;
+
+            if (pref.event_type === 'deadline_warning') {
+                html += `<div class="mail-pref-days">
+                    <input type="number" id="mailPrefDays_${pref.event_type}" value="${pref.days_before}" min="1" max="30">
+                    <span>Tage vorher</span>
+                </div>`;
+            }
+
+            html += '</div>';
+        }
+        html += '</div>';
+
+        const modalBody = overlay.querySelector('.modal-body');
+        modalBody.innerHTML = html;
+
+        const saveBtn = document.getElementById('mailPrefsSaveBtn');
+        saveBtn.disabled = false;
+
+        saveBtn.addEventListener('click', async () => {
+            const preferences = [];
+            overlay.querySelectorAll('.mail-pref-item input[type="checkbox"]').forEach(cb => {
+                const eventType = cb.dataset.event;
+                const enabled = cb.checked;
+                const daysInput = document.getElementById(`mailPrefDays_${eventType}`);
+                const days_before = daysInput ? parseInt(daysInput.value) || 2 : 2;
+                preferences.push({ event_type: eventType, enabled, days_before });
+            });
+
+            try {
+                const resp = await fetch('/api/user/mail/preferences', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preferences }),
+                });
+
+                if (!resp.ok) {
+                    const data = await resp.json().catch(() => ({}));
+                    throw new Error(data.detail || 'Fehler beim Speichern');
+                }
+
+                showNotification('Mail-Einstellungen gespeichert', 'success');
+                overlay.remove();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        });
+    } catch (error) {
+        const modalBody = overlay.querySelector('.modal-body');
+        modalBody.innerHTML = '<p style="color:var(--color-bearish)">Fehler beim Laden der Einstellungen</p>';
+    }
 }
 
 // ========================================

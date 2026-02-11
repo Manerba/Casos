@@ -818,3 +818,159 @@ a.tab {
     background-color: rgba(142, 68, 173, 0.3);
     color: #bb6bd9;
 }
+
+/* ========================================
+   Mail-Tab Styles
+   ======================================== */
+
+.mail-container {
+    padding: 20px;
+    max-width: 900px;
+}
+
+.mail-section {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.mail-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.mail-form-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.mail-form-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mail-form-field label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.mail-form-field input[type="text"],
+.mail-form-field input[type="password"],
+.mail-form-field input[type="number"],
+.mail-form-field input[type="email"],
+.mail-form-field select,
+.mail-form-field textarea {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.mail-form-field textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.mail-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    padding-top: 4px;
+}
+
+.mail-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.mail-status-info {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.mail-template-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+.mail-template-section:first-of-type {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.mail-template-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.mail-placeholder-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Mail-Preferences Modal */
+
+.mail-prefs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mail-pref-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+}
+
+.mail-pref-item label {
+    flex: 1;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mail-pref-days {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.mail-pref-days input {
+    width: 50px;
+    padding: 3px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 12px;
+    text-align: center;
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Tareas Mail Scheduler
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/sdb1/nextcloud/data/mir/files/Dev/Tareas
+ExecStart=/usr/bin/python3 scripts/mail_scheduler.py
+StandardOutput=journal
+StandardError=journal

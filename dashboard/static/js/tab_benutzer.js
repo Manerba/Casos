@@ -159,6 +159,11 @@ function onUserRowExpanded(rowId, detailElement) {
     html += '<div class="detail-edit-actions">';
     html += `<button class="action-btn primary" onclick="saveUser(${row.id})">Speichern</button>`;
 
+    // Einladungsmail-Button (nur wenn User E-Mail hat)
+    if (row.email) {
+        html += ` <button class="action-btn" onclick="sendInviteMail(${row.id}, '${escapeAttr(row.username)}')">Einladungsmail senden</button>`;
+    }
+
     // Loeschen-Button: LDAP-User nur wenn deaktiviert, lokale immer
     if (!isLdap || !row.is_active) {
         html += ` <button class="action-btn danger" onclick="deleteUser(${row.id}, '${escapeAttr(row.username)}')">Loeschen</button>`;
@@ -334,4 +339,25 @@ function openNewUserModal() {
             showNotification(error.message, 'error');
         }
     });
+}
+
+// ========================================
+// Einladungsmail
+// ========================================
+
+async function sendInviteMail(userId, username) {
+    if (!await msgbox('cancel/yes', 'confirm', `Einladungsmail an "${username}" senden?`)) return;
+
+    try {
+        const resp = await fetch(`/api/admin/mail/invite/${userId}`, { method: 'POST' });
+
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.detail || 'Fehler beim Senden');
+        }
+
+        showNotification('Einladungsmail gesendet', 'success');
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
 }

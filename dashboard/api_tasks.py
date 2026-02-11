@@ -2,7 +2,9 @@
 Tareas - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
 """
 
+import asyncio
 import heapq
+import logging
 from collections import defaultdict
 from datetime import datetime
 from typing import Optional
@@ -13,6 +15,9 @@ from pydantic import BaseModel
 from dashboard.database import get_db
 from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
+from dashboard.mail_service import notify_event
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -187,6 +192,32 @@ def _topological_reorder(db, project_id):
             db.execute("UPDATE sub_tasks SET position_number = ? WHERE id = ?", (p, nid))
 
     return new_pos
+
+
+async def _send_assignment_mail(user_id, task_name, actor_name, deadline, priority):
+    """Sendet Zuweisungs-Mail (non-blocking)."""
+    try:
+        notify_event("task_assigned", user_id, {
+            "task_name": task_name,
+            "actor_name": actor_name,
+            "deadline": deadline,
+            "priority": priority,
+        })
+    except Exception as e:
+        logger.error(f"Mail-Versand fehlgeschlagen (task_assigned): {e}")
+
+
+async def _send_status_mail(user_id, task_name, actor_name, new_status):
+    """Sendet Status-Aenderungs-Mail (non-blocking)."""
+    status_labels = {"offen": "Offen", "in_arbeit": "In Arbeit", "erledigt": "Erledigt"}
+    try:
+        notify_event("status_change", user_id, {
+            "task_name": task_name,
+            "actor_name": actor_name,
+            "new_status": status_labels.get(new_status, new_status),
+        })
+    except Exception as e:
+        logger.error(f"Mail-Versand fehlgeschlagen (status_change): {e}")
 
 
 # ============================================================
@@ -377,6 +408,25 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                 values,
             )
             db.commit()
+
+        # Mail-Benachrichtigungen (non-blocking)
+        actor_name = f"{user.get('vorname', '')} {user.get('nachname', '')}".strip() or user["username"]
+        task_row = db.execute("SELECT name, deadline, priority, assigned_to, status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+
+        # Bei Zuweisung: Mail an neuen Zugewiesenen
+        if task.assigned_to is not None and task.assigned_to > 0:
+            old_assigned = existing["assigned_to"]
+            if old_assigned != task.assigned_to:
+                asyncio.create_task(_send_assignment_mail(
+                    task.assigned_to, task_row["name"], actor_name,
+                    task_row["deadline"] or "", str(task_row["priority"])
+                ))
+
+        # Bei Status-Aenderung: Mail an Zugewiesenen
+        if task.status is not None and task_row["assigned_to"] and task_row["assigned_to"] != user["id"]:
+            asyncio.create_task(_send_status_mail(
+                task_row["assigned_to"], task_row["name"], actor_name, task.status
+            ))
 
         return {"message": "Aufgabe aktualisiert"}
     finally:
