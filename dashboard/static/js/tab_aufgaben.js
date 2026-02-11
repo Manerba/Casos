@@ -557,8 +557,12 @@ async function onSubtaskViewExpanded(row, detailElement) {
             <input type="number" value="${row.priority}" disabled class="field-readonly" style="width:70px">
         </div>
         <div class="detail-edit-field">
-            <label>Status (%)</label>
-            <input type="number" id="stViewStatus_${stId}" value="${row._status_percent}" min="0" max="100" style="width:70px">
+            <label>Status</label>
+            <select id="stViewStatus_${stId}">
+                <option value="0" ${row._status_percent === 0 ? 'selected' : ''}>Offen</option>
+                <option value="50" ${row._status_percent > 0 && row._status_percent < 100 ? 'selected' : ''}>In Arbeit</option>
+                <option value="100" ${row._status_percent >= 100 ? 'selected' : ''}>Erledigt</option>
+            </select>
         </div>
     </div>`;
 
@@ -738,7 +742,7 @@ function renderSubTasks(taskId, subtasks) {
             <td>${escapeHtml(st.created_at)}</td>
             <td>${escapeHtml(st.deadline || '-')}</td>
             <td>${renderPriority(st.priority)}</td>
-            <td><span class="subtask-status-text"><span class="subtask-status-bar"><span class="subtask-status-fill" style="width:${statusPct}%"></span></span>${statusPct}%</span></td>`;
+            <td>${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</td>`;
 
         // Berechtigungs-Icon (nur Ersteller sieht es)
         if (parentPerm.isCreator) {
@@ -820,8 +824,12 @@ function renderSubTasks(taskId, subtasks) {
                             <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px" ${stPrioRO} class="${stPrioROClass}">
                         </div>
                         <div class="detail-edit-field">
-                            <label>Status (%)</label>
-                            <input type="number" id="stEditStatus_${st.id}" value="${st.status_percent}" min="0" max="100" style="width:70px" ${stStatusRO} class="${stStatusROClass}">
+                            <label>Status</label>
+                            <select id="stEditStatus_${st.id}" ${stStatusRO} class="${stStatusROClass}">
+                                <option value="0" ${statusPct === 0 ? 'selected' : ''}>Offen</option>
+                                <option value="50" ${statusPct > 0 && statusPct < 100 ? 'selected' : ''}>In Arbeit</option>
+                                <option value="100" ${statusPct >= 100 ? 'selected' : ''}>Erledigt</option>
+                            </select>
                         </div>`;
 
         // Zuweisungs-Dropdown fuer SubTasks (nur Ersteller)
