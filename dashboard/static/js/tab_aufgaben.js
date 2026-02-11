@@ -171,13 +171,14 @@ function buildCategoryButtons() {
     if (!container) {
         const controlBar = document.querySelector('.control-bar');
         if (!controlBar) return;
-        // Nach dem Separator einfuegen
-        const separator = controlBar.querySelector('.separator');
-        if (!separator) return;
+        // Nach den Dropdowns einfuegen (stabile Position)
+        const filterGroups = controlBar.querySelectorAll('.filter-group');
+        const lastFilterGroup = filterGroups[filterGroups.length - 1];
+        if (!lastFilterGroup) return;
         container = document.createElement('div');
         container.id = 'categoryFilterGroup';
         container.className = 'category-filter-group';
-        separator.after(container);
+        lastFilterGroup.after(container);
     }
 
     // Aktive Filter merken
@@ -194,9 +195,6 @@ function buildCategoryButtons() {
     });
 
     container.innerHTML = html;
-
-    // Ausblenden wenn nur eine Kategorie (kein Filtern noetig)
-    container.style.display = Object.keys(counts).length <= 1 ? 'none' : '';
 }
 
 function toggleCategoryFilter(category) {
@@ -902,9 +900,14 @@ function renderSubTasks(taskId, subtasks) {
         const stStatusROClass = stStatusRO ? 'field-readonly' : '';
         const dlISO = convertToISO(st.deadline);
 
-        // Vorgaenger-Optionen und Chips
+        // Vorgaenger-Optionen und Chips (nur niedrigere Positionen, keine transitiven Abhaengigkeiten)
+        const transitivePreds = getTransitivePredecessors(st.id, subtasks);
         const predOptions = subtasks
-            .filter(other => other.id !== st.id)
+            .filter(other =>
+                other.id !== st.id &&
+                other.position_number < st.position_number &&
+                !transitivePreds.has(other.id)
+            )
             .map(other => `<option value="${other.id}">Pos. ${other.position_number}: ${escapeHtml(other.name)}</option>`)
             .join('');
 
@@ -916,7 +919,7 @@ function renderSubTasks(taskId, subtasks) {
 
         // Daten-Zeile mit Dual-Content (Text + verstecktes Input)
         html += `<tr class="subtask-row" data-subtask-id="${st.id}" onclick="toggleSubTaskDetail(${taskId}, ${st.id})">
-            <td class="pos-cell"><span class="subtask-expand-icon">&#9654;</span>${st.position_number || ''}</td>
+            <td class="pos-cell"><span class="subtask-expand-icon">&#9654;</span><span class="pos-number">${st.position_number || ''}</span><span class="pos-arrows st-cell-edit"><button class="pos-arrow up" onclick="event.stopPropagation(); moveSubTask(${taskId}, ${st.id}, 'up')" title="Nach oben">&#9650;</button><button class="pos-arrow down" onclick="event.stopPropagation(); moveSubTask(${taskId}, ${st.id}, 'down')" title="Nach unten">&#9660;</button></span></td>
             ${!stNameRO ? `<td>
                 <span class="st-cell-text">${escapeHtml(st.name)}</span>
                 <span class="st-cell-edit"><input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" class="subtask-name-input" onclick="event.stopPropagation()"></span>
@@ -1210,6 +1213,23 @@ async function addSubTask(taskId) {
     }
 }
 
+async function moveSubTask(taskId, subtaskId, direction) {
+    const resp = await fetch(`/api/subtasks/${subtaskId}/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction }),
+    });
+    if (!resp.ok) {
+        showNotification('Verschieben fehlgeschlagen', 'error');
+        return;
+    }
+    const data = await resp.json();
+    if (data.removed_dependencies && data.removed_dependencies.length > 0) {
+        showNotification(`Position getauscht. ${data.removed_dependencies.length} ungueltige Abhaengigkeit(en) entfernt.`, 'info');
+    }
+    await loadSubTasks(taskId);
+}
+
 async function deleteSubTask(taskId, subtaskId) {
     if (!await msgbox('cancel/yes', 'confirm', 'Teilaufgabe wirklich loeschen?')) return;
 
@@ -1227,6 +1247,23 @@ async function deleteSubTask(taskId, subtaskId) {
 // ========================================
 // Vorgaenger (Predecessors)
 // ========================================
+
+function getTransitivePredecessors(subtaskId, subtasks) {
+    const visited = new Set();
+    const st = subtasks.find(s => s.id === subtaskId);
+    if (!st) return visited;
+    const queue = [...(st.predecessor_ids || [])];
+    while (queue.length > 0) {
+        const id = queue.shift();
+        if (visited.has(id)) continue;
+        visited.add(id);
+        const pred = subtasks.find(s => s.id === id);
+        if (pred && pred.predecessor_ids) {
+            queue.push(...pred.predecessor_ids);
+        }
+    }
+    return visited;
+}
 
 async function addPredecessor(taskId, subtaskId) {
     const select = document.getElementById(`predSelect_${subtaskId}`);
@@ -1655,6 +1692,8 @@ function escapeAttr(text) {
 // ========================================
 
 let netzplanNetwork = null;
+let _netzplanLinkState = null;
+let _netzplanRebuilding = false;
 
 function getNetzplanColors() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1673,43 +1712,48 @@ function getNodeColor(statusPercent, colors) {
     return colors.nodeOffen;
 }
 
-function openNetzplan(taskId) {
-    const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
-    const projectName = parentRow ? parentRow.name : `Projekt #${taskId}`;
+function _computeValidNetzplanTargets(sourceId, subtasks) {
+    const st = subtasks.find(s => s.id === sourceId);
+    if (!st) return new Set();
 
-    // SubTasks-Daten aus dem gespeicherten Container lesen
-    const container = document.getElementById(`subtaskContainer_${taskId}`);
-    const subtasks = container?._subtasksData || [];
+    // Bereits direkte Nachfolger (sourceId ist Vorgaenger von diesen)
+    const directSuccessors = new Set();
+    subtasks.forEach(s => {
+        if ((s.predecessor_ids || []).includes(sourceId)) directSuccessors.add(s.id);
+    });
 
-    if (subtasks.length === 0) {
-        showNotification('Keine Teilaufgaben vorhanden', 'error');
-        return;
+    // Transitive Nachfolger von sourceId (wuerde Zyklus erzeugen)
+    const transitiveSuccessors = new Set();
+    const queue = [sourceId];
+    while (queue.length > 0) {
+        const nid = queue.shift();
+        subtasks.forEach(s => {
+            if ((s.predecessor_ids || []).includes(nid) && !transitiveSuccessors.has(s.id)) {
+                transitiveSuccessors.add(s.id);
+                queue.push(s.id);
+            }
+        });
     }
 
-    const colors = getNetzplanColors();
+    // Transitive Vorgaenger von potentiellem Ziel: Wenn sourceId bereits transitiver
+    // Vorgaenger eines Ziels ist, waere die direkte Kante redundant
+    const valid = new Set();
+    subtasks.forEach(target => {
+        if (target.id === sourceId) return; // sich selbst
+        if (directSuccessors.has(target.id)) return; // bereits direkte Abhaengigkeit
+        if (transitiveSuccessors.has(target.id)) return; // wuerde Zyklus erzeugen
 
-    // Overlay erstellen
-    const overlay = document.createElement('div');
-    overlay.className = 'netzplan-overlay';
-    overlay.innerHTML = `
-        <div class="netzplan-header">
-            <div class="netzplan-title">${escapeHtml(projectName)} - Netzplan</div>
-            <div class="netzplan-legend">
-                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-offen"></span> Offen</span>
-                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-arbeit"></span> In Arbeit</span>
-                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-erledigt"></span> Erledigt</span>
-            </div>
-            <button class="netzplan-close-btn" title="Schliessen">&times;</button>
-        </div>
-        <div class="netzplan-body">
-            <div class="netzplan-graph" id="netzplanGraph"></div>
-            <button class="netzplan-fit-btn" id="netzplanFitBtn">Einpassen</button>
-        </div>
-    `;
+        // Pruefen auf transitive Redundanz: ist sourceId bereits transitiver Vorgaenger von target?
+        const transitivePreds = getTransitivePredecessors(target.id, subtasks);
+        if (transitivePreds.has(sourceId)) return; // transitiv redundant
 
-    document.body.appendChild(overlay);
+        valid.add(target.id);
+    });
 
-    // Graph-Daten aufbereiten
+    return valid;
+}
+
+function _buildNetzplanGraphData(subtasks, colors) {
     const nodesArr = [];
     const edgesArr = [];
 
@@ -1795,6 +1839,49 @@ function openNetzplan(taskId) {
         });
     });
 
+    return { nodesArr, edgesArr };
+}
+
+function openNetzplan(taskId) {
+    const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
+    const projectName = parentRow ? parentRow.name : `Projekt #${taskId}`;
+
+    // SubTasks-Daten aus dem gespeicherten Container lesen
+    const stContainer = document.getElementById(`subtaskContainer_${taskId}`);
+    let subtasks = stContainer?._subtasksData || [];
+
+    if (subtasks.length === 0) {
+        showNotification('Keine Teilaufgaben vorhanden', 'error');
+        return;
+    }
+
+    const colors = getNetzplanColors();
+    const defaultTitle = `${escapeHtml(projectName)} - Netzplan`;
+
+    // Overlay erstellen
+    const overlay = document.createElement('div');
+    overlay.className = 'netzplan-overlay';
+    overlay.innerHTML = `
+        <div class="netzplan-header">
+            <div class="netzplan-title" id="netzplanTitle">${defaultTitle}</div>
+            <div class="netzplan-legend">
+                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-offen"></span> Offen</span>
+                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-arbeit"></span> In Arbeit</span>
+                <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-erledigt"></span> Erledigt</span>
+            </div>
+            <button class="netzplan-close-btn" title="Schliessen">&times;</button>
+        </div>
+        <div class="netzplan-body">
+            <div class="netzplan-graph" id="netzplanGraph"></div>
+            <button class="netzplan-fit-btn" id="netzplanFitBtn">Einpassen</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Graph-Daten aufbereiten
+    const { nodesArr, edgesArr } = _buildNetzplanGraphData(subtasks, colors);
+
     // vis-network initialisieren
     const graphContainer = document.getElementById('netzplanGraph');
     const data = { nodes: new vis.DataSet(nodesArr), edges: new vis.DataSet(edgesArr) };
@@ -1828,6 +1915,246 @@ function openNetzplan(taskId) {
         }
     });
 
+    // ---- Linking-Modus Funktionen (Closures) ----
+
+    // Originale Knoten-Styles merken (fuer Reset)
+    const _originalNodeStyles = {};
+
+    function enterLinkingMode(nodeId) {
+        const validTargets = _computeValidNetzplanTargets(nodeId, subtasks);
+        const positions = netzplanNetwork.getPositions([nodeId]);
+        const sourcePos = positions[nodeId];
+
+        _netzplanLinkState = {
+            sourceId: nodeId,
+            sourcePos: sourcePos,
+            mouseCanvas: { x: sourcePos.x, y: sourcePos.y },
+            validTargets: validTargets,
+        };
+
+        // Quellknoten hervorheben
+        subtasks.forEach(st => {
+            const currentNode = data.nodes.get(st.id);
+            if (currentNode) {
+                _originalNodeStyles[st.id] = {
+                    color: currentNode.color,
+                    font: currentNode.font,
+                    borderWidth: currentNode.borderWidth,
+                    opacity: currentNode.opacity,
+                };
+            }
+
+            if (st.id === nodeId) {
+                data.nodes.update({
+                    id: st.id,
+                    borderWidth: 4,
+                    color: { ...currentNode.color, border: '#e67e22' },
+                });
+            } else if (!validTargets.has(st.id)) {
+                data.nodes.update({
+                    id: st.id,
+                    opacity: 0.3,
+                });
+            }
+        });
+
+        // Header-Text aendern
+        const titleEl = document.getElementById('netzplanTitle');
+        if (titleEl) titleEl.textContent = 'Klicken Sie auf einen Zielknoten... (ESC = Abbrechen)';
+
+        // Canvas-Cursor
+        graphContainer.style.cursor = 'crosshair';
+    }
+
+    function exitLinkingMode() {
+        _netzplanLinkState = null;
+
+        // Alle Knoten-Styles zuruecksetzen
+        subtasks.forEach(st => {
+            const orig = _originalNodeStyles[st.id];
+            if (orig) {
+                data.nodes.update({
+                    id: st.id,
+                    color: orig.color,
+                    font: orig.font,
+                    borderWidth: orig.borderWidth,
+                    opacity: 1,
+                });
+            }
+        });
+
+        // Header-Text zuruecksetzen
+        const titleEl = document.getElementById('netzplanTitle');
+        if (titleEl) titleEl.textContent = defaultTitle;
+
+        // Cursor zuruecksetzen
+        graphContainer.style.cursor = '';
+
+        netzplanNetwork.redraw();
+    }
+
+    async function _rebuildNetzplan() {
+        if (_netzplanRebuilding) return;
+        _netzplanRebuilding = true;
+        try {
+            // Viewport speichern
+            const viewPos = netzplanNetwork.getViewPosition();
+            const scale = netzplanNetwork.getScale();
+
+            // Frische Daten laden
+            const resp = await fetch(`/api/tasks/${taskId}/subtasks`);
+            const freshData = await resp.json();
+            const freshSubtasks = freshData.items || [];
+
+            // Container-Daten aktualisieren
+            const sc = document.getElementById(`subtaskContainer_${taskId}`);
+            if (sc) sc._subtasksData = freshSubtasks;
+
+            // Lokales subtasks-Array aktualisieren (Closure-Referenz erhalten)
+            subtasks.length = 0;
+            freshSubtasks.forEach(st => subtasks.push(st));
+
+            // Neuen Graph berechnen
+            const newColors = getNetzplanColors();
+            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors);
+
+            // DataSets aktualisieren
+            data.nodes.clear();
+            data.nodes.add(newNodes);
+            data.edges.clear();
+            data.edges.add(newEdges);
+
+            // Viewport wiederherstellen
+            netzplanNetwork.moveTo({ position: viewPos, scale: scale });
+
+            // Tabelle im Hintergrund aktualisieren
+            loadSubTasks(taskId);
+        } finally {
+            _netzplanRebuilding = false;
+        }
+    }
+
+    // ---- Event-Handler ----
+
+    // afterDrawing: gestrichelte Linking-Linie zeichnen
+    netzplanNetwork.on('afterDrawing', (ctx) => {
+        if (!_netzplanLinkState) return;
+        const { sourcePos, mouseCanvas } = _netzplanLinkState;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([8, 4]);
+        ctx.strokeStyle = '#e67e22';
+        ctx.lineWidth = 2;
+        ctx.moveTo(sourcePos.x, sourcePos.y);
+        ctx.lineTo(mouseCanvas.x, mouseCanvas.y);
+        ctx.stroke();
+
+        // Pfeilspitze am Mauszeiger
+        const angle = Math.atan2(mouseCanvas.y - sourcePos.y, mouseCanvas.x - sourcePos.x);
+        const arrowLen = 12;
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#e67e22';
+        ctx.beginPath();
+        ctx.moveTo(mouseCanvas.x, mouseCanvas.y);
+        ctx.lineTo(
+            mouseCanvas.x - arrowLen * Math.cos(angle - Math.PI / 6),
+            mouseCanvas.y - arrowLen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+            mouseCanvas.x - arrowLen * Math.cos(angle + Math.PI / 6),
+            mouseCanvas.y - arrowLen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    });
+
+    // mousemove auf Canvas: Linking-Linie aktualisieren
+    graphContainer.addEventListener('mousemove', (e) => {
+        if (!_netzplanLinkState || !netzplanNetwork) return;
+        const rect = graphContainer.getBoundingClientRect();
+        const domPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        const canvasPos = netzplanNetwork.DOMtoCanvas(domPos);
+        _netzplanLinkState.mouseCanvas = canvasPos;
+        netzplanNetwork.redraw();
+    });
+
+    // click-Handler auf Network
+    netzplanNetwork.on('click', async (params) => {
+        if (_netzplanRebuilding) return;
+
+        const clickedNodeId = params.nodes && params.nodes.length > 0 ? params.nodes[0] : null;
+        const clickedEdgeId = params.edges && params.edges.length > 0 ? params.edges[0] : null;
+
+        if (!_netzplanLinkState) {
+            // Kein Linking-Modus
+            if (clickedNodeId !== null) {
+                // Klick auf Knoten -> Linking-Modus starten
+                enterLinkingMode(clickedNodeId);
+            } else if (clickedEdgeId !== null) {
+                // Klick auf Kante -> Loeschen mit Bestaetigung
+                const edgeData = data.edges.get(clickedEdgeId);
+                if (!edgeData) return;
+
+                const fromSt = subtasks.find(s => s.id === edgeData.from);
+                const toSt = subtasks.find(s => s.id === edgeData.to);
+                const fromLabel = fromSt ? `${fromSt.position_number}: ${fromSt.name}` : `#${edgeData.from}`;
+                const toLabel = toSt ? `${toSt.position_number}: ${toSt.name}` : `#${edgeData.to}`;
+
+                const confirmed = await msgbox('cancel/yes', 'confirm', `Abhaengigkeit "${fromLabel}" → "${toLabel}" wirklich entfernen?`);
+                if (!confirmed) return;
+
+                try {
+                    const resp = await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ from_id: edgeData.from, to_id: edgeData.to }),
+                    });
+                    if (!resp.ok) {
+                        const err = await resp.json();
+                        showNotification(err.detail || 'Fehler beim Entfernen', 'error');
+                        return;
+                    }
+                    showNotification('Abhaengigkeit entfernt', 'success');
+                    await _rebuildNetzplan();
+                } catch (error) {
+                    showNotification('Fehler beim Entfernen', 'error');
+                }
+            }
+        } else {
+            // Linking-Modus aktiv
+            if (clickedNodeId === null || clickedNodeId === _netzplanLinkState.sourceId) {
+                // Klick auf leere Flaeche oder Quellknoten -> abbrechen
+                exitLinkingMode();
+            } else if (_netzplanLinkState.validTargets.has(clickedNodeId)) {
+                // Gueltiger Zielknoten -> Abhaengigkeit erstellen
+                const sourceId = _netzplanLinkState.sourceId;
+                exitLinkingMode();
+
+                try {
+                    const resp = await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ from_id: sourceId, to_id: clickedNodeId }),
+                    });
+                    if (!resp.ok) {
+                        const err = await resp.json();
+                        showNotification(err.detail || 'Fehler beim Hinzufuegen', 'error');
+                        return;
+                    }
+                    showNotification('Abhaengigkeit hinzugefuegt', 'success');
+                    await _rebuildNetzplan();
+                } catch (error) {
+                    showNotification('Fehler beim Hinzufuegen', 'error');
+                }
+            } else {
+                // Ungueltiger Knoten
+                showNotification('Ungueltige Verbindung', 'error');
+            }
+        }
+    });
+
     // Theme-Wechsel: Graph-Farben aktualisieren
     const themeHandler = () => {
         if (!netzplanNetwork) return;
@@ -1849,6 +2176,7 @@ function openNetzplan(taskId) {
 
     // Schliessen-Logik (mit komplettem Cleanup)
     const closeOverlay = () => {
+        _netzplanLinkState = null;
         document.removeEventListener('themeChanged', themeHandler);
         document.removeEventListener('keydown', escHandler);
         if (netzplanNetwork) {
@@ -1859,7 +2187,13 @@ function openNetzplan(taskId) {
     };
 
     const escHandler = (e) => {
-        if (e.key === 'Escape') closeOverlay();
+        if (e.key === 'Escape') {
+            if (_netzplanLinkState) {
+                exitLinkingMode();
+            } else {
+                closeOverlay();
+            }
+        }
     };
     document.addEventListener('keydown', escHandler);
 

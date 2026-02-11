@@ -3,7 +3,6 @@ Tareas - Aufgabenplanungs-Tool
 FastAPI Backend, Port 8504
 """
 
-import subprocess
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -169,19 +168,6 @@ async def dashboard_info(user=Depends(get_current_user)):
             ],
         },
     }
-
-
-@app.post("/api/dashboard/restart")
-async def restart_dashboard(user=Depends(get_current_user)):
-    """
-    Startet den Dashboard-Service neu.
-    """
-    subprocess.Popen(
-        ["systemctl", "restart", "tareas.service"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    return {"status": "restarting", "message": "Dashboard wird neu gestartet..."}
 
 
 # ============================================================

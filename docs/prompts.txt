@@ -488,13 +488,77 @@ ich sehe keine veränderung. haben die elemente im header vielleicht ein margin?
 
 passe jetzt bitte noch die höhe des team-button an die des netzplan-buttons an.
 
+------------------------------------------------------------------------------------
+
+wenn für das projekt bereits ein wurzelverzeichnis gewählt wurde, soll bei einem klick auf die schaltfläche zur auswahl eines verzeichnisses eine "Wollen Sie das Projektverzeichnis wirklich ändern"-Abfrage kommen.
+
 ====================================================================================
 
-neues feature: filter "team/zugewiesene/vergebene/eigene" im control-bereich des aufgaben-tabs. es sollen 3 schaltflächen sein. wenn alle deaktiviert sind, soll alles angezeigt werden, wenn mehrere aktiviert sind, mit UND verknüpfen, also alle aufgaben aller gewählter kategorien anzeigen:
+änderung an der spalte "status" in der Aufgaben-tabelle (aufgaben-tab):
+- bei projekten soll im format n/n (<erledigt>/<gesamt>) angezeigt werden, wieviele teilaufgaben des projekts bereits abgeschlossen sind.
+
+====================================================================================
+
+für aufgaben soll ebenfalls eine dateiablage gewählt werden können.
+
+====================================================================================
+
+bekommen wir es zuverlässig hin, dass eingaben im wysiwyg-editor und änderungen an den meta-daten von projekten und aufgaben instant gespeichert werden, ohne gefahr von datenverlust? wenn ja, implementiere das bitte und entferne den speichern-button von aufgaben, projekten und teilaufgaben.
+
+====================================================================================
+
+ändere bitte die statusanzeige von teilaufgaben ebenfalls zu einem "offen/in arbeit/erledigt"-schema.
+
+====================================================================================
+
+neues feature: filter für "team/zugewiesene/vergebene/eigene"-aufgaben im control-bereich des aufgaben-tabs. eine schaltfläche für jede kategorie. wenn alle deaktiviert sind, soll alles angezeigt werden, wenn mehrere aktiviert sind, mit UND verknüpfen, also alle aufgaben aller gewählter kategorien anzeigen:
 - team: projekte, welche aufgrund von team-zugehörigkeit angezeigt werden.
 - zugewiesene: aufgaben, die der benutzer von anderen zugewiesen bekommen hat.
 - vergebene: aufgaben, die vom benutzer an andere vergeben wurde.
 - eigene: alle aufgaben, die vom benutzer selbst erstellt und nicht an andere vergeben wurden.
+es sollen nur die filter angezeigt werden, für welche auch aufgaben-objekte vorhanden sind.
+
+
+====================================================================================
+
+verlege den löschen-button von aufgaben, projekten und teilaufgaben bitte von der detailansicht an das ende der tabellenzeile.
+
+====================================================================================
+
+entferne bitte das dropdown für den status eines projekts -> projektstatus wird in anzahl fertiggestellter teilaufgaben bestimmt.
+
+====================================================================================
+
+gehe bitte in den chatmodus, bis wir uns über die nächste anforderung abgestimmt haben: ist folgendes möglich?: die eingabeelemente für die metadaten von aufgaben, projekten und teilaufgaben sollen nicht im detail-bereich angezeigt werden, sondern direkt in der tabellenzeile, aber nur, wenn der detail-bereich aufgeklappt ist. im zugeklappten zustand soll, so wie es jetzt der fall ist, nur text in der tabellenzeile stehen.
+
+====================================================================================
+
+entferne bitte das berechtigungsmanagement für teilaufgaben von projekten. für jedes teammitglied gelten die global eingestellten berechtigungen im projekt, so wie im dialog "teammitglieder" eingestellt.  
+
+====================================================================================
+
+verlege bitte den "restart dashboard"-button in das einstellungen-menü der admin-ui. -> normale benutzer sollen das dashboard nicht neustarten können.
+
+====================================================================================
+
+gehe bitte in den chatmodus. änderung am netzplan: können die linien so dargestellt werden, dass sie immer mittig links oder rechts (je nach dem, ob sie vom node weg oder zu ihm hin gehen) angedockt sind und die linie immer bei 90 grad zum node beginnt, sodass zwei kreisbögen entstehen, wenn die nodes in der höhe zueinander versetzt sind. stelle bitte rückfragen um sicherzustellen, dass wir hinsichtlich der gewünschten darstellung auf einer linie sind.
+
+====================================================================================
+
+im dropdown für die vorgänger-auswahl sollen nur die wählbaren optionen angezeigt werden -> nicht teilaufgaben, die bereits gewählt wurden, nicht die teilaufgabe selbst und keine aufgaben, für welche die abhängigkeit keinen sinnd macht, da die abhängigkeit schon durch eine andere aufgabe gegeben ist. beispiel:
+aufgabe 2 ist von aufgabe 1 abhängig und aufgabe 3 von 2. dann macht es keinen sinn, für aufgabe 3 die aufgabe 1 als abhängigkeit zu hinterlegen, da die abhängigkeit schon über 2 gegeben ist.
+
+====================================================================================
+
+herstellen der abhängigkeiten von teilaufgaben über den netzplan:
+- durch einen klick auf einen node soll ein linien-ende "geschnappt" werden und der maus folgen. 
+- beim klick auf einen anderen node soll die abhängigkeit hergestellt werden. 
+- ungültige abhängigkeiten wie zirkuläre oder transitive sollen nicht möglich sein. 
+- die position der teilaufgaben und damit ihre positionsnummer soll automatisch durch die hergestellten abhängigkeiten angepasst werden.
+
+====================================================================================
+
+die tabelle im view bereich darf nie soweit hochgescrollt werden können, dass sie nicht mehr sichtbar ist. es muss immer sichergestellt werden, dass die letzte tabellenzeile im view-bereich sichtbar ist. (in edge ist das so, dass die unterste tabellenzeile immer sichtbar ist, nur nicht in chrome und firefox).
 
 ====================================================================================
 
@@ -506,53 +570,34 @@ neues feature: filter "team/zugewiesene/vergebene/eigene" im control-bereich des
 
 ====================================================================================
 
+Implementiere bitte den Plan aus docs/TODO/sprint_onlyoffice.md
 
+docs/TODO/sprint_onlyoffice.md
 
-====================================================================================
+  Kernarchitektur:
 
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-Zusätzliche spalte in der Aufgaben-tabelle (aufgaben-tab): Status
-- bei aufgaben soll der status wie in der aufgabe eingestellt, angezeigt werden
-- bei projekte soll im format n/n (<erledigt>/<gesamt>) angezeigt werden, wieviele teilaufgaben des projekts bereits abgeschlossen sind.
-
-====================================================================================
-
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
-
-====================================================================================
-
-
+  Benutzer -> Tareas (Fullscreen-Overlay mit iframe)
+                  |
+                  +--> ONLYOFFICE Document Server (Docker, Port 8090)
+                  |         |
+                  |         +--> WOPI-Requests an Tareas zurueck
+                  |                    |
+                  +--> WebDAV -------> Nextcloud (Datei lesen/schreiben)
+  ┌──────────────────────┬────────────────────────────────────────────────────────────┐
+  │      Komponente      │                        Beschreibung                        │
+  ├──────────────────────┼────────────────────────────────────────────────────────────┤
+  │ ONLYOFFICE Container │ Docker auf Tareas-Server, JWT-Secret fuer Auth             │
+  ├──────────────────────┼────────────────────────────────────────────────────────────┤
+  │ WOPI-Host (Tareas)   │ CheckFileInfo, GetFile, PutFile Endpoints                  │
+  ├──────────────────────┼────────────────────────────────────────────────────────────┤
+  │ Token-System         │ Kurzlebige Tokens (8h) pro Benutzer + Datei                │
+  ├──────────────────────┼────────────────────────────────────────────────────────────┤
+  │ Frontend             │ Fullscreen-Overlay, ONLYOFFICE JS-API initialisiert iframe │
+  ├──────────────────────┼────────────────────────────────────────────────────────────┤
+  │ Admin-UI             │ URL + Secret konfigurierbar, Verbindungstest               │
+  ├──────────────────────┼────────────────────────────────────────────────────────────┤
+  │ Formate              │ docx, xlsx, pptx, odt, ods, txt, csv, md                   │
+  └──────────────────────┴────────────────────────────────────────────────────────────┘
 
 ====================================================================================
 

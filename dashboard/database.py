@@ -194,6 +194,35 @@ def init_db():
             base_path TEXT NOT NULL,
             created_at TEXT DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS onlyoffice_config (
+            id INTEGER PRIMARY KEY,
+            server_url TEXT NOT NULL,
+            jwt_secret TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS wopi_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token TEXT NOT NULL UNIQUE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+            file_path TEXT NOT NULL,
+            permissions TEXT DEFAULT 'edit',
+            created_at TEXT DEFAULT (datetime('now')),
+            expires_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS wopi_locks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id TEXT NOT NULL UNIQUE,
+            lock_id TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT DEFAULT (datetime('now')),
+            expires_at TEXT NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_wopi_tokens_token ON wopi_tokens(token);
     """)
 
     # Migration: nextcloud_path fuer tasks

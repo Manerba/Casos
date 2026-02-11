@@ -3,6 +3,7 @@ Tareas Admin - Benutzerverwaltung
 FastAPI Backend, Port 8505
 """
 
+import subprocess
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,7 +21,7 @@ from dashboard.api_auth import router as auth_router
 from dashboard.api_admin import router as admin_router
 from dashboard.api_ldap import router as ldap_router
 from dashboard.api_nextcloud import admin_router as nextcloud_admin_router
-from dashboard.auth import _extract_user_from_request
+from dashboard.auth import _extract_user_from_request, get_admin_user
 
 
 @asynccontextmanager
@@ -58,6 +59,21 @@ async def no_cache_static(request, call_next):
     if request.url.path.startswith("/static/"):
         response.headers["Cache-Control"] = "no-cache"
     return response
+
+
+# ============================================================
+# API-Routen
+# ============================================================
+
+@app.post("/api/dashboard/restart")
+async def restart_dashboard(user=Depends(get_admin_user)):
+    """Startet den Dashboard-Service neu (nur Admins)."""
+    subprocess.Popen(
+        ["systemctl", "restart", "tareas.service"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    return {"status": "restarting", "message": "Dashboard wird neu gestartet..."}
 
 
 # ============================================================

@@ -2,6 +2,8 @@
 Tareas - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
 """
 
+import heapq
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
@@ -61,6 +63,15 @@ class SubTaskUpdate(BaseModel):
     assigned_to: Optional[int] = None
 
 
+class SubTaskMove(BaseModel):
+    direction: str  # "up" oder "down"
+
+
+class DependencyAction(BaseModel):
+    from_id: int
+    to_id: int
+
+
 class AreaCreate(BaseModel):
     name: str
 
@@ -118,6 +129,54 @@ def _parse_date_input(date_str: Optional[str]) -> Optional[str]:
             return f"{parts[2]}-{parts[1]}-{parts[0]}"
     # Bereits ISO oder anderes Format -> durchreichen
     return date_str
+
+
+def _topological_reorder(db, project_id):
+    """Topologische Neuordnung der Teilaufgaben anhand der Abhaengigkeiten (Kahn-Algorithmus)."""
+    rows = db.execute(
+        "SELECT id, position_number FROM sub_tasks WHERE project_id = ?", (project_id,)
+    ).fetchall()
+    if not rows:
+        return {}
+
+    old_pos = {r["id"]: r["position_number"] for r in rows}
+    all_ids = set(old_pos.keys())
+
+    deps = db.execute(
+        "SELECT d.sub_task_id, d.depends_on_id FROM sub_task_dependencies d "
+        "JOIN sub_tasks s ON d.sub_task_id = s.id WHERE s.project_id = ?", (project_id,)
+    ).fetchall()
+
+    in_degree = defaultdict(int)
+    successors = defaultdict(list)
+    for d in deps:
+        if d["sub_task_id"] in all_ids and d["depends_on_id"] in all_ids:
+            in_degree[d["sub_task_id"]] += 1
+            successors[d["depends_on_id"]].append(d["sub_task_id"])
+
+    # Kahn's mit heapq: Tiebreaker = alte position_number
+    heap = []
+    for nid in all_ids:
+        if in_degree[nid] == 0:
+            heapq.heappush(heap, (old_pos.get(nid, 0), nid))
+
+    new_pos = {}
+    pos = 1
+    while heap:
+        _, nid = heapq.heappop(heap)
+        new_pos[nid] = pos
+        pos += 1
+        for succ in successors[nid]:
+            in_degree[succ] -= 1
+            if in_degree[succ] == 0:
+                heapq.heappush(heap, (old_pos.get(succ, 0), succ))
+
+    # Nur geaenderte Positionen aktualisieren
+    for nid, p in new_pos.items():
+        if old_pos.get(nid) != p:
+            db.execute("UPDATE sub_tasks SET position_number = ? WHERE id = ?", (p, nid))
+
+    return new_pos
 
 
 # ============================================================
@@ -594,6 +653,227 @@ async def delete_subtask(subtask_id: int, user=Depends(get_current_user)):
         db.execute("DELETE FROM sub_tasks WHERE id = ?", (subtask_id,))
         db.commit()
         return {"message": "Teilaufgabe geloescht"}
+    finally:
+        db.close()
+
+
+# ============================================================
+# SubTask Move (Position Swap)
+# ============================================================
+
+@router.post("/api/subtasks/{subtask_id}/move")
+async def move_subtask(subtask_id: int, move: SubTaskMove, user=Depends(get_current_user)):
+    """Teilaufgabe nach oben/unten verschieben (Position tauschen)."""
+    db = get_db()
+    try:
+        # Subtask laden
+        current = db.execute(
+            "SELECT id, project_id, position_number FROM sub_tasks WHERE id = ?",
+            (subtask_id,),
+        ).fetchone()
+        if not current:
+            raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
+
+        # Berechtigung pruefen
+        task = db.execute(
+            "SELECT created_by FROM tasks WHERE id = ?", (current["project_id"],)
+        ).fetchone()
+        is_creator = task and task["created_by"] == user["id"]
+        is_legacy = task and task["created_by"] is None
+        if not is_creator and not is_legacy:
+            raise HTTPException(status_code=403, detail="Keine Berechtigung")
+
+        # Nachbar finden
+        if move.direction == "up":
+            neighbor = db.execute(
+                """SELECT id, position_number FROM sub_tasks
+                   WHERE project_id = ? AND position_number < ?
+                   ORDER BY position_number DESC LIMIT 1""",
+                (current["project_id"], current["position_number"]),
+            ).fetchone()
+        elif move.direction == "down":
+            neighbor = db.execute(
+                """SELECT id, position_number FROM sub_tasks
+                   WHERE project_id = ? AND position_number > ?
+                   ORDER BY position_number ASC LIMIT 1""",
+                (current["project_id"], current["position_number"]),
+            ).fetchone()
+        else:
+            raise HTTPException(status_code=400, detail="direction muss 'up' oder 'down' sein")
+
+        if not neighbor:
+            return {"message": "Bereits am Rand", "removed_dependencies": []}
+
+        # Positionen tauschen
+        cur_pos = current["position_number"]
+        nb_pos = neighbor["position_number"]
+        db.execute(
+            "UPDATE sub_tasks SET position_number = ? WHERE id = ?",
+            (nb_pos, current["id"]),
+        )
+        db.execute(
+            "UPDATE sub_tasks SET position_number = ? WHERE id = ?",
+            (cur_pos, neighbor["id"]),
+        )
+
+        # Abhaengigkeiten bereinigen: Alle Dependencies im Projekt laden
+        all_subtasks = db.execute(
+            "SELECT id, position_number FROM sub_tasks WHERE project_id = ?",
+            (current["project_id"],),
+        ).fetchall()
+        pos_map = {row["id"]: row["position_number"] for row in all_subtasks}
+
+        all_deps = db.execute(
+            """SELECT d.sub_task_id, d.depends_on_id
+               FROM sub_task_dependencies d
+               JOIN sub_tasks s ON d.sub_task_id = s.id
+               WHERE s.project_id = ?""",
+            (current["project_id"],),
+        ).fetchall()
+
+        removed = []
+        for dep in all_deps:
+            st_pos = pos_map.get(dep["sub_task_id"], 0)
+            dep_pos = pos_map.get(dep["depends_on_id"], 0)
+            # Vorgaenger muss niedrigere Position haben
+            if dep_pos >= st_pos:
+                db.execute(
+                    "DELETE FROM sub_task_dependencies WHERE sub_task_id = ? AND depends_on_id = ?",
+                    (dep["sub_task_id"], dep["depends_on_id"]),
+                )
+                removed.append({
+                    "sub_task_id": dep["sub_task_id"],
+                    "depends_on_id": dep["depends_on_id"],
+                })
+
+        db.commit()
+        return {"message": "Position getauscht", "removed_dependencies": removed}
+    finally:
+        db.close()
+
+
+# ============================================================
+# SubTask Dependencies (Add / Remove)
+# ============================================================
+
+@router.post("/api/tasks/{task_id}/subtasks/add-dependency")
+async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_current_user)):
+    """Abhaengigkeit zwischen Teilaufgaben hinzufuegen (from_id -> to_id)."""
+    db = get_db()
+    try:
+        # Projekt pruefen
+        task = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if not task:
+            raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+
+        # Berechtigung pruefen
+        is_creator = task["created_by"] == user["id"]
+        is_legacy = task["created_by"] is None
+        if not is_creator and not is_legacy:
+            raise HTTPException(status_code=403, detail="Keine Berechtigung")
+
+        # Beide Subtasks muessen zum Projekt gehoeren
+        from_st = db.execute(
+            "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?", (dep.from_id, task_id)
+        ).fetchone()
+        to_st = db.execute(
+            "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?", (dep.to_id, task_id)
+        ).fetchone()
+        if not from_st or not to_st:
+            raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
+
+        # Keine Self-Loops
+        if dep.from_id == dep.to_id:
+            raise HTTPException(status_code=400, detail="Self-Loop nicht erlaubt")
+
+        # Keine Duplikate
+        existing = db.execute(
+            "SELECT 1 FROM sub_task_dependencies WHERE sub_task_id = ? AND depends_on_id = ?",
+            (dep.to_id, dep.from_id),
+        ).fetchone()
+        if existing:
+            raise HTTPException(status_code=400, detail="Abhaengigkeit existiert bereits")
+
+        # Zykluserkennung: from_id darf nicht transitiv von to_id abhaengen
+        # BFS von from_id entlang depends_on_id-Kanten
+        all_deps = db.execute(
+            "SELECT d.sub_task_id, d.depends_on_id FROM sub_task_dependencies d "
+            "JOIN sub_tasks s ON d.sub_task_id = s.id WHERE s.project_id = ?", (task_id,)
+        ).fetchall()
+        adj = defaultdict(set)  # sub_task_id -> set of depends_on_ids (Vorgaenger)
+        adj_fwd = defaultdict(set)  # depends_on_id -> set of sub_task_ids (Nachfolger)
+        for d in all_deps:
+            adj[d["sub_task_id"]].add(d["depends_on_id"])
+            adj_fwd[d["depends_on_id"]].add(d["sub_task_id"])
+
+        # Pruefen ob to_id transitiv from_id erreichen kann (= Zyklus)
+        visited = set()
+        queue = [dep.to_id]
+        while queue:
+            nid = queue.pop(0)
+            if nid == dep.from_id:
+                raise HTTPException(status_code=400, detail="Zirkulaere Abhaengigkeit nicht erlaubt")
+            if nid in visited:
+                continue
+            visited.add(nid)
+            for succ in adj_fwd.get(nid, set()):
+                queue.append(succ)
+
+        # Transitive Redundanz: Pruefen ob from_id bereits transitiver Vorgaenger von to_id ist
+        visited_pred = set()
+        queue_pred = list(adj.get(dep.to_id, set()))
+        while queue_pred:
+            nid = queue_pred.pop(0)
+            if nid == dep.from_id:
+                raise HTTPException(status_code=400, detail="Transitiv redundante Abhaengigkeit")
+            if nid in visited_pred:
+                continue
+            visited_pred.add(nid)
+            for pred in adj.get(nid, set()):
+                queue_pred.append(pred)
+
+        # Dependency einfuegen
+        db.execute(
+            "INSERT INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
+            (dep.to_id, dep.from_id),
+        )
+
+        # Topologische Neuordnung
+        new_positions = _topological_reorder(db, task_id)
+        db.commit()
+
+        return {"message": "Abhaengigkeit hinzugefuegt", "new_positions": new_positions}
+    finally:
+        db.close()
+
+
+@router.post("/api/tasks/{task_id}/subtasks/remove-dependency")
+async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(get_current_user)):
+    """Abhaengigkeit zwischen Teilaufgaben entfernen."""
+    db = get_db()
+    try:
+        # Projekt pruefen
+        task = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if not task:
+            raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+
+        # Berechtigung pruefen
+        is_creator = task["created_by"] == user["id"]
+        is_legacy = task["created_by"] is None
+        if not is_creator and not is_legacy:
+            raise HTTPException(status_code=403, detail="Keine Berechtigung")
+
+        # Dependency loeschen
+        db.execute(
+            "DELETE FROM sub_task_dependencies WHERE sub_task_id = ? AND depends_on_id = ?",
+            (dep.to_id, dep.from_id),
+        )
+
+        # Topologische Neuordnung
+        new_positions = _topological_reorder(db, task_id)
+        db.commit()
+
+        return {"message": "Abhaengigkeit entfernt", "new_positions": new_positions}
     finally:
         db.close()
 

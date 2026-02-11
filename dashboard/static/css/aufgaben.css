@@ -588,13 +588,41 @@
 
 .subtask-table .pos-cell {
     text-align: center;
-    width: 45px;
+    width: 65px;
     font-weight: 600;
     color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 .subtask-table th.pos-cell {
     text-align: center;
+}
+
+/* Positions-Pfeile */
+.pos-arrows {
+    display: inline-flex;
+    flex-direction: column;
+    vertical-align: middle;
+    margin-left: 2px;
+    gap: 0;
+    line-height: 1;
+}
+
+.pos-arrow {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 8px;
+    line-height: 1;
+    padding: 0 2px;
+    color: var(--text-secondary);
+    border-radius: 2px;
+    transition: all var(--transition-speed);
+}
+
+.pos-arrow:hover {
+    color: var(--accent-primary);
+    background-color: var(--bg-row-hover);
 }
 
 /* ----------------------------------------
@@ -712,7 +740,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 500;
+    z-index: 800;
     animation: fadeIn 0.15s ease-out;
 }
 

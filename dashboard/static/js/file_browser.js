@@ -8,7 +8,7 @@ class FileBrowser {
         this.containerId = containerId;
         this.taskId = taskId;
         this.currentPath = '';
-        this.viewMode = options.viewMode || 'grid'; // 'tree' oder 'grid'
+        this.viewMode = options.viewMode || 'tree'; // 'tree' oder 'grid'
         this.items = [];
         this.expandedDirs = new Set();
         this.treeCache = {}; // Pfad -> Items (Lazy-Load Cache)
