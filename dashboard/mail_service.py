@@ -42,13 +42,16 @@ def _create_smtp_connection(config: dict):
     port = config["smtp_port"]
     encryption = config.get("encryption", "starttls")
 
+    # Zertifikatsvalidierung deaktivieren (selbst-signierte Zertifikate)
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+
     if encryption == "ssl":
-        context = ssl.create_default_context()
         conn = smtplib.SMTP_SSL(server, port, context=context, timeout=10)
     else:
         conn = smtplib.SMTP(server, port, timeout=10)
         if encryption == "starttls":
-            context = ssl.create_default_context()
             conn.starttls(context=context)
 
     if config.get("auth_enabled"):

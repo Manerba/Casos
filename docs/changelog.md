@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+12.02.2026 02:15;0.0.1+50;Bugfix;Mail: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte Zertifikate
 12.02.2026 02:00;0.0.1+49;Feature;Mail-Integration: SMTP-Konfiguration, Testmail, Mail-Vorlagen (Admin-Tab), Benutzer-Benachrichtigungs-Einstellungen (Modal), Event-getriggerter Sofort-Versand bei Zuweisung/Statusaenderung, taeglicher Scheduler fuer Faelligkeits-Mails, Einladungsmail an Benutzer
 12.02.2026 02:00;0.0.1+49;Aenderung;DB-Schema: mail_config, mail_templates, user_mail_preferences Tabellen mit Default-Templates (6 Event-Typen)
 12.02.2026 02:00;0.0.1+49;Aenderung;Neue Dateien: mail_service.py (SMTP-Versand, Template-Rendering), api_mail.py (Admin+User API), tab_mail.js (Admin-UI), mail_scheduler.py + systemd-Dateien
