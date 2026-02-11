@@ -1075,6 +1075,69 @@
 }
 
 /* ----------------------------------------
+   Inline-Editing (Haupt-Tabelle)
+   ---------------------------------------- */
+
+.inline-edit-input,
+.inline-edit-select {
+    padding: 3px 6px;
+    border: 1px solid var(--accent-primary);
+    border-radius: 3px;
+    font-size: 12px;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.inline-edit-input:focus,
+.inline-edit-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.inline-edit-input[type="number"] {
+    width: 60px;
+}
+
+.inline-edit-input[type="date"] {
+    width: 120px;
+}
+
+/* Haupt-Tabelle: Overflow bei expanded */
+.table-row-wrapper.expanded .table-row .table-cell {
+    overflow: visible;
+}
+
+/* ----------------------------------------
+   Subtask Dual-Content Toggle
+   ---------------------------------------- */
+
+.st-cell-edit {
+    display: none;
+}
+
+.subtask-row.expanded .st-cell-text {
+    display: none;
+}
+
+.subtask-row.expanded .st-cell-edit {
+    display: block;
+}
+
+/* Predecessor chips im Subtask-Edit-Modus */
+.st-pred-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 3px;
+}
+
+.st-pred-chips:empty {
+    display: none;
+}
+
+/* ----------------------------------------
    Responsive
    ---------------------------------------- */
 

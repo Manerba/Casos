@@ -1,6 +1,9 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 04:10;0.0.1+39;Feature;Inline-Editing: Metadaten-Felder direkt in Tabellenzeilen editierbar (Aufgaben und Teilaufgaben)
+11.02.2026 04:10;0.0.1+39;Aenderung;Detail-Header bei Aufgaben und Teilaufgaben entfernt, Detail startet direkt mit Beschreibungs-Editor
+11.02.2026 04:10;0.0.1+39;Aenderung;Vorgaenger bei Teilaufgaben: Direkt-Hinzufuegen per Dropdown ohne +-Button
 11.02.2026 03:28;0.0.1+38;Aenderung;Projektstatus wird automatisch aus Teilaufgaben berechnet, Status-Dropdown bei Projekten entfernt
 11.02.2026 03:25;0.0.1+37;Aenderung;Loeschen-Button von Detailansicht in Tabellenzeile verlegt (Aufgaben/Projekte)
 11.02.2026 03:15;0.0.1+36;Feature;Kategorie-Filter: Toggle-Buttons (Team/Zugewiesen/Vergeben/Eigene) im Aufgaben-Tab mit dynamischer Anzeige und Count-Badges

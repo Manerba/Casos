@@ -60,6 +60,7 @@ async function initAufgabenTab() {
         // Tabelle erstellen
         aufgabenTable = new ExpandableTable(aufgabenConfig, 'aufgabenTableContainer', {
             onRowExpanded: onTaskRowExpanded,
+            onRowCollapsed: (rowId) => deactivateInlineEditing(rowId),
             onDataLoaded: () => buildCategoryButtons(),
         });
 
@@ -220,6 +221,137 @@ function toggleCategoryFilter(category) {
 }
 
 // ========================================
+// Inline-Editing (Haupt-Tabelle)
+// ========================================
+
+/**
+ * Zellen-Index-Mapping (nach expand-icon):
+ * 0=expand, 1=Name, 2=Typ, 3=Status, 4=Prioritaet, 5=Von, 6=Zugewiesen, 7=Erstellt, 8=Deadline, 9=Actions
+ */
+
+function activateInlineEditing(rowId) {
+    const wrapper = document.querySelector(`[data-row-id="${rowId}"]`);
+    if (!wrapper) return;
+
+    const row = aufgabenTable.filteredData.find(r => String(r.id) === String(rowId));
+    if (!row) return;
+
+    // Skip assigned_subtask pseudo-rows
+    if (row._type === 'assigned_subtask' || row.id < 0) return;
+
+    const perm = getTaskPermissions(row);
+    const tableRow = wrapper.querySelector('.table-row');
+    if (!tableRow) return;
+
+    const cells = tableRow.querySelectorAll('.table-cell');
+    if (!cells.length) return;
+
+    const deadlineISO = convertToISO(row.deadline);
+
+    // Cell 1: Name
+    if (cells[0] && !perm.isAssignee && !(perm.isCreator && perm.isAssigned)) {
+        cells[0]._originalHTML = cells[0].innerHTML;
+        cells[0].innerHTML = `<input type="text" class="inline-edit-input" id="inlineName_${row.id}" value="${escapeAttr(row.name)}" onclick="event.stopPropagation()">`;
+    }
+
+    // Cell 3: Status (nicht bei Projekten)
+    if (cells[2] && row.task_type !== 'projekt') {
+        const canEditStatus = perm.isAssignee || perm.isOwnTask || perm.isLegacy;
+        if (canEditStatus) {
+            cells[2]._originalHTML = cells[2].innerHTML;
+            cells[2].innerHTML = `<select class="inline-edit-select" id="inlineStatus_${row.id}" onclick="event.stopPropagation()">
+                <option value="offen" ${row.status === 'offen' ? 'selected' : ''}>Offen</option>
+                <option value="in_arbeit" ${row.status === 'in_arbeit' ? 'selected' : ''}>In Arbeit</option>
+                <option value="erledigt" ${row.status === 'erledigt' ? 'selected' : ''}>Erledigt</option>
+            </select>`;
+        }
+    }
+
+    // Cell 4: Prioritaet
+    if (cells[3] && !perm.isAssignee) {
+        cells[3]._originalHTML = cells[3].innerHTML;
+        cells[3].innerHTML = `<input type="number" class="inline-edit-input" id="inlinePriority_${row.id}" value="${row.priority}" min="1" max="100" onclick="event.stopPropagation()">`;
+    }
+
+    // Cell 6: Zugewiesen an (nur Ersteller/Legacy)
+    if (cells[5] && (perm.isCreator || perm.isOwnTask || perm.isLegacy)) {
+        cells[5]._originalHTML = cells[5].innerHTML;
+        cells[5].innerHTML = `<select class="inline-edit-select" id="inlineAssigned_${row.id}" onclick="event.stopPropagation()">
+            ${buildUserOptions(row.assigned_to)}
+        </select>`;
+    }
+
+    // Cell 8: Deadline
+    if (cells[7] && !perm.isAssignee) {
+        cells[7]._originalHTML = cells[7].innerHTML;
+        cells[7].innerHTML = `<input type="date" class="inline-edit-input" id="inlineDeadline_${row.id}" value="${deadlineISO}" onclick="event.stopPropagation()">`;
+    }
+
+    // Auto-Save auf alle inline inputs wiren
+    ['inlineName', 'inlineStatus', 'inlinePriority', 'inlineAssigned', 'inlineDeadline'].forEach(prefix => {
+        const el = document.getElementById(`${prefix}_${row.id}`);
+        if (el) {
+            el.addEventListener('change', () => saveTaskFromInline(row.id));
+        }
+    });
+}
+
+function deactivateInlineEditing(rowId) {
+    const wrapper = document.querySelector(`[data-row-id="${rowId}"]`);
+    if (!wrapper) return;
+
+    const tableRow = wrapper.querySelector('.table-row');
+    if (!tableRow) return;
+
+    const cells = tableRow.querySelectorAll('.table-cell');
+    cells.forEach(cell => {
+        if (cell._originalHTML !== undefined) {
+            cell.innerHTML = cell._originalHTML;
+            delete cell._originalHTML;
+        }
+    });
+}
+
+async function saveTaskFromInline(taskId) {
+    const row = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
+    if (!row) return;
+
+    const perm = row ? getTaskPermissions(row) : { isOwnTask: true, isLegacy: true };
+
+    const body = {};
+
+    const nameInput = document.getElementById(`inlineName_${taskId}`);
+    if (nameInput) body.name = nameInput.value;
+
+    const statusInput = document.getElementById(`inlineStatus_${taskId}`);
+    if (statusInput) body.status = statusInput.value;
+
+    const prioInput = document.getElementById(`inlinePriority_${taskId}`);
+    if (prioInput) body.priority = parseInt(prioInput.value) || 50;
+
+    const assignInput = document.getElementById(`inlineAssigned_${taskId}`);
+    if (assignInput) {
+        const val = assignInput.value;
+        body.assigned_to = val ? parseInt(val) : 0;
+    }
+
+    const dlInput = document.getElementById(`inlineDeadline_${taskId}`);
+    if (dlInput) body.deadline = dlInput.value || '';
+
+    try {
+        const resp = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!resp.ok) throw new Error('Fehler beim Speichern');
+    } catch (error) {
+        console.error('Inline-Save fehlgeschlagen:', error);
+        showNotification('Fehler beim Speichern', 'error');
+    }
+}
+
+// ========================================
 // Custom Renderer
 // ========================================
 
@@ -310,51 +442,10 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
     const perm = getTaskPermissions(row);
 
-    // Deadline fuer date input: DD.MM.YYYY -> YYYY-MM-DD
-    const deadlineISO = convertToISO(row.deadline);
-
-    // Felder readonly je nach Rolle
-    const nameReadonly = perm.isAssignee || (perm.isCreator && perm.isAssigned) ? 'disabled' : '';
-    const deadlineReadonly = perm.isAssignee ? 'disabled' : '';
-    const prioReadonly = perm.isAssignee ? 'disabled' : '';
-    const statusReadonly = perm.isAssignee ? '' : ((perm.isCreator && perm.isAssigned) ? 'disabled' : '');
+    // Inline-Editing in der Tabellenzeile aktivieren
+    activateInlineEditing(rowId);
 
     let html = `<div class="detail-edit" data-task-id="${row.id}">`;
-
-    // Editierbare Header-Felder
-    html += `<div class="detail-edit-header">
-        <div class="detail-edit-field flex-grow">
-            <label>Name</label>
-            <input type="text" id="editName_${row.id}" value="${escapeAttr(row.name)}" ${nameReadonly} class="${nameReadonly ? 'field-readonly' : ''}">
-        </div>
-        <div class="detail-edit-field">
-            <label>Deadline</label>
-            <input type="date" id="editDeadline_${row.id}" value="${deadlineISO}" ${deadlineReadonly} class="${deadlineReadonly ? 'field-readonly' : ''}">
-        </div>
-        <div class="detail-edit-field">
-            <label>Prioritaet</label>
-            <input type="number" id="editPriority_${row.id}" value="${row.priority}" min="1" max="100" style="width:70px" ${prioReadonly} class="${prioReadonly ? 'field-readonly' : ''}">
-        </div>
-        ${row.task_type !== 'projekt' ? `<div class="detail-edit-field">
-            <label>Status</label>
-            <select id="editStatus_${row.id}" ${statusReadonly} class="${statusReadonly ? 'field-readonly' : ''}">
-                <option value="offen" ${row.status === 'offen' ? 'selected' : ''}>Offen</option>
-                <option value="in_arbeit" ${row.status === 'in_arbeit' ? 'selected' : ''}>In Arbeit</option>
-                <option value="erledigt" ${row.status === 'erledigt' ? 'selected' : ''}>Erledigt</option>
-            </select>
-        </div>` : ''}`;
-
-    // Zuweisungs-Dropdown (nur fuer Ersteller oder Altdaten)
-    if (perm.isCreator || perm.isOwnTask || perm.isLegacy) {
-        html += `<div class="detail-edit-field">
-            <label>Zuweisen an</label>
-            <select id="editAssignedTo_${row.id}">
-                ${buildUserOptions(row.assigned_to)}
-            </select>
-        </div>`;
-    }
-
-    html += `</div>`;
 
     // Beschreibung + Dateiablage: Zwei-Spalten-Layout wenn NC-Verzeichnis zugeordnet
     const hasNcPath = !!row.nextcloud_path && ncConfigured;
@@ -456,14 +547,6 @@ async function onTaskRowExpanded(rowId, detailElement) {
         new WysiwygEditor(`wysiwygEditor_${row.id}`, row.description || '');
     }
 
-    // Auto-Save: Metadaten-Felder bei Aenderung sofort speichern
-    ['editName', 'editDeadline', 'editPriority', 'editStatus', 'editAssignedTo'].forEach(prefix => {
-        const el = document.getElementById(`${prefix}_${row.id}`);
-        if (el && !el.disabled) {
-            el.addEventListener('change', () => saveTask(row.id, true));
-        }
-    });
-
     // Auto-Save: WYSIWYG-Editor mit Debounce
     const wysiwygContent = document.querySelector(`#wysiwygEditor_${row.id} .wysiwyg-content`);
     if (wysiwygContent) {
@@ -546,31 +629,30 @@ async function saveTask(taskId, silent = false) {
 
     const body = {};
 
-    // Felder nur senden wenn nicht readonly
-    if (perm.isOwnTask || perm.isLegacy) {
-        body.name = document.getElementById(`editName_${taskId}`)?.value;
-        body.deadline = document.getElementById(`editDeadline_${taskId}`)?.value;
-        body.priority = parseInt(document.getElementById(`editPriority_${taskId}`)?.value) || 50;
-        body.status = document.getElementById(`editStatus_${taskId}`)?.value;
+    // Inline-Felder lesen (aus Tabellenzeile)
+    const nameInput = document.getElementById(`inlineName_${taskId}`);
+    if (nameInput) body.name = nameInput.value;
 
-        // WYSIWYG-Content
-        const editorContainer = document.getElementById(`wysiwygEditor_${taskId}`);
-        const editorContent = editorContainer?.querySelector('.wysiwyg-content');
-        body.description = editorContent ? editorContent.innerHTML : '';
-    } else if (perm.isCreator && perm.isAssigned) {
-        // Ersteller mit Zuweisung: nur Deadline + Prioritaet
-        body.deadline = document.getElementById(`editDeadline_${taskId}`)?.value;
-        body.priority = parseInt(document.getElementById(`editPriority_${taskId}`)?.value) || 50;
-    } else if (perm.isAssignee) {
-        // Zugewiesener darf nur Status aendern
-        body.status = document.getElementById(`editStatus_${taskId}`)?.value;
-    }
+    const statusInput = document.getElementById(`inlineStatus_${taskId}`);
+    if (statusInput) body.status = statusInput.value;
 
-    // Zuweisung (nur Ersteller)
-    const assignSelect = document.getElementById(`editAssignedTo_${taskId}`);
+    const prioInput = document.getElementById(`inlinePriority_${taskId}`);
+    if (prioInput) body.priority = parseInt(prioInput.value) || 50;
+
+    const dlInput = document.getElementById(`inlineDeadline_${taskId}`);
+    if (dlInput) body.deadline = dlInput.value || '';
+
+    const assignSelect = document.getElementById(`inlineAssigned_${taskId}`);
     if (assignSelect) {
         const val = assignSelect.value;
         body.assigned_to = val ? parseInt(val) : 0;
+    }
+
+    // WYSIWYG-Content (aus Detail-Bereich)
+    if (perm.isOwnTask || perm.isLegacy) {
+        const editorContainer = document.getElementById(`wysiwygEditor_${taskId}`);
+        const editorContent = editorContainer?.querySelector('.wysiwyg-content');
+        if (editorContent) body.description = editorContent.innerHTML;
     }
 
     try {
@@ -808,18 +890,86 @@ function renderSubTasks(taskId, subtasks) {
         const isSubAssigned = !!st.assigned_to;
         const isSubCreator = parentPerm.isCreator || parentPerm.isLegacy;
 
-        // Daten-Zeile (klickbar, reiner Text)
+        // Readonly-Logik pro Feld
+        const stNameRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
+        const stNameROClass = stNameRO ? 'field-readonly' : '';
+        const fieldRO = !canEdit ? 'disabled' : '';
+        const fieldROClass = !canEdit ? 'field-readonly' : '';
+        const stDeadlineRO = !canEdit ? 'disabled' : '';
+        const stDeadlineROClass = stDeadlineRO ? 'field-readonly' : '';
+        const stPrioRO = !canEdit ? 'disabled' : '';
+        const stPrioROClass = stPrioRO ? 'field-readonly' : '';
+        const stStatusRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
+        const stStatusROClass = stStatusRO ? 'field-readonly' : '';
+        const dlISO = convertToISO(st.deadline);
+
+        // Vorgaenger-Optionen und Chips
+        const predOptions = subtasks
+            .filter(other => other.id !== st.id)
+            .map(other => `<option value="${other.id}">Pos. ${other.position_number}: ${escapeHtml(other.name)}</option>`)
+            .join('');
+
+        const predChips = predIds.map(pid => {
+            const pred = subtasks.find(s => s.id === pid);
+            const posLabel = pred ? pred.position_number : '?';
+            return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="event.stopPropagation(); removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
+        }).join('');
+
+        // Daten-Zeile mit Dual-Content (Text + verstecktes Input)
         html += `<tr class="subtask-row" data-subtask-id="${st.id}" onclick="toggleSubTaskDetail(${taskId}, ${st.id})">
             <td class="pos-cell"><span class="subtask-expand-icon">&#9654;</span>${st.position_number || ''}</td>
-            <td>${escapeHtml(st.name)}</td>
-            <td>${predDisplay ? `<span class="predecessor-display">${escapeHtml(predDisplay)}</span>` : '-'}</td>
-            <td>${escapeHtml(st.area_name || '-')}</td>
+            ${!stNameRO ? `<td>
+                <span class="st-cell-text">${escapeHtml(st.name)}</span>
+                <span class="st-cell-edit"><input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" class="subtask-name-input" onclick="event.stopPropagation()"></span>
+            </td>` : `<td>${escapeHtml(st.name)}</td>`}
+            ${canEdit ? `<td class="predecessor-cell">
+                <span class="st-cell-text">${predDisplay ? `<span class="predecessor-display">${escapeHtml(predDisplay)}</span>` : '-'}</span>
+                <span class="st-cell-edit">
+                    <select id="predSelect_${st.id}" onclick="event.stopPropagation()" onchange="addPredecessorDirect(${taskId}, ${st.id}, this)">
+                        <option value="">+Vorg.</option>
+                        ${predOptions}
+                    </select>
+                    <div class="st-pred-chips" id="predChips_${st.id}">${predChips}</div>
+                </span>
+            </td>` : `<td>${predDisplay ? `<span class="predecessor-display">${escapeHtml(predDisplay)}</span>` : '-'}</td>`}
+            ${canEdit ? `<td>
+                <span class="st-cell-text">${escapeHtml(st.area_name || '-')}</span>
+                <span class="st-cell-edit">
+                    <div class="area-select-wrapper">
+                        <select id="stEditArea_${st.id}" onclick="event.stopPropagation()">
+                            <option value="">-</option>
+                            ${areasOptions.map(a => `<option value="${a.id}" ${a.id === st.area_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}
+                        </select>
+                        <button class="area-add-btn" onclick="event.stopPropagation(); addNewAreaInDetail(this, ${taskId}, ${st.id})" title="Neuer Bereich">+</button>
+                    </div>
+                </span>
+            </td>` : `<td>${escapeHtml(st.area_name || '-')}</td>`}
             <td>${escapeHtml(st.created_by_name || '-')}</td>
-            <td>${escapeHtml(st.assigned_to_name || '-')}</td>
+            ${(parentPerm.isCreator || parentPerm.isLegacy) ? `<td>
+                <span class="st-cell-text">${escapeHtml(st.assigned_to_name || '-')}</span>
+                <span class="st-cell-edit">
+                    <select id="stEditAssigned_${st.id}" onclick="event.stopPropagation()">
+                        ${buildUserOptions(st.assigned_to)}
+                    </select>
+                </span>
+            </td>` : `<td>${escapeHtml(st.assigned_to_name || '-')}</td>`}
             <td>${escapeHtml(st.created_at)}</td>
-            <td>${escapeHtml(st.deadline || '-')}</td>
-            <td>${renderPriority(st.priority)}</td>
-            <td>${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</td>`;
+            ${!stDeadlineRO ? `<td>
+                <span class="st-cell-text">${escapeHtml(st.deadline || '-')}</span>
+                <span class="st-cell-edit"><input type="date" id="stEditDeadline_${st.id}" value="${dlISO}" onclick="event.stopPropagation()"></span>
+            </td>` : `<td>${escapeHtml(st.deadline || '-')}</td>`}
+            ${!stPrioRO ? `<td>
+                <span class="st-cell-text">${renderPriority(st.priority)}</span>
+                <span class="st-cell-edit"><input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:60px" onclick="event.stopPropagation()"></span>
+            </td>` : `<td>${renderPriority(st.priority)}</td>`}
+            ${!stStatusRO ? `<td>
+                <span class="st-cell-text">${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</span>
+                <span class="st-cell-edit"><select id="stEditStatus_${st.id}" onclick="event.stopPropagation()">
+                    <option value="0" ${statusPct === 0 ? 'selected' : ''}>Offen</option>
+                    <option value="50" ${statusPct > 0 && statusPct < 100 ? 'selected' : ''}>In Arbeit</option>
+                    <option value="100" ${statusPct >= 100 ? 'selected' : ''}>Erledigt</option>
+                </select></span>
+            </td>` : `<td>${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</td>`}`;
 
         // Berechtigungs-Icon (nur Ersteller sieht es)
         if (parentPerm.isCreator) {
@@ -837,93 +987,13 @@ function renderSubTasks(taskId, subtasks) {
         }
         html += `</td></tr>`;
 
-        // Detail-Zeile (versteckt, wird bei Klick eingeblendet)
-        const dlISO = convertToISO(st.deadline);
-        const predOptions = subtasks
-            .filter(other => other.id !== st.id)
-            .map(other => `<option value="${other.id}">Pos. ${other.position_number}: ${escapeHtml(other.name)}</option>`)
-            .join('');
-
-        const predChips = predIds.map(pid => {
-            const pred = subtasks.find(s => s.id === pid);
-            const posLabel = pred ? pred.position_number : '?';
-            return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="event.stopPropagation(); removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
-        }).join('');
-
-        // Differenzierte Readonly-Logik pro Feld
-        const fieldRO = !canEdit ? 'disabled' : '';
-        const fieldROClass = !canEdit ? 'field-readonly' : '';
-        // Creator mit zugewiesener Subtask: Name readonly, Deadline/Prio editierbar, Status readonly
-        const stNameRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
-        const stNameROClass = stNameRO ? 'field-readonly' : '';
-        const stDeadlineRO = !canEdit ? 'disabled' : '';
-        const stDeadlineROClass = stDeadlineRO ? 'field-readonly' : '';
-        const stPrioRO = !canEdit ? 'disabled' : '';
-        const stPrioROClass = stPrioRO ? 'field-readonly' : '';
-        const stStatusRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
-        const stStatusROClass = stStatusRO ? 'field-readonly' : '';
-
+        // Detail-Zeile (versteckt): nur noch Beschreibung/WYSIWYG
         html += `<tr class="subtask-detail-row" data-subtask-detail-id="${st.id}">
             <td colspan="${colCount}">
-                <div class="subtask-detail-content">
-                    <div class="detail-edit-header">
-                        <div class="detail-edit-field flex-grow">
-                            <label>Name</label>
-                            <input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" ${stNameRO} class="${stNameROClass}">
-                        </div>
-                        <div class="detail-edit-field">
-                            <label>Vorgaenger</label>
-                            <div class="predecessor-input">
-                                <select id="predSelect_${st.id}" ${fieldRO} class="${fieldROClass}">
-                                    <option value="">--</option>
-                                    ${predOptions}
-                                </select>
-                                <button onclick="event.stopPropagation(); addPredecessor(${taskId}, ${st.id})" ${fieldRO}>+</button>
-                            </div>
-                        </div>
-                        <div class="predecessor-chips-inline" id="predChips_${st.id}">${predChips}</div>
-                        <div class="detail-edit-field">
-                            <label>Bereich</label>
-                            <div class="area-select-wrapper">
-                                <select id="stEditArea_${st.id}" ${fieldRO} class="${fieldROClass}">
-                                    <option value="">-</option>
-                                    ${areasOptions.map(a => `<option value="${a.id}" ${a.id === st.area_id ? 'selected' : ''}>${escapeHtml(a.name)}</option>`).join('')}
-                                </select>
-                                ${canEdit ? `<button class="area-add-btn" onclick="event.stopPropagation(); addNewAreaInDetail(this, ${taskId}, ${st.id})" title="Neuer Bereich">+</button>` : ''}
-                            </div>
-                        </div>
-                        <div class="detail-edit-field">
-                            <label>Deadline</label>
-                            <input type="date" id="stEditDeadline_${st.id}" value="${dlISO}" ${stDeadlineRO} class="${stDeadlineROClass}">
-                        </div>
-                        <div class="detail-edit-field">
-                            <label>Prioritaet</label>
-                            <input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:70px" ${stPrioRO} class="${stPrioROClass}">
-                        </div>
-                        <div class="detail-edit-field">
-                            <label>Status</label>
-                            <select id="stEditStatus_${st.id}" ${stStatusRO} class="${stStatusROClass}">
-                                <option value="0" ${statusPct === 0 ? 'selected' : ''}>Offen</option>
-                                <option value="50" ${statusPct > 0 && statusPct < 100 ? 'selected' : ''}>In Arbeit</option>
-                                <option value="100" ${statusPct >= 100 ? 'selected' : ''}>Erledigt</option>
-                            </select>
-                        </div>`;
-
-        // Zuweisungs-Dropdown fuer SubTasks (nur Ersteller)
-        if (parentPerm.isCreator || parentPerm.isLegacy) {
-            html += `<div class="detail-edit-field">
-                <label>Zuweisen an</label>
-                <select id="stEditAssigned_${st.id}">
-                    ${buildUserOptions(st.assigned_to)}
-                </select>
-            </div>`;
-        }
-
-        html += `</div>`;
+                <div class="subtask-detail-content">`;
 
         // WYSIWYG oder Readonly-Beschreibung
         if (isSubCreator && isSubAssigned) {
-            // Creator mit zugewiesener Subtask: Beschreibung readonly + Zugewiesenen-Notizen
             html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
             html += `<div class="notes-section" id="stAssigneeNotes_${st.id}">
                 <h5>Notizen von ${escapeHtml(st.assigned_to_name || 'Zugewiesenem')}</h5>
@@ -1004,10 +1074,9 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
             }
         }
 
-        // Auto-Save: Metadaten-Felder bei Aenderung sofort speichern
-        const detailRow = document.querySelector(`tr.subtask-detail-row[data-subtask-detail-id="${subtaskId}"]`);
-        if (detailRow && !detailRow._autoSaveInit) {
-            detailRow._autoSaveInit = true;
+        // Auto-Save: Inline-Felder (in der Daten-Zeile) bei Aenderung sofort speichern
+        if (!dataRow._autoSaveInit) {
+            dataRow._autoSaveInit = true;
             ['stEditName', 'stEditArea', 'stEditDeadline', 'stEditPriority', 'stEditStatus', 'stEditAssigned'].forEach(prefix => {
                 const el = document.getElementById(`${prefix}_${subtaskId}`);
                 if (el && !el.disabled) {
@@ -1184,6 +1253,43 @@ async function addPredecessor(taskId, subtaskId) {
     const currentChips = chipsContainer ? chipsContainer.querySelectorAll('.predecessor-chip') : [];
     const predIds = Array.from(currentChips).map(c => parseInt(c.dataset.predId));
     predIds.push(predId);
+
+    try {
+        const resp = await fetch(`/api/subtasks/${subtaskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ predecessor_ids: predIds }),
+        });
+        if (!resp.ok) throw new Error('Fehler');
+
+        // Tabelle neu laden
+        await loadSubTasks(taskId);
+    } catch (error) {
+        console.error('Vorgaenger hinzufuegen fehlgeschlagen:', error);
+        showNotification('Fehler beim Hinzufuegen', 'error');
+    }
+}
+
+async function addPredecessorDirect(taskId, subtaskId, selectEl) {
+    if (!selectEl || !selectEl.value) return;
+
+    const predId = parseInt(selectEl.value);
+
+    // Aktuelle Chips lesen um Duplikate zu vermeiden
+    const chipsContainer = document.getElementById(`predChips_${subtaskId}`);
+    if (chipsContainer && chipsContainer.querySelector(`[data-pred-id="${predId}"]`)) {
+        showNotification('Vorgaenger bereits vorhanden', 'error');
+        selectEl.value = '';
+        return;
+    }
+
+    // Aktuelle predecessor_ids sammeln
+    const currentChips = chipsContainer ? chipsContainer.querySelectorAll('.predecessor-chip') : [];
+    const predIds = Array.from(currentChips).map(c => parseInt(c.dataset.predId));
+    predIds.push(predId);
+
+    // Select zuruecksetzen
+    selectEl.value = '';
 
     try {
         const resp = await fetch(`/api/subtasks/${subtaskId}`, {

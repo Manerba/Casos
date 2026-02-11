@@ -793,8 +793,11 @@ class ExpandableTable {
                 this.options.onRowExpanded(rowId, detailElement);
             }
 
-            // Beim Zuklappen: Scroll-Position korrigieren
+            // Beim Zuklappen: Callback + Scroll-Position korrigieren
             if (wasExpanded) {
+                if (this.options.onRowCollapsed) {
+                    this.options.onRowCollapsed(rowId, wrapper);
+                }
                 const newRowTop = wrapper.getBoundingClientRect().top;
                 window.scrollBy(0, newRowTop - rowTop);
             }
@@ -882,6 +885,10 @@ class ExpandableTable {
                 }
             } else if (!expand && isExpanded) {
                 wrapper.classList.remove('expanded');
+                if (this.options.onRowCollapsed) {
+                    const rowId = wrapper.dataset.rowId;
+                    this.options.onRowCollapsed(rowId, wrapper);
+                }
             }
         });
     }
