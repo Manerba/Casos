@@ -196,6 +196,15 @@ async def index(request: Request):
     return FileResponse(templates_dir / "index.html")
 
 
+@app.get("/editor", response_class=HTMLResponse)
+async def editor_page(request: Request):
+    """ONLYOFFICE Editor-Seite (eigener Tab)."""
+    user = _extract_user_from_request(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    return FileResponse(templates_dir / "editor.html")
+
+
 @app.get("/{path:path}", response_class=HTMLResponse)
 async def catch_all(path: str, request: Request = None):
     """Catch-All fuer clientseitiges Routing (SPA)."""
