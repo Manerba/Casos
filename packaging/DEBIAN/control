@@ -2,11 +2,11 @@ Package: tareas
 Version: __VERSION__
 Architecture: all
 Maintainer: Tareas Team <admin@hirschgasse5.de>
-Depends: python3 (>= 3.10), python3-venv, python3-pip
+Depends: python3 (>= 3.10), python3-venv, python3-pip, sqlite3, docker.io | docker-ce, curl
 Section: web
 Priority: optional
 Homepage: http://10.0.12.7:8504/
 Description: Tareas - Aufgabenplanung und Projektverwaltung
  Web-basiertes Aufgabenplanungs-Tool auf Basis von FastAPI.
- Bietet Projektverwaltung, Teilaufgaben, Teams, LDAP-Integration
- und eine Admin-Oberflaeche.
+ Bietet Projektverwaltung, Teilaufgaben, Teams, LDAP-Integration,
+ ONLYOFFICE-Dokumentenbearbeitung und eine Admin-Oberflaeche.

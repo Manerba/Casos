@@ -550,23 +550,15 @@ aufgabe 2 ist von aufgabe 1 abhängig und aufgabe 3 von 2. dann macht es keinen 
 
 ====================================================================================
 
+die tabelle im view bereich darf nie soweit hochgescrollt werden können, dass sie nicht mehr sichtbar ist. es muss immer sichergestellt werden, dass die letzte tabellenzeile im view-bereich sichtbar ist. (in edge ist das so, dass die unterste tabellenzeile immer sichtbar ist, nur nicht in chrome und firefox).
+
+====================================================================================
+
 herstellen der abhängigkeiten von teilaufgaben über den netzplan:
 - durch einen klick auf einen node soll ein linien-ende "geschnappt" werden und der maus folgen. 
 - beim klick auf einen anderen node soll die abhängigkeit hergestellt werden. 
 - ungültige abhängigkeiten wie zirkuläre oder transitive sollen nicht möglich sein. 
 - die position der teilaufgaben und damit ihre positionsnummer soll automatisch durch die hergestellten abhängigkeiten angepasst werden.
-
-====================================================================================
-
-die tabelle im view bereich darf nie soweit hochgescrollt werden können, dass sie nicht mehr sichtbar ist. es muss immer sichergestellt werden, dass die letzte tabellenzeile im view-bereich sichtbar ist. (in edge ist das so, dass die unterste tabellenzeile immer sichtbar ist, nur nicht in chrome und firefox).
-
-====================================================================================
-
-
-
-====================================================================================
-
-
 
 ====================================================================================
 
@@ -598,6 +590,19 @@ docs/TODO/sprint_onlyoffice.md
   ├──────────────────────┼────────────────────────────────────────────────────────────┤
   │ Formate              │ docx, xlsx, pptx, odt, ods, txt, csv, md                   │
   └──────────────────────┴────────────────────────────────────────────────────────────┘
+
+------------------------------------------------------------------------------------
+
+zu 1: ich dachte, das wird aus der server-konfig ausgelesen. taras ist für die installation auf einem standalone-server vorgesehen. es kann alles hartcodiert werden, bis auf die ip-adresse des servers, die muss aus der server-konfiguration ausgelesen werden.
+zu 2: das komplette feature onlyoffice-integration muss auf endgeräten automatisch über apt update installiert werden (siehe publish.sh).
+
+====================================================================================
+
+markieren von dateien in der dateiablage: bei einem klick auf eine datei wird diese nicht farblich hinterlegt (wie in betriebssystem-guis üblich). schaue nach, ob die funktionalität implementiert ist. implementiere sie, wenn nicht. 
+
+====================================================================================
+
+
 
 ====================================================================================
 

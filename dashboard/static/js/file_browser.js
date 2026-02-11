@@ -174,11 +174,16 @@ class FileBrowser {
         this.items.forEach(item => {
             const icon = this._getFileIcon(item);
             const sizeStr = item.type === 'directory' ? '' : this._formatSize(item.size);
+            const isEditable = item.type === 'file' && typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(item.name);
+            const editIcon = isEditable
+                ? `<div class="fb-grid-edit" onclick="event.stopPropagation(); openOnlyOfficeEditor(${this.taskId}, '${escapeAttr(this.currentPath ? this.currentPath + '/' + item.name : item.name)}')" title="Im Editor oeffnen">${this._iconEdit()}</div>`
+                : '';
             html += `
                 <div class="fb-grid-item ${item.type === 'directory' ? 'fb-grid-dir' : 'fb-grid-file'}"
                      ondblclick="window._fb${this.taskId}.onItemDblClick('${escapeAttr(item.name)}', '${item.type}')"
                      oncontextmenu="window._fb${this.taskId}.onContextMenu(event, '${escapeAttr(item.name)}', '${item.type}', '${escapeAttr(item.nextcloud_link || '')}')"
                      title="${escapeAttr(item.name)}${sizeStr ? ' (' + sizeStr + ')' : ''}">
+                    ${editIcon}
                     <div class="fb-grid-icon">${icon}</div>
                     <div class="fb-grid-name">${escapeHtml(item.name)}</div>
                     ${sizeStr ? `<div class="fb-grid-size">${sizeStr}</div>` : ''}
@@ -288,9 +293,16 @@ class FileBrowser {
                 : (this.currentPath ? `${this.currentPath}/${name}` : name);
             this.loadDirectory(path);
         } else {
-            // Datei downloaden
-            const filePath = this.currentPath ? `${this.currentPath}/${name}` : name;
-            this.downloadFile(filePath);
+            // ONLYOFFICE Editor oder Download
+            const filePath = this.viewMode === 'tree' && parentPath !== undefined
+                ? (parentPath ? `${parentPath}/${name}` : name)
+                : (this.currentPath ? `${this.currentPath}/${name}` : name);
+
+            if (typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(name)) {
+                openOnlyOfficeEditor(this.taskId, filePath);
+            } else {
+                this.downloadFile(filePath);
+            }
         }
     }
 
@@ -307,6 +319,9 @@ class FileBrowser {
 
         let html = '<div class="fb-ctx-menu">';
         if (type === 'file') {
+            if (typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(name)) {
+                html += `<div class="fb-ctx-item" onclick="openOnlyOfficeEditor(${this.taskId}, '${escapeAttr(fullPath)}')">Im Editor oeffnen</div>`;
+            }
             html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.downloadFile('${escapeAttr(fullPath)}')">Herunterladen</div>`;
             if (nextcloudLink) {
                 html += `<div class="fb-ctx-item" onclick="window.open('${escapeAttr(nextcloudLink)}', '_blank')">In Nextcloud oeffnen</div>`;
@@ -585,6 +600,9 @@ class FileBrowser {
     }
     _iconGrid() {
         return '<svg viewBox="0 0 24 24" class="fb-icon-btn"><path d="M3 3h8v8H3zm10 0h8v8h-8zM3 13h8v8H3zm10 0h8v8h-8z" fill="currentColor"/></svg>';
+    }
+    _iconEdit() {
+        return '<svg viewBox="0 0 24 24" class="fb-icon-edit"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" fill="currentColor"/></svg>';
     }
 
     // ========================================

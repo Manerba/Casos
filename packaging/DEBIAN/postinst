@@ -46,6 +46,17 @@ systemctl restart tareas.service
 systemctl restart tareas-admin.service
 systemctl restart tareas-ldap-sync.timer
 
+# Docker-Daemon sicherstellen (wurde als Dependency installiert)
+systemctl enable docker.service 2>/dev/null || true
+systemctl start docker.service 2>/dev/null || true
+
+# ONLYOFFICE Document Server Setup (Docker)
+if [ -x "$APP_DIR/scripts/onlyoffice-setup.sh" ]; then
+    echo ""
+    echo "--- ONLYOFFICE Setup ---"
+    APP_DIR="$APP_DIR" "$APP_DIR/scripts/onlyoffice-setup.sh" || true
+fi
+
 echo ""
 echo "=== Tareas Installation abgeschlossen ==="
 echo "  App:   http://$(hostname -I | awk '{print $1}'):8504/"

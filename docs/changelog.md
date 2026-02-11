@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 17:00;0.0.1+43;Feature;ONLYOFFICE-Integration: Dokumente (docx, xlsx, pptx, etc.) direkt im Browser bearbeiten via WOPI-Host, Fullscreen-Editor-Overlay, Admin-Tab fuer Konfiguration, automatisches Docker-Setup ueber apt-Pipeline
 11.02.2026 14:00;0.0.1+42;Aenderung;Dateiablage: Baumansicht als Standard-Ansicht statt Grid
 11.02.2026 13:00;0.0.1+41;Aenderung;Netzplan: Kanten als cubicBezier mit horizontalem Start/Ende (zwei Kreisboegen statt geschwungene Kurve)
 11.02.2026 13:00;0.0.1+41;Aenderung;Netzplan: Knoten frei verschiebbar (eigene Positionsberechnung statt fixiertes hierarchisches Layout)

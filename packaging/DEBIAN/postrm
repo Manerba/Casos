@@ -12,6 +12,13 @@ rm -f /etc/systemd/system/tareas-ldap-sync.timer
 systemctl daemon-reload
 
 if [ "$1" = "purge" ]; then
+    # ONLYOFFICE Docker-Container entfernen
+    if command -v docker &> /dev/null; then
+        docker stop onlyoffice-docs 2>/dev/null || true
+        docker rm onlyoffice-docs 2>/dev/null || true
+        echo "ONLYOFFICE-Container entfernt."
+    fi
+
     # Datenverzeichnis loeschen
     rm -rf "$APP_DIR/data"
     echo "Datenverzeichnis geloescht."

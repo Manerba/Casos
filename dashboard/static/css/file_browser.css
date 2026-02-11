@@ -273,6 +273,7 @@
     text-align: center;
     transition: background 0.15s;
     user-select: none;
+    position: relative;
 }
 
 .fb-grid-item:hover {
@@ -310,6 +311,39 @@
     font-size: 10px;
     color: var(--text-muted, #999);
     margin-top: 2px;
+}
+
+/* Edit-Icon auf editierbaren Dateien */
+.fb-grid-edit {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 3px;
+    background: var(--bg-primary, #fff);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    line-height: 0;
+}
+
+.fb-grid-item:hover .fb-grid-edit {
+    opacity: 1;
+}
+
+.fb-grid-edit:hover {
+    background: var(--accent-primary, #3498db);
+}
+
+.fb-grid-edit:hover .fb-icon-edit {
+    color: #fff;
+}
+
+.fb-icon-edit {
+    width: 14px;
+    height: 14px;
+    color: var(--accent-primary, #3498db);
 }
 
 /* --- Baum Ansicht --- */

@@ -47,6 +47,7 @@
         <a class="tab active" href="#" data-tab="benutzer">Benutzerverwaltung</a>
         <a class="tab" href="#" data-tab="ldap">LDAP</a>
         <a class="tab" href="#" data-tab="nextcloud">Nextcloud</a>
+        <a class="tab" href="#" data-tab="onlyoffice">ONLYOFFICE</a>
     </nav>
 
     <!-- Filter Bar -->
@@ -65,6 +66,7 @@
     <script src="/static/js/tab_benutzer.js"></script>
     <script src="/static/js/tab_ldap.js"></script>
     <script src="/static/js/tab_nextcloud.js"></script>
+    <script src="/static/js/tab_onlyoffice.js"></script>
     <script>
         // Admin-App: User laden und Tab initialisieren
         let adminCurrentTab = 'benutzer';
@@ -86,6 +88,8 @@
                 switchAdminTab('ldap');
             } else if (path === '/nextcloud') {
                 switchAdminTab('nextcloud');
+            } else if (path === '/onlyoffice') {
+                switchAdminTab('onlyoffice');
             } else {
                 switchAdminTab('benutzer');
             }
@@ -101,7 +105,7 @@
             });
 
             // URL aktualisieren
-            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap', 'nextcloud': '/nextcloud' };
+            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap', 'nextcloud': '/nextcloud', 'onlyoffice': '/onlyoffice' };
             history.replaceState({}, '', pathMap[tab] || '/benutzer');
 
             // Tab-Inhalt laden
@@ -111,6 +115,8 @@
                 initLdapTab();
             } else if (tab === 'nextcloud') {
                 initNextcloudTab();
+            } else if (tab === 'onlyoffice') {
+                initOnlyOfficeTab();
             }
         }
     </script>
