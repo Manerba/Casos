@@ -300,6 +300,8 @@ class FileBrowser {
 
             if (typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(name)) {
                 openOnlyOfficeEditor(this.taskId, filePath);
+            } else if (this._isImageFile(name)) {
+                this.openFileInline(filePath);
             } else {
                 this.downloadFile(filePath);
             }
@@ -321,6 +323,9 @@ class FileBrowser {
         if (type === 'file') {
             if (typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(name)) {
                 html += `<div class="fb-ctx-item" onclick="openOnlyOfficeEditor(${this.taskId}, '${escapeAttr(fullPath)}')">Im Editor oeffnen</div>`;
+            }
+            if (this._isImageFile(name)) {
+                html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.openFileInline('${escapeAttr(fullPath)}')">Anzeigen</div>`;
             }
             html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.downloadFile('${escapeAttr(fullPath)}')">Herunterladen</div>`;
             if (nextcloudLink) {
@@ -365,6 +370,17 @@ class FileBrowser {
     // ========================================
     // Dateioperationen
     // ========================================
+
+    _isImageFile(fileName) {
+        if (!fileName) return false;
+        const ext = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
+        return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext);
+    }
+
+    openFileInline(path) {
+        const url = `/api/tasks/${this.taskId}/files/download?path=${encodeURIComponent(path)}&inline=true`;
+        window.open(url, '_blank');
+    }
 
     downloadFile(path) {
         const url = `/api/tasks/${this.taskId}/files/download?path=${encodeURIComponent(path)}`;

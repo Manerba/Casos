@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 22:30;0.0.1+46;Feature;Dateiablage: Bilddateien (jpg, png, gif, webp, svg, etc.) oeffnen bei Doppelklick im neuen Browser-Tab statt Download, Kontextmenue-Eintrag Anzeigen
 11.02.2026 22:00;0.0.1+45;Aenderung;ONLYOFFICE: Dateien aus Dateiablage oeffnen sich jetzt in neuem Browser-Tab statt Fullscreen-Overlay, eigene Editor-Seite mit Theme-Support
 11.02.2026 21:30;0.0.1+44;Bugfix;Inline-Editing: Metadaten-Aenderungen in Tabellenzeilen (Name, Status, Prioritaet, Zuweisung, Deadline) werden jetzt korrekt uebernommen - optimistisches lokales Daten-Update und Zellen-Re-Rendering beim Zuklappen
 11.02.2026 17:00;0.0.1+43;Feature;ONLYOFFICE-Integration: Dokumente (docx, xlsx, pptx, etc.) direkt im Browser bearbeiten via WOPI-Host, Fullscreen-Editor-Overlay, Admin-Tab fuer Konfiguration, automatisches Docker-Setup ueber apt-Pipeline

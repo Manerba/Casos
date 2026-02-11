@@ -272,9 +272,10 @@ async def list_task_files(
 async def download_task_file(
     task_id: int,
     path: str = Query(..., description="Relativer Pfad zur Datei"),
+    inline: bool = Query(False, description="Datei inline anzeigen statt herunterladen"),
     user=Depends(get_current_user),
 ):
-    """Datei aus dem Projektverzeichnis herunterladen."""
+    """Datei aus dem Projektverzeichnis herunterladen oder inline anzeigen."""
     nc_path = _get_task_nextcloud_path(task_id, user)
     full_path = f"{nc_path}/{path.strip('/')}"
 
@@ -287,12 +288,13 @@ async def download_task_file(
 
     # Dateiname aus Pfad extrahieren
     filename = path.rsplit("/", 1)[-1] if "/" in path else path
+    disposition = "inline" if inline else "attachment"
 
     return Response(
         content=content,
         media_type=content_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
         },
     )
 
