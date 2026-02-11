@@ -298,13 +298,21 @@ function deactivateInlineEditing(rowId) {
     const wrapper = document.querySelector(`[data-row-id="${rowId}"]`);
     if (!wrapper) return;
 
+    const row = aufgabenTable.filteredData.find(r => String(r.id) === String(rowId));
     const tableRow = wrapper.querySelector('.table-row');
     if (!tableRow) return;
 
     const cells = tableRow.querySelectorAll('.table-cell');
-    cells.forEach(cell => {
+    const columns = aufgabenTable.config.columns;
+
+    cells.forEach((cell, index) => {
         if (cell._originalHTML !== undefined) {
-            cell.innerHTML = cell._originalHTML;
+            if (row && columns[index]) {
+                // Zelle aus aktuellen (ggf. optimistisch aktualisierten) Daten neu rendern
+                cell.innerHTML = aufgabenTable.renderCell(row[columns[index].field], columns[index], row);
+            } else {
+                cell.innerHTML = cell._originalHTML;
+            }
             delete cell._originalHTML;
         }
     });
@@ -313,8 +321,6 @@ function deactivateInlineEditing(rowId) {
 async function saveTaskFromInline(taskId) {
     const row = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
     if (!row) return;
-
-    const perm = row ? getTaskPermissions(row) : { isOwnTask: true, isLegacy: true };
 
     const body = {};
 
@@ -336,6 +342,32 @@ async function saveTaskFromInline(taskId) {
     const dlInput = document.getElementById(`inlineDeadline_${taskId}`);
     if (dlInput) body.deadline = dlInput.value || '';
 
+    // Optimistisches Update der lokalen Daten (vor await, damit deactivateInlineEditing die neuen Werte sieht)
+    const oldValues = {};
+    if (body.name !== undefined) { oldValues.name = row.name; row.name = body.name; }
+    if (body.status !== undefined) { oldValues.status = row.status; row.status = body.status; }
+    if (body.priority !== undefined) { oldValues.priority = row.priority; row.priority = body.priority; }
+    if (body.assigned_to !== undefined) {
+        oldValues.assigned_to = row.assigned_to;
+        oldValues.assigned_to_name = row.assigned_to_name;
+        row.assigned_to = body.assigned_to === 0 ? null : body.assigned_to;
+        if (body.assigned_to === 0) {
+            row.assigned_to_name = '';
+        } else {
+            const user = cachedUsers.find(u => u.id === body.assigned_to);
+            row.assigned_to_name = user ? `${user.vorname} ${user.nachname}`.trim() : '';
+        }
+    }
+    if (body.deadline !== undefined) {
+        oldValues.deadline = row.deadline;
+        if (body.deadline) {
+            const parts = body.deadline.split('-');
+            row.deadline = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : body.deadline;
+        } else {
+            row.deadline = '';
+        }
+    }
+
     try {
         const resp = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
@@ -344,6 +376,10 @@ async function saveTaskFromInline(taskId) {
         });
         if (!resp.ok) throw new Error('Fehler beim Speichern');
     } catch (error) {
+        // Bei Fehler: lokale Daten zuruecksetzen
+        for (const [key, value] of Object.entries(oldValues)) {
+            row[key] = value;
+        }
         console.error('Inline-Save fehlgeschlagen:', error);
         showNotification('Fehler beim Speichern', 'error');
     }
