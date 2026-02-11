@@ -1734,16 +1734,40 @@ function openNetzplan(taskId) {
     }
     subtasks.forEach(st => computeLevel(st));
 
+    // Positionen berechnen: X nach Level, Y gleichmaessig verteilt pro Level
+    const levelSeparation = 220;
+    const nodeSpacing = 70;
+    const levelGroups = {};
+    subtasks.forEach(st => {
+        const lvl = levelMap[st.id];
+        if (!levelGroups[lvl]) levelGroups[lvl] = [];
+        levelGroups[lvl].push(st);
+    });
+
+    const positionMap = {};
+    Object.keys(levelGroups).forEach(lvl => {
+        const group = levelGroups[lvl];
+        const totalHeight = (group.length - 1) * nodeSpacing;
+        group.forEach((st, idx) => {
+            positionMap[st.id] = {
+                x: parseInt(lvl) * levelSeparation,
+                y: -totalHeight / 2 + idx * nodeSpacing,
+            };
+        });
+    });
+
     subtasks.forEach(st => {
         const statusPct = st.status_percent || 0;
         const nodeColor = getNodeColor(statusPct, colors);
         const posLabel = st.position_number ? `${st.position_number}: ` : '';
         const label = `${posLabel}${st.name}`;
+        const pos = positionMap[st.id];
 
         nodesArr.push({
             id: st.id,
             label: label,
-            level: levelMap[st.id],
+            x: pos.x,
+            y: pos.y,
             color: {
                 background: nodeColor.background,
                 border: nodeColor.border,
@@ -1765,7 +1789,7 @@ function openNetzplan(taskId) {
                 to: st.id,
                 arrows: { to: { enabled: true, scaleFactor: 0.8 } },
                 color: { color: colors.edge, highlight: colors.highlight.border },
-                smooth: { type: 'curvedCW', roundness: 0.15 },
+                smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.5 },
                 width: 1.5,
             });
         });
@@ -1776,27 +1800,17 @@ function openNetzplan(taskId) {
     const data = { nodes: new vis.DataSet(nodesArr), edges: new vis.DataSet(edgesArr) };
 
     const options = {
-        layout: {
-            hierarchical: {
-                enabled: true,
-                direction: 'LR',
-                sortMethod: 'directed',
-                levelSeparation: 180,
-                nodeSpacing: 60,
-                treeSpacing: 80,
-                blockShifting: true,
-                edgeMinimization: true,
-            },
-        },
+        layout: { randomSeed: 1 },
         physics: { enabled: false },
         interaction: {
             hover: true,
             tooltipDelay: 200,
             zoomView: true,
             dragView: true,
+            dragNodes: true,
         },
         edges: {
-            smooth: { type: 'curvedCW', roundness: 0.15 },
+            smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.5 },
         },
     };
 

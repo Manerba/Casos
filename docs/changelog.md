@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 13:00;0.0.1+41;Aenderung;Netzplan: Kanten als cubicBezier mit horizontalem Start/Ende (zwei Kreisboegen statt geschwungene Kurve)
+11.02.2026 13:00;0.0.1+41;Aenderung;Netzplan: Knoten frei verschiebbar (eigene Positionsberechnung statt fixiertes hierarchisches Layout)
 11.02.2026 12:00;0.0.1+40;Aenderung;Teilaufgaben-Berechtigungsmanagement entfernt: nur noch Projekt-Berechtigungen aus Teammitglieder-Dialog
 11.02.2026 12:00;0.0.1+40;Aenderung;subtask_permissions Tabelle gedroppt, Schloss-Icons und Override-Dialog aus UI entfernt
 11.02.2026 04:10;0.0.1+39;Feature;Inline-Editing: Metadaten-Felder direkt in Tabellenzeilen editierbar (Aufgaben und Teilaufgaben)
