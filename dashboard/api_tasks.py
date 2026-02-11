@@ -382,17 +382,6 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
             for dr in dep_rows:
                 deps.setdefault(dr["sub_task_id"], []).append(dr["depends_on_id"])
 
-        # Subtask-Permissions laden (fuer Teammitglieder)
-        st_perms = {}
-        if membership and sub_ids:
-            placeholders = ",".join("?" * len(sub_ids))
-            perm_rows = db.execute(
-                f"SELECT sub_task_id, can_read, can_edit FROM subtask_permissions WHERE user_id = ? AND sub_task_id IN ({placeholders})",
-                [user["id"]] + sub_ids,
-            ).fetchall()
-            for pr in perm_rows:
-                st_perms[pr["sub_task_id"]] = {"can_read": bool(pr["can_read"]), "can_edit": bool(pr["can_edit"])}
-
         # Mapping: sub_task id -> position_number (fuer predecessors_display)
         id_to_pos = {row["id"]: row["position_number"] for row in rows}
 
@@ -400,31 +389,20 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
         for row in rows:
             # Effektive Berechtigungen berechnen
             if is_creator or is_legacy:
-                permissions = {"can_read": True, "can_edit": True, "can_create": True, "has_override": False}
+                permissions = {"can_read": True, "can_edit": True, "can_create": True}
             elif membership:
-                override = st_perms.get(row["id"])
-                if override:
-                    permissions = {
-                        "can_read": override["can_read"],
-                        "can_edit": override["can_edit"],
-                        "can_create": bool(membership["can_create"]),
-                        "has_override": True,
-                    }
-                else:
-                    permissions = {
-                        "can_read": bool(membership["can_read"]),
-                        "can_edit": bool(membership["can_edit"]),
-                        "can_create": bool(membership["can_create"]),
-                        "has_override": False,
-                    }
-                # Nicht-lesbare filtern
+                permissions = {
+                    "can_read": bool(membership["can_read"]),
+                    "can_edit": bool(membership["can_edit"]),
+                    "can_create": bool(membership["can_create"]),
+                }
                 if not permissions["can_read"]:
                     continue
             else:
                 # Kein Zugriff (weder Ersteller, Legacy, noch Teammitglied)
                 # Zugewiesene sehen nur ihre zugewiesene Subtask
                 if row["assigned_to"] == user["id"]:
-                    permissions = {"can_read": True, "can_edit": True, "can_create": False, "has_override": False}
+                    permissions = {"can_read": True, "can_edit": True, "can_create": False}
                 else:
                     continue
 
@@ -522,25 +500,15 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(g
         is_creator = task and task["created_by"] == user["id"]
         is_legacy = task and task["created_by"] is None
         if not is_creator and not is_legacy:
-            # Subtask-Override pruefen
-            override = db.execute(
-                "SELECT can_edit FROM subtask_permissions WHERE sub_task_id = ? AND user_id = ?",
-                (subtask_id, user["id"]),
+            membership = db.execute(
+                "SELECT can_edit FROM project_members WHERE project_id = ? AND user_id = ?",
+                (existing["project_id"], user["id"]),
             ).fetchone()
-            if override:
-                if not override["can_edit"]:
+            if not membership or not membership["can_edit"]:
+                # Zugewiesene duerfen ihre Subtask bearbeiten
+                st_row = db.execute("SELECT assigned_to FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+                if not st_row or st_row["assigned_to"] != user["id"]:
                     raise HTTPException(status_code=403, detail="Keine Berechtigung zum Bearbeiten")
-            else:
-                # Fallback auf Projekt-Berechtigung
-                membership = db.execute(
-                    "SELECT can_edit FROM project_members WHERE project_id = ? AND user_id = ?",
-                    (existing["project_id"], user["id"]),
-                ).fetchone()
-                if not membership or not membership["can_edit"]:
-                    # Zugewiesene duerfen ihre Subtask bearbeiten
-                    st_row = db.execute("SELECT assigned_to FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
-                    if not st_row or st_row["assigned_to"] != user["id"]:
-                        raise HTTPException(status_code=403, detail="Keine Berechtigung zum Bearbeiten")
 
         updates = []
         values = []

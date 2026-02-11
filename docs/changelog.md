@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 12:00;0.0.1+40;Aenderung;Teilaufgaben-Berechtigungsmanagement entfernt: nur noch Projekt-Berechtigungen aus Teammitglieder-Dialog
+11.02.2026 12:00;0.0.1+40;Aenderung;subtask_permissions Tabelle gedroppt, Schloss-Icons und Override-Dialog aus UI entfernt
 11.02.2026 04:10;0.0.1+39;Feature;Inline-Editing: Metadaten-Felder direkt in Tabellenzeilen editierbar (Aufgaben und Teilaufgaben)
 11.02.2026 04:10;0.0.1+39;Aenderung;Detail-Header bei Aufgaben und Teilaufgaben entfernt, Detail startet direkt mit Beschreibungs-Editor
 11.02.2026 04:10;0.0.1+39;Aenderung;Vorgaenger bei Teilaufgaben: Direkt-Hinzufuegen per Dropdown ohne +-Button

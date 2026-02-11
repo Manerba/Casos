@@ -155,16 +155,10 @@ def init_db():
             UNIQUE(project_id, user_id)
         );
 
-        CREATE TABLE IF NOT EXISTS subtask_permissions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            can_read INTEGER DEFAULT 1,
-            can_edit INTEGER DEFAULT 0,
-            added_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(sub_task_id, user_id)
-        );
     """)
+
+    # Migration: subtask_permissions entfernen (nicht mehr benoetigt)
+    conn.execute("DROP TABLE IF EXISTS subtask_permissions")
 
     # Migration: LDAP-Felder fuer users-Tabelle
     user_cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]

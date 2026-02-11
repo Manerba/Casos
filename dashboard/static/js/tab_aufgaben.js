@@ -875,7 +875,6 @@ function renderSubTasks(taskId, subtasks) {
                 <th>Deadline</th>
                 <th>Prioritaet</th>
                 <th>Status (%)</th>
-                ${parentPerm.isCreator ? '<th class="perm-icon-cell"></th>' : ''}
                 <th></th>
             </tr>
         </thead>
@@ -885,7 +884,7 @@ function renderSubTasks(taskId, subtasks) {
         const predIds = st.predecessor_ids || [];
         const predDisplay = st.predecessors_display || '';
         const statusPct = st.status_percent || 0;
-        const stPerms = st.permissions || { can_read: true, can_edit: true, can_create: true, has_override: false };
+        const stPerms = st.permissions || { can_read: true, can_edit: true, can_create: true };
         const canEdit = stPerms.can_edit;
         const isSubAssigned = !!st.assigned_to;
         const isSubCreator = parentPerm.isCreator || parentPerm.isLegacy;
@@ -970,13 +969,6 @@ function renderSubTasks(taskId, subtasks) {
                     <option value="100" ${statusPct >= 100 ? 'selected' : ''}>Erledigt</option>
                 </select></span>
             </td>` : `<td>${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</td>`}`;
-
-        // Berechtigungs-Icon (nur Ersteller sieht es)
-        if (parentPerm.isCreator) {
-            const iconClass = stPerms.has_override ? 'perm-icon-override' : 'perm-icon-default';
-            const icon = stPerms.has_override ? '&#128274;' : '&#128275;';
-            html += `<td class="perm-icon-cell"><button class="perm-btn ${iconClass}" onclick="event.stopPropagation(); openSubtaskPermDialog(${taskId}, ${st.id})" title="Berechtigungen">${icon}</button></td>`;
-        }
 
         // Delete-Button (nur Ersteller/Legacy)
         html += `<td>`;
@@ -1629,141 +1621,6 @@ async function removeTeamMember(projectId, userId) {
 
         showNotification('Mitglied entfernt', 'success');
         await loadTeamMembers(projectId);
-    } catch (error) {
-        showNotification('Fehler beim Entfernen', 'error');
-    }
-}
-
-// ========================================
-// Subtask-Berechtigungs-Dialog (Sprint C)
-// ========================================
-
-async function openSubtaskPermDialog(projectId, subtaskId) {
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    // Subtask-Name ermitteln
-    const container = document.getElementById(`subtaskContainer_${projectId}`);
-    const subtasks = container?._subtasksData || [];
-    const st = subtasks.find(s => s.id === subtaskId);
-    const stName = st ? st.name : `Teilaufgabe #${subtaskId}`;
-
-    overlay.innerHTML = `
-        <div class="modal-content modal-wide">
-            <div class="modal-header">Berechtigungen: ${escapeHtml(stName)}</div>
-            <div class="modal-body">
-                <div class="team-info-text">Ueberschreibungen gelten nur fuer diese Teilaufgabe. Ohne Ueberschreibung gelten die Projekt-Standardberechtigungen.</div>
-                <div id="subtaskPermContainer">
-                    <div class="table-loading"><div class="spinner"></div></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Schliessen</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
-
-    // Parallel laden: Mitglieder + Permissions
-    try {
-        const [membersResp, permsResp] = await Promise.all([
-            fetch(`/api/tasks/${projectId}/members`),
-            fetch(`/api/subtasks/${subtaskId}/permissions`),
-        ]);
-        const membersData = await membersResp.json();
-        const permsData = await permsResp.json();
-        const members = membersData.items || [];
-        const perms = permsData.items || [];
-
-        const permContainer = document.getElementById('subtaskPermContainer');
-        if (!permContainer) return;
-
-        if (members.length === 0) {
-            permContainer.innerHTML = '<div class="team-empty">Keine Teammitglieder vorhanden.</div>';
-            return;
-        }
-
-        // Permissions als Map
-        const permMap = {};
-        perms.forEach(p => { permMap[p.user_id] = p; });
-
-        let html = `<table class="team-table">
-            <thead>
-                <tr>
-                    <th>Nachname</th>
-                    <th>Vorname</th>
-                    <th style="text-align:center">Lesen</th>
-                    <th style="text-align:center">Bearbeiten</th>
-                    <th style="text-align:center">Override</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>`;
-
-        members.forEach(m => {
-            const override = permMap[m.user_id];
-            const hasOverride = !!override;
-            const canRead = hasOverride ? override.can_read : m.can_read;
-            const canEdit = hasOverride ? override.can_edit : m.can_edit;
-
-            html += `<tr data-perm-uid="${m.user_id}">
-                <td>${escapeHtml(m.nachname)}</td>
-                <td>${escapeHtml(m.vorname)}</td>
-                <td style="text-align:center"><input type="checkbox" ${canRead ? 'checked' : ''} onchange="updateSubtaskPerm(${subtaskId}, ${m.user_id}, this.closest('tr'))"></td>
-                <td style="text-align:center"><input type="checkbox" ${canEdit ? 'checked' : ''} onchange="updateSubtaskPerm(${subtaskId}, ${m.user_id}, this.closest('tr'))"></td>
-                <td style="text-align:center">${hasOverride ? '<span class="override-indicator"></span>' : '-'}</td>
-                <td>${hasOverride ? `<button class="team-remove-btn" onclick="resetSubtaskPerm(${projectId}, ${subtaskId}, ${m.user_id})">Reset</button>` : ''}</td>
-            </tr>`;
-        });
-
-        html += '</tbody></table>';
-        permContainer.innerHTML = html;
-    } catch (error) {
-        console.error('Subtask-Berechtigungen laden fehlgeschlagen:', error);
-        const permContainer = document.getElementById('subtaskPermContainer');
-        if (permContainer) permContainer.innerHTML = '<div class="table-error">Fehler beim Laden</div>';
-    }
-}
-
-async function updateSubtaskPerm(subtaskId, userId, row) {
-    if (!row) return;
-    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-    const can_read = checkboxes[0]?.checked || false;
-    const can_edit = checkboxes[1]?.checked || false;
-
-    try {
-        const resp = await fetch(`/api/subtasks/${subtaskId}/permissions/${userId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ can_read, can_edit }),
-        });
-        if (!resp.ok) throw new Error('Fehler');
-    } catch (error) {
-        showNotification('Fehler beim Aktualisieren', 'error');
-    }
-}
-
-async function resetSubtaskPerm(projectId, subtaskId, userId) {
-    try {
-        const resp = await fetch(`/api/subtasks/${subtaskId}/permissions/${userId}`, { method: 'DELETE' });
-        if (!resp.ok) throw new Error('Fehler');
-
-        showNotification('Ueberschreibung entfernt', 'success');
-        // Dialog neu laden
-        await openSubtaskPermDialog(projectId, subtaskId);
     } catch (error) {
         showNotification('Fehler beim Entfernen', 'error');
     }

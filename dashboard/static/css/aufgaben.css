@@ -1041,39 +1041,6 @@
     border-color: var(--accent-primary);
 }
 
-/* Berechtigungs-Icon Spalte (Subtask-Tabelle) */
-.perm-icon-cell {
-    width: 30px;
-    text-align: center;
-}
-
-.perm-btn {
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 2px;
-    line-height: 1;
-}
-
-.perm-icon-default {
-    color: var(--text-secondary);
-    opacity: 0.5;
-}
-
-.perm-icon-override {
-    color: var(--accent-primary);
-}
-
-.override-indicator {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--accent-primary);
-    margin-left: 4px;
-}
-
 /* ----------------------------------------
    Inline-Editing (Haupt-Tabelle)
    ---------------------------------------- */
