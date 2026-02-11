@@ -1246,10 +1246,16 @@
     height: 100%;
 }
 
-.netzplan-fit-btn {
+.netzplan-btn-group {
     position: absolute;
     bottom: 16px;
     right: 16px;
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+}
+
+.netzplan-fit-btn {
     padding: 8px 14px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -1258,7 +1264,6 @@
     background-color: var(--bg-primary);
     color: var(--text-primary);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 10;
     transition: all var(--transition-speed);
 }
 
@@ -1266,4 +1271,35 @@
     background-color: var(--accent-primary);
     color: white;
     border-color: var(--accent-primary);
+}
+
+.netzplan-toolbar {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    margin-left: auto;
+    margin-right: 12px;
+}
+
+.netzplan-toolbar-btn {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all var(--transition-speed);
+    line-height: 1;
+}
+
+.netzplan-toolbar-btn:hover:not(:disabled) {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.netzplan-toolbar-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
 }

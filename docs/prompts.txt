@@ -598,7 +598,52 @@ zu 2: das komplette feature onlyoffice-integration muss auf endgeräten automati
 
 ====================================================================================
 
-markieren von dateien in der dateiablage: bei einem klick auf eine datei wird diese nicht farblich hinterlegt (wie in betriebssystem-guis üblich). schaue nach, ob die funktionalität implementiert ist. implementiere sie, wenn nicht. 
+änderungen an metadeten (daten in eingefelder der tabellenzeile) von aufgaben und projekten werden nicht übernommen.
+
+====================================================================================
+
+beim öffnen von dateien in onlyoffice aus der dateiablage heraus, soll sich onlyoffice in einem neuen tab öffnen.
+
+====================================================================================
+
+dateiablage: bild-dateien sollen bei doppelklick ebenfalls im broser geöffnet anstatt downgeloadet werden.
+
+====================================================================================
+
+verbesserung des netzplans: 
+- die node-positionen sollen gespeichert werden. 
+- beim löschen und herstellen von abhängigkeiten sollen die nodes ihre position behalten
+- es soll einen schalter für die automatische anordnung der nodes geben. beim klick darauf sollen die nodes so angeordnet werden, dass alle, welche parallel zueinander abgearbeitet werden können übereinander stehen. 
+- undo-/redo-buttons für anderungen an abhängigkeiten oder positionierung der nodes
+stelle bitte rückfragen um sicherzustellen, dass wir bezüglich der anforderungen auf gleicher linie sind.
+
+------------------------------------------------------------------------------------
+
+1: 
+- speicherung wie von dir vorgeschlagen in db
+- positionen global speichern.
+- die nodes sind bereits frei positionierbar
+2:
+- ja, manuelle Positionen bleiben immer erhalten, und nur der "Auto-Anordnung"-Button setzt sie zurück.
+3:
+- der button soll sie nur neu anordnen, danach sollen sie wieder verschiebbar sein.
+- der bestehende algorithmus reich aus.
+4:
+- Scope: Nur solange der Netzplan-Overlay offen ist. 
+- Abhängigkeitsänderungen (hinzufügen/entfernen) UND Positionsänderungen -> änderungen sollen sich in der reihenfolge rückgängig machen lassen, in welcher sie vorgenommen wurden. also "do: positionsänderung1 -> abhängigkeitsänderun1 -> positionsänderung2; undo: positionsänderung2 -> abhängigkeitsänderun1 -> positionsänderung1".
+Tiefe: 50 schritte.
+
+------------------------------------------------------------------------------------
+
+die positionen werden aktuell anscheinend nur nach änderungen an den abhängigkeiten gespeichert, nicht aber, wenn nur die position eines nodes geändert wird. die neuen positionen sollen auch nach dem ändern der node-positionen in die db geschrieben werden.
+
+------------------------------------------------------------------------------------
+
+seltsames verhalten: wenn nur die position eines nodes geändert und dann der netzplan geschlossen und wieder geöffnet wird, wird der node wieder an der alten position angezeigt. wenn dann die seite neu geladen wird (strg shift f5), wird der node an der korrekten neuen position angezeigt. wenn hingegen eine abhängigkeit gelöscht und dann der netzplan geschlossen und wieder geöffnet wird, wird die korrekte neue darstellung angezeigt.
+
+====================================================================================
+
+
 
 ====================================================================================
 

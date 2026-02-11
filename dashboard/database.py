@@ -122,6 +122,12 @@ def init_db():
     if "assigned_to" not in sub_cols:
         conn.execute("ALTER TABLE sub_tasks ADD COLUMN assigned_to INTEGER REFERENCES users(id)")
 
+    # Migration: Netzplan-Positionen
+    if "netzplan_x" not in sub_cols:
+        conn.execute("ALTER TABLE sub_tasks ADD COLUMN netzplan_x REAL")
+    if "netzplan_y" not in sub_cols:
+        conn.execute("ALTER TABLE sub_tasks ADD COLUMN netzplan_y REAL")
+
     # Migration: Notes-Tabellen
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS task_notes (

@@ -72,6 +72,16 @@ class DependencyAction(BaseModel):
     to_id: int
 
 
+class NetzplanPositionItem(BaseModel):
+    id: int
+    x: float
+    y: float
+
+
+class NetzplanPositionsSave(BaseModel):
+    positions: list[NetzplanPositionItem]
+
+
 class AreaCreate(BaseModel):
     name: str
 
@@ -486,6 +496,8 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
                 "created_by_name": (row["created_by_name"] or "").strip(),
                 "assigned_to_name": (row["assigned_to_name"] or "").strip(),
                 "permissions": permissions,
+                "netzplan_x": row["netzplan_x"],
+                "netzplan_y": row["netzplan_y"],
             })
 
         return {"items": items, "total": len(items)}
@@ -874,6 +886,39 @@ async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(ge
         db.commit()
 
         return {"message": "Abhaengigkeit entfernt", "new_positions": new_positions}
+    finally:
+        db.close()
+
+
+@router.post("/api/tasks/{task_id}/subtasks/save-netzplan-positions")
+async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, user=Depends(get_current_user)):
+    """Netzplan-Positionen fuer Teilaufgaben speichern."""
+    db = get_db()
+    try:
+        task = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if not task:
+            raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+
+        is_creator = task["created_by"] == user["id"]
+        is_legacy = task["created_by"] is None
+        can_edit = False
+        if not is_creator and not is_legacy:
+            member = db.execute(
+                "SELECT role FROM task_members WHERE task_id = ? AND user_id = ?",
+                (task_id, user["id"]),
+            ).fetchone()
+            if member and member["role"] in ("admin", "member"):
+                can_edit = True
+            if not can_edit:
+                raise HTTPException(status_code=403, detail="Keine Berechtigung")
+
+        for pos in payload.positions:
+            db.execute(
+                "UPDATE sub_tasks SET netzplan_x = ?, netzplan_y = ? WHERE id = ? AND project_id = ?",
+                (pos.x, pos.y, pos.id, task_id),
+            )
+        db.commit()
+        return {"message": "Positionen gespeichert"}
     finally:
         db.close()
 

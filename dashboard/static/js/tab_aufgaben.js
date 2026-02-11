@@ -1789,7 +1789,7 @@ function _computeValidNetzplanTargets(sourceId, subtasks) {
     return valid;
 }
 
-function _buildNetzplanGraphData(subtasks, colors) {
+function _buildNetzplanGraphData(subtasks, colors, savedPositions) {
     const nodesArr = [];
     const edgesArr = [];
 
@@ -1835,6 +1835,16 @@ function _buildNetzplanGraphData(subtasks, colors) {
             };
         });
     });
+
+    // Gespeicherte Positionen ueberschreiben (falls vorhanden)
+    if (savedPositions) {
+        Object.keys(savedPositions).forEach(id => {
+            const numId = parseInt(id);
+            if (positionMap[numId] && savedPositions[id].x != null && savedPositions[id].y != null) {
+                positionMap[numId] = { x: savedPositions[id].x, y: savedPositions[id].y };
+            }
+        });
+    }
 
     subtasks.forEach(st => {
         const statusPct = st.status_percent || 0;
@@ -1894,6 +1904,74 @@ function openNetzplan(taskId) {
     const colors = getNetzplanColors();
     const defaultTitle = `${escapeHtml(projectName)} - Netzplan`;
 
+    // Gespeicherte Positionen aus subtasks extrahieren
+    const savedPositions = {};
+    subtasks.forEach(st => {
+        if (st.netzplan_x != null && st.netzplan_y != null) {
+            savedPositions[st.id] = { x: st.netzplan_x, y: st.netzplan_y };
+        }
+    });
+
+    // Undo/Redo-System
+    const netzplanHistory = [];
+    let netzplanHistoryPointer = -1;
+    const NETZPLAN_HISTORY_MAX = 50;
+
+    function _pushNetzplanHistory(entry) {
+        // Redo-Teil abschneiden
+        netzplanHistory.splice(netzplanHistoryPointer + 1);
+        netzplanHistory.push(entry);
+        // Trimmen auf max Groesse
+        if (netzplanHistory.length > NETZPLAN_HISTORY_MAX) {
+            netzplanHistory.shift();
+        }
+        netzplanHistoryPointer = netzplanHistory.length - 1;
+        _updateUndoRedoButtons();
+    }
+
+    function _updateUndoRedoButtons() {
+        const undoBtn = document.getElementById('netzplanUndoBtn');
+        const redoBtn = document.getElementById('netzplanRedoBtn');
+        if (undoBtn) undoBtn.disabled = netzplanHistoryPointer < 0;
+        if (redoBtn) redoBtn.disabled = netzplanHistoryPointer >= netzplanHistory.length - 1;
+    }
+
+    async function _savePositionsToDb(positions) {
+        const posArr = Object.keys(positions).map(id => ({
+            id: parseInt(id),
+            x: positions[id].x,
+            y: positions[id].y,
+        }));
+        // Lokale Daten aktualisieren (damit Schliessen/Oeffnen korrekte Positionen zeigt)
+        subtasks.forEach(st => {
+            if (positions[st.id]) {
+                st.netzplan_x = positions[st.id].x;
+                st.netzplan_y = positions[st.id].y;
+            }
+        });
+        const sc = document.getElementById(`subtaskContainer_${taskId}`);
+        if (sc) sc._subtasksData = subtasks;
+        try {
+            await fetch(`/api/tasks/${taskId}/subtasks/save-netzplan-positions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ positions: posArr }),
+            });
+        } catch (e) {
+            console.error('Netzplan-Positionen speichern fehlgeschlagen:', e);
+        }
+    }
+
+    function _getAllPositions() {
+        if (!netzplanNetwork) return {};
+        const pos = netzplanNetwork.getPositions();
+        const result = {};
+        Object.keys(pos).forEach(id => {
+            result[id] = { x: pos[id].x, y: pos[id].y };
+        });
+        return result;
+    }
+
     // Overlay erstellen
     const overlay = document.createElement('div');
     overlay.className = 'netzplan-overlay';
@@ -1905,18 +1983,26 @@ function openNetzplan(taskId) {
                 <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-arbeit"></span> In Arbeit</span>
                 <span class="netzplan-legend-item"><span class="netzplan-legend-dot status-erledigt"></span> Erledigt</span>
             </div>
+            <div class="netzplan-toolbar">
+                <button class="netzplan-toolbar-btn" id="netzplanUndoBtn" disabled title="Rueckgaengig (Ctrl+Z)">&#x21B6;</button>
+                <button class="netzplan-toolbar-btn" id="netzplanRedoBtn" disabled title="Wiederherstellen (Ctrl+Y)">&#x21B7;</button>
+            </div>
             <button class="netzplan-close-btn" title="Schliessen">&times;</button>
         </div>
         <div class="netzplan-body">
             <div class="netzplan-graph" id="netzplanGraph"></div>
-            <button class="netzplan-fit-btn" id="netzplanFitBtn">Einpassen</button>
+            <div class="netzplan-btn-group">
+                <button class="netzplan-fit-btn" id="netzplanAutoLayoutBtn" title="Auto-Anordnung">&#x2725; Auto</button>
+                <button class="netzplan-fit-btn" id="netzplanFitBtn">Einpassen</button>
+            </div>
         </div>
     `;
 
     document.body.appendChild(overlay);
 
     // Graph-Daten aufbereiten
-    const { nodesArr, edgesArr } = _buildNetzplanGraphData(subtasks, colors);
+    const hasSaved = Object.keys(savedPositions).length > 0;
+    const { nodesArr, edgesArr } = _buildNetzplanGraphData(subtasks, colors, hasSaved ? savedPositions : null);
 
     // vis-network initialisieren
     const graphContainer = document.getElementById('netzplanGraph');
@@ -1949,6 +2035,56 @@ function openNetzplan(taskId) {
         if (netzplanNetwork) {
             netzplanNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
         }
+    });
+
+    // Drag-Handler: Positionen speichern nach Node-Verschiebung
+    let _dragOldPos = null;
+    netzplanNetwork.on('dragStart', (params) => {
+        if (params.nodes && params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const pos = netzplanNetwork.getPositions([nodeId]);
+            _dragOldPos = { nodeId, x: pos[nodeId].x, y: pos[nodeId].y };
+        }
+    });
+    netzplanNetwork.on('dragEnd', () => {
+        if (!_dragOldPos) return;
+        const nodeId = _dragOldPos.nodeId;
+        const pos = netzplanNetwork.getPositions([nodeId]);
+        if (!pos[nodeId]) { _dragOldPos = null; return; }
+        const newX = pos[nodeId].x;
+        const newY = pos[nodeId].y;
+        if (_dragOldPos.x !== newX || _dragOldPos.y !== newY) {
+            _pushNetzplanHistory({
+                type: 'position',
+                nodeId: nodeId,
+                oldX: _dragOldPos.x,
+                oldY: _dragOldPos.y,
+                newX: newX,
+                newY: newY,
+            });
+            _savePositionsToDb(_getAllPositions());
+        }
+        _dragOldPos = null;
+    });
+
+    // Auto-Layout-Button
+    document.getElementById('netzplanAutoLayoutBtn').addEventListener('click', () => {
+        if (!netzplanNetwork) return;
+        const beforePositions = _getAllPositions();
+        const newColors = getNetzplanColors();
+        const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, null);
+        data.nodes.clear();
+        data.nodes.add(newNodes);
+        data.edges.clear();
+        data.edges.add(newEdges);
+        netzplanNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+        const afterPositions = _getAllPositions();
+        _pushNetzplanHistory({
+            type: 'auto-layout',
+            beforePositions: beforePositions,
+            afterPositions: afterPositions,
+        });
+        _savePositionsToDb(afterPositions);
     });
 
     // ---- Linking-Modus Funktionen (Closures) ----
@@ -2033,6 +2169,9 @@ function openNetzplan(taskId) {
         if (_netzplanRebuilding) return;
         _netzplanRebuilding = true;
         try {
+            // Aktuelle Positionen vor Rebuild erfassen
+            const currentPositions = _getAllPositions();
+
             // Viewport speichern
             const viewPos = netzplanNetwork.getViewPosition();
             const scale = netzplanNetwork.getScale();
@@ -2050,9 +2189,9 @@ function openNetzplan(taskId) {
             subtasks.length = 0;
             freshSubtasks.forEach(st => subtasks.push(st));
 
-            // Neuen Graph berechnen
+            // Neuen Graph berechnen - bestehende Positionen beibehalten
             const newColors = getNetzplanColors();
-            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors);
+            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, currentPositions);
 
             // DataSets aktualisieren
             data.nodes.clear();
@@ -2063,7 +2202,43 @@ function openNetzplan(taskId) {
             // Viewport wiederherstellen
             netzplanNetwork.moveTo({ position: viewPos, scale: scale });
 
+            // Positionen in DB speichern
+            _savePositionsToDb(_getAllPositions());
+
             // Tabelle im Hintergrund aktualisieren
+            loadSubTasks(taskId);
+        } finally {
+            _netzplanRebuilding = false;
+        }
+    }
+
+    async function _rebuildNetzplanWithPositions(forcedPositions) {
+        if (_netzplanRebuilding) return;
+        _netzplanRebuilding = true;
+        try {
+            const viewPos = netzplanNetwork.getViewPosition();
+            const scale = netzplanNetwork.getScale();
+
+            const resp = await fetch(`/api/tasks/${taskId}/subtasks`);
+            const freshData = await resp.json();
+            const freshSubtasks = freshData.items || [];
+
+            const sc = document.getElementById(`subtaskContainer_${taskId}`);
+            if (sc) sc._subtasksData = freshSubtasks;
+
+            subtasks.length = 0;
+            freshSubtasks.forEach(st => subtasks.push(st));
+
+            const newColors = getNetzplanColors();
+            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, forcedPositions);
+
+            data.nodes.clear();
+            data.nodes.add(newNodes);
+            data.edges.clear();
+            data.edges.add(newEdges);
+
+            netzplanNetwork.moveTo({ position: viewPos, scale: scale });
+            _savePositionsToDb(_getAllPositions());
             loadSubTasks(taskId);
         } finally {
             _netzplanRebuilding = false;
@@ -2142,6 +2317,7 @@ function openNetzplan(taskId) {
                 if (!confirmed) return;
 
                 try {
+                    const positionsBefore = _getAllPositions();
                     const resp = await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2154,6 +2330,13 @@ function openNetzplan(taskId) {
                     }
                     showNotification('Abhaengigkeit entfernt', 'success');
                     await _rebuildNetzplan();
+                    _pushNetzplanHistory({
+                        type: 'dependency-remove',
+                        fromId: edgeData.from,
+                        toId: edgeData.to,
+                        positionsBefore: positionsBefore,
+                        positionsAfter: _getAllPositions(),
+                    });
                 } catch (error) {
                     showNotification('Fehler beim Entfernen', 'error');
                 }
@@ -2169,6 +2352,7 @@ function openNetzplan(taskId) {
                 exitLinkingMode();
 
                 try {
+                    const positionsBefore = _getAllPositions();
                     const resp = await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2181,6 +2365,13 @@ function openNetzplan(taskId) {
                     }
                     showNotification('Abhaengigkeit hinzugefuegt', 'success');
                     await _rebuildNetzplan();
+                    _pushNetzplanHistory({
+                        type: 'dependency-add',
+                        fromId: sourceId,
+                        toId: clickedNodeId,
+                        positionsBefore: positionsBefore,
+                        positionsAfter: _getAllPositions(),
+                    });
                 } catch (error) {
                     showNotification('Fehler beim Hinzufuegen', 'error');
                 }
@@ -2210,11 +2401,102 @@ function openNetzplan(taskId) {
     };
     document.addEventListener('themeChanged', themeHandler);
 
+    // ---- Undo/Redo Logik ----
+
+    function _applyPositions(positions) {
+        Object.keys(positions).forEach(id => {
+            const numId = parseInt(id);
+            data.nodes.update({ id: numId, x: positions[id].x, y: positions[id].y });
+        });
+    }
+
+    async function _netzplanUndo() {
+        if (netzplanHistoryPointer < 0) return;
+        const entry = netzplanHistory[netzplanHistoryPointer];
+        netzplanHistoryPointer--;
+        _updateUndoRedoButtons();
+
+        if (entry.type === 'position') {
+            data.nodes.update({ id: entry.nodeId, x: entry.oldX, y: entry.oldY });
+            _savePositionsToDb(_getAllPositions());
+        } else if (entry.type === 'auto-layout') {
+            _applyPositions(entry.beforePositions);
+            _savePositionsToDb(entry.beforePositions);
+        } else if (entry.type === 'dependency-add') {
+            // Undo: Dependency wieder entfernen
+            try {
+                await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
+                });
+                await _rebuildNetzplanWithPositions(entry.positionsBefore);
+            } catch (e) {
+                showNotification('Undo fehlgeschlagen', 'error');
+            }
+        } else if (entry.type === 'dependency-remove') {
+            // Undo: Dependency wieder hinzufuegen
+            try {
+                await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
+                });
+                await _rebuildNetzplanWithPositions(entry.positionsBefore);
+            } catch (e) {
+                showNotification('Undo fehlgeschlagen', 'error');
+            }
+        }
+    }
+
+    async function _netzplanRedo() {
+        if (netzplanHistoryPointer >= netzplanHistory.length - 1) return;
+        netzplanHistoryPointer++;
+        const entry = netzplanHistory[netzplanHistoryPointer];
+        _updateUndoRedoButtons();
+
+        if (entry.type === 'position') {
+            data.nodes.update({ id: entry.nodeId, x: entry.newX, y: entry.newY });
+            _savePositionsToDb(_getAllPositions());
+        } else if (entry.type === 'auto-layout') {
+            _applyPositions(entry.afterPositions);
+            _savePositionsToDb(entry.afterPositions);
+        } else if (entry.type === 'dependency-add') {
+            // Redo: Dependency wieder hinzufuegen
+            try {
+                await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
+                });
+                await _rebuildNetzplanWithPositions(entry.positionsAfter);
+            } catch (e) {
+                showNotification('Redo fehlgeschlagen', 'error');
+            }
+        } else if (entry.type === 'dependency-remove') {
+            // Redo: Dependency wieder entfernen
+            try {
+                await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
+                });
+                await _rebuildNetzplanWithPositions(entry.positionsAfter);
+            } catch (e) {
+                showNotification('Redo fehlgeschlagen', 'error');
+            }
+        }
+    }
+
+    // Undo/Redo-Buttons
+    document.getElementById('netzplanUndoBtn').addEventListener('click', _netzplanUndo);
+    document.getElementById('netzplanRedoBtn').addEventListener('click', _netzplanRedo);
+
     // Schliessen-Logik (mit komplettem Cleanup)
     const closeOverlay = () => {
         _netzplanLinkState = null;
         document.removeEventListener('themeChanged', themeHandler);
-        document.removeEventListener('keydown', escHandler);
+        document.removeEventListener('keydown', keyHandler);
         if (netzplanNetwork) {
             netzplanNetwork.destroy();
             netzplanNetwork = null;
@@ -2222,16 +2504,22 @@ function openNetzplan(taskId) {
         overlay.remove();
     };
 
-    const escHandler = (e) => {
+    const keyHandler = (e) => {
         if (e.key === 'Escape') {
             if (_netzplanLinkState) {
                 exitLinkingMode();
             } else {
                 closeOverlay();
             }
+        } else if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+            e.preventDefault();
+            _netzplanUndo();
+        } else if ((e.key === 'y' && (e.ctrlKey || e.metaKey)) || (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey)) {
+            e.preventDefault();
+            _netzplanRedo();
         }
     };
-    document.addEventListener('keydown', escHandler);
+    document.addEventListener('keydown', keyHandler);
 
     overlay.querySelector('.netzplan-close-btn').addEventListener('click', closeOverlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
