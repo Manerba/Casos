@@ -128,6 +128,12 @@ def init_db():
     if "netzplan_y" not in sub_cols:
         conn.execute("ALTER TABLE sub_tasks ADD COLUMN netzplan_y REAL")
 
+    # Migration: Netzplan-Projektknoten-Position
+    if "netzplan_project_x" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN netzplan_project_x REAL")
+    if "netzplan_project_y" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN netzplan_project_y REAL")
+
     # Migration: Notes-Tabellen
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS task_notes (

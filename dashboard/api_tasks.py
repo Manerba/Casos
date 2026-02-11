@@ -410,7 +410,7 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
     try:
         # Projekt pruefen
         task = db.execute(
-            "SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)
+            "SELECT id, created_by, netzplan_project_x, netzplan_project_y FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
         if not task:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
@@ -500,7 +500,12 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
                 "netzplan_y": row["netzplan_y"],
             })
 
-        return {"items": items, "total": len(items)}
+        return {
+            "items": items,
+            "total": len(items),
+            "netzplan_project_x": task["netzplan_project_x"],
+            "netzplan_project_y": task["netzplan_project_y"],
+        }
     finally:
         db.close()
 
@@ -913,10 +918,16 @@ async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, 
                 raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         for pos in payload.positions:
-            db.execute(
-                "UPDATE sub_tasks SET netzplan_x = ?, netzplan_y = ? WHERE id = ? AND project_id = ?",
-                (pos.x, pos.y, pos.id, task_id),
-            )
+            if pos.id == 0:
+                db.execute(
+                    "UPDATE tasks SET netzplan_project_x = ?, netzplan_project_y = ? WHERE id = ?",
+                    (pos.x, pos.y, task_id),
+                )
+            else:
+                db.execute(
+                    "UPDATE sub_tasks SET netzplan_x = ?, netzplan_y = ? WHERE id = ? AND project_id = ?",
+                    (pos.x, pos.y, pos.id, task_id),
+                )
         db.commit()
         return {"message": "Positionen gespeichert"}
     finally:

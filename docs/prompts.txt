@@ -641,6 +641,25 @@ die positionen werden aktuell anscheinend nur nach änderungen an den abhängigk
 
 seltsames verhalten: wenn nur die position eines nodes geändert und dann der netzplan geschlossen und wieder geöffnet wird, wird der node wieder an der alten position angezeigt. wenn dann die seite neu geladen wird (strg shift f5), wird der node an der korrekten neuen position angezeigt. wenn hingegen eine abhängigkeit gelöscht und dann der netzplan geschlossen und wieder geöffnet wird, wird die korrekte neue darstellung angezeigt.
 
+------------------------------------------------------------------------------------
+
+undo- und redo-button sollen auch unten rechts bei "auto" und "einpassen" platziert werden und sollen den selben stil haben.
+
+====================================================================================
+
+wäre es gute praxis, im netzplan einen node 0 einzufügen, der das übergeordnete projekt-objekt repräsentiert und den starrtpunkt des projekts bildet (kann keinen vorgänger haben)?
+
+------------------------------------------------------------------------------------
+
+ja, implementiere das bitte:
+- node 0 soll den namen des projekts haben.
+- verschiebbar sein
+- visuell anders gestylt sein
+- keinen vorgänger haben dürfen.
+- initiale darstellung:
+  - wenn keine abhängigkeiten definiert sind: darstellung links neben den nodes der teilaufgaben (welche übereinander dargestellt werden wie bisher)
+  - Subtasks ohne Vorgänger NICHT automatisch eine Kante von ihm bekommen.
+
 ====================================================================================
 
 

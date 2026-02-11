@@ -874,6 +874,14 @@ async function loadSubTasks(taskId) {
         const data = await resp.json();
         renderSubTasks(taskId, data.items || []);
 
+        // Projektknoten-Position speichern
+        if (container) {
+            container._netzplanProjectPos = {
+                x: data.netzplan_project_x ?? null,
+                y: data.netzplan_project_y ?? null,
+            };
+        }
+
         // Expanded-State wiederherstellen
         expandedIds.forEach(id => toggleSubTaskDetail(taskId, id));
     } catch (error) {
@@ -1739,6 +1747,7 @@ function getNetzplanColors() {
         nodeErledigt: { background: isDark ? '#1e5631' : '#d5f5e3', border: isDark ? '#27ae60' : '#28a745', font: isDark ? '#e8e8e8' : '#333333' },
         edge: isDark ? '#4a4a6a' : '#bbb',
         highlight: { background: isDark ? '#2980b9' : '#3498db', border: isDark ? '#3498db' : '#2471a3' },
+        project: { background: isDark ? '#5b3a8c' : '#e8daef', border: isDark ? '#8e44ad' : '#9b59b6', font: isDark ? '#e8e8e8' : '#333333' },
     };
 }
 
@@ -1789,7 +1798,7 @@ function _computeValidNetzplanTargets(sourceId, subtasks) {
     return valid;
 }
 
-function _buildNetzplanGraphData(subtasks, colors, savedPositions) {
+function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName) {
     const nodesArr = [];
     const edgesArr = [];
 
@@ -1836,15 +1845,39 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions) {
         });
     });
 
+    // Projektknoten-Position: eine Ebene links von Level 0
+    positionMap[0] = { x: -levelSeparation, y: 0 };
+
     // Gespeicherte Positionen ueberschreiben (falls vorhanden)
     if (savedPositions) {
         Object.keys(savedPositions).forEach(id => {
             const numId = parseInt(id);
-            if (positionMap[numId] && savedPositions[id].x != null && savedPositions[id].y != null) {
+            if (positionMap[numId] !== undefined && savedPositions[id].x != null && savedPositions[id].y != null) {
                 positionMap[numId] = { x: savedPositions[id].x, y: savedPositions[id].y };
             }
         });
     }
+
+    // Projektknoten (Node 0)
+    const pc = colors.project;
+    const projectPos = positionMap[0];
+    nodesArr.push({
+        id: 0,
+        label: projectName || 'Projekt',
+        x: projectPos.x,
+        y: projectPos.y,
+        color: {
+            background: pc.background,
+            border: pc.border,
+            highlight: { background: colors.highlight.background, border: colors.highlight.border },
+        },
+        font: { color: pc.font, size: 14, bold: true, face: "'Segoe UI', Arial, sans-serif" },
+        shape: 'diamond',
+        size: 25,
+        borderWidth: 2,
+        borderWidthSelected: 3,
+        title: projectName || 'Projekt',
+    });
 
     subtasks.forEach(st => {
         const statusPct = st.status_percent || 0;
@@ -1911,6 +1944,11 @@ function openNetzplan(taskId) {
             savedPositions[st.id] = { x: st.netzplan_x, y: st.netzplan_y };
         }
     });
+    // Projektknoten-Position aus Container laden
+    const projectPos = stContainer?._netzplanProjectPos;
+    if (projectPos && projectPos.x != null && projectPos.y != null) {
+        savedPositions[0] = { x: projectPos.x, y: projectPos.y };
+    }
 
     // Undo/Redo-System
     const netzplanHistory = [];
@@ -1950,7 +1988,12 @@ function openNetzplan(taskId) {
             }
         });
         const sc = document.getElementById(`subtaskContainer_${taskId}`);
-        if (sc) sc._subtasksData = subtasks;
+        if (sc) {
+            sc._subtasksData = subtasks;
+            if (positions[0]) {
+                sc._netzplanProjectPos = { x: positions[0].x, y: positions[0].y };
+            }
+        }
         try {
             await fetch(`/api/tasks/${taskId}/subtasks/save-netzplan-positions`, {
                 method: 'POST',
@@ -1986,15 +2029,13 @@ function openNetzplan(taskId) {
             <div class="netzplan-toolbar">
                 <button class="netzplan-toolbar-btn" id="netzplanUndoBtn" disabled title="Rueckgaengig (Ctrl+Z)">&#x21B6;</button>
                 <button class="netzplan-toolbar-btn" id="netzplanRedoBtn" disabled title="Wiederherstellen (Ctrl+Y)">&#x21B7;</button>
+                <button class="netzplan-toolbar-btn" id="netzplanAutoLayoutBtn" title="Auto-Anordnung">&#x2725; Auto</button>
+                <button class="netzplan-toolbar-btn" id="netzplanFitBtn">Einpassen</button>
             </div>
             <button class="netzplan-close-btn" title="Schliessen">&times;</button>
         </div>
         <div class="netzplan-body">
             <div class="netzplan-graph" id="netzplanGraph"></div>
-            <div class="netzplan-btn-group">
-                <button class="netzplan-fit-btn" id="netzplanAutoLayoutBtn" title="Auto-Anordnung">&#x2725; Auto</button>
-                <button class="netzplan-fit-btn" id="netzplanFitBtn">Einpassen</button>
-            </div>
         </div>
     `;
 
@@ -2002,7 +2043,7 @@ function openNetzplan(taskId) {
 
     // Graph-Daten aufbereiten
     const hasSaved = Object.keys(savedPositions).length > 0;
-    const { nodesArr, edgesArr } = _buildNetzplanGraphData(subtasks, colors, hasSaved ? savedPositions : null);
+    const { nodesArr, edgesArr } = _buildNetzplanGraphData(subtasks, colors, hasSaved ? savedPositions : null, projectName);
 
     // vis-network initialisieren
     const graphContainer = document.getElementById('netzplanGraph');
@@ -2072,7 +2113,7 @@ function openNetzplan(taskId) {
         if (!netzplanNetwork) return;
         const beforePositions = _getAllPositions();
         const newColors = getNetzplanColors();
-        const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, null);
+        const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, null, projectName);
         data.nodes.clear();
         data.nodes.add(newNodes);
         data.edges.clear();
@@ -2130,6 +2171,18 @@ function openNetzplan(taskId) {
             }
         });
 
+        // Projektknoten dimmen (ist kein gueltiges Ziel)
+        const projectNode = data.nodes.get(0);
+        if (projectNode) {
+            _originalNodeStyles[0] = {
+                color: projectNode.color,
+                font: projectNode.font,
+                borderWidth: projectNode.borderWidth,
+                opacity: projectNode.opacity,
+            };
+            data.nodes.update({ id: 0, opacity: 0.3 });
+        }
+
         // Header-Text aendern
         const titleEl = document.getElementById('netzplanTitle');
         if (titleEl) titleEl.textContent = 'Klicken Sie auf einen Zielknoten... (ESC = Abbrechen)';
@@ -2141,8 +2194,8 @@ function openNetzplan(taskId) {
     function exitLinkingMode() {
         _netzplanLinkState = null;
 
-        // Alle Knoten-Styles zuruecksetzen
-        subtasks.forEach(st => {
+        // Alle Knoten-Styles zuruecksetzen (inkl. Projektknoten)
+        [...subtasks, { id: 0 }].forEach(st => {
             const orig = _originalNodeStyles[st.id];
             if (orig) {
                 data.nodes.update({
@@ -2191,7 +2244,7 @@ function openNetzplan(taskId) {
 
             // Neuen Graph berechnen - bestehende Positionen beibehalten
             const newColors = getNetzplanColors();
-            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, currentPositions);
+            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, currentPositions, projectName);
 
             // DataSets aktualisieren
             data.nodes.clear();
@@ -2230,7 +2283,7 @@ function openNetzplan(taskId) {
             freshSubtasks.forEach(st => subtasks.push(st));
 
             const newColors = getNetzplanColors();
-            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, forcedPositions);
+            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, forcedPositions, projectName);
 
             data.nodes.clear();
             data.nodes.add(newNodes);
@@ -2300,8 +2353,8 @@ function openNetzplan(taskId) {
 
         if (!_netzplanLinkState) {
             // Kein Linking-Modus
-            if (clickedNodeId !== null) {
-                // Klick auf Knoten -> Linking-Modus starten
+            if (clickedNodeId !== null && clickedNodeId !== 0) {
+                // Klick auf Knoten -> Linking-Modus starten (nicht fuer Projektknoten)
                 enterLinkingMode(clickedNodeId);
             } else if (clickedEdgeId !== null) {
                 // Klick auf Kante -> Loeschen mit Bestaetigung
@@ -2386,6 +2439,13 @@ function openNetzplan(taskId) {
     const themeHandler = () => {
         if (!netzplanNetwork) return;
         const newColors = getNetzplanColors();
+        // Projektknoten aktualisieren
+        const pc = newColors.project;
+        data.nodes.update({
+            id: 0,
+            color: { background: pc.background, border: pc.border, highlight: { background: newColors.highlight.background, border: newColors.highlight.border } },
+            font: { color: pc.font, size: 14, bold: true, face: "'Segoe UI', Arial, sans-serif" },
+        });
         subtasks.forEach(st => {
             const statusPct = st.status_percent || 0;
             const nc = getNodeColor(statusPct, newColors);

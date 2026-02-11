@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+12.02.2026 00:30;0.0.1+48;Feature;Netzplan: Projektknoten (Node 0) als Diamond-Shape mit Projektnamen, persistente Position, Toolbar-Buttons im Header, visuelles Dimmen im Linking-Modus
 11.02.2026 23:55;0.0.1+47;Feature;Netzplan: Persistente Node-Positionen (DB-gespeichert), Auto-Anordnung-Button, Undo/Redo fuer Positionsaenderungen und Abhaengigkeiten (Ctrl+Z/Y)
 11.02.2026 22:30;0.0.1+46;Feature;Dateiablage: Bilddateien (jpg, png, gif, webp, svg, etc.) oeffnen bei Doppelklick im neuen Browser-Tab statt Download, Kontextmenue-Eintrag Anzeigen
 11.02.2026 22:00;0.0.1+45;Aenderung;ONLYOFFICE: Dateien aus Dateiablage oeffnen sich jetzt in neuem Browser-Tab statt Fullscreen-Overlay, eigene Editor-Seite mit Theme-Support
