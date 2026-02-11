@@ -84,6 +84,26 @@
     color: var(--text-primary);
 }
 
+/* Row Delete Button */
+.row-delete-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--text-secondary);
+    padding: 2px 4px;
+    border-radius: 3px;
+    opacity: 0.4;
+    transition: all var(--transition-speed);
+}
+
+.row-delete-btn:hover {
+    opacity: 1;
+    color: var(--color-bearish);
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
 /* ----------------------------------------
    Status Badges
    ---------------------------------------- */

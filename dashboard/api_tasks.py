@@ -786,6 +786,7 @@ async def get_tasks_config():
             Column("Zugewiesen an", "assigned_to_name", width=120, sortable=True),
             Column("Erstellt", "created_at", width=100, sortable=True),
             Column("Deadline", "deadline", width=100, sortable=True),
+            Column("", "_actions", width=36, sortable=False, renderer="deleteAction", align="center"),
         ],
         detail_fields=[],
         default_sort=("priority", "asc"),

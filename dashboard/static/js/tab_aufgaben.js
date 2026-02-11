@@ -66,6 +66,7 @@ async function initAufgabenTab() {
         // Custom Renderer registrieren
         aufgabenTable.renderers['badge'] = renderAufgabenBadge;
         aufgabenTable.renderers['priority'] = renderPriority;
+        aufgabenTable.renderers['deleteAction'] = renderDeleteAction;
 
         // Prioritaet-Spalte Renderer zuweisen
         const prioCol = aufgabenConfig.columns.find(c => c.field === 'priority');
@@ -254,6 +255,13 @@ function renderPriority(value, col, row) {
     return `<span class="priority-display"><span class="priority-dot ${dotClass}"></span>${num}</span>`;
 }
 
+function renderDeleteAction(value, col, row) {
+    const perm = getTaskPermissions(row);
+    if (!perm.isCreator && !perm.isOwnTask && !perm.isLegacy) return '';
+    const taskId = row.id;
+    return `<button class="row-delete-btn" onclick="event.stopPropagation(); deleteTask(${taskId})" title="Loeschen">&times;</button>`;
+}
+
 // ========================================
 // Berechtigungslogik
 // ========================================
@@ -409,13 +417,6 @@ async function onTaskRowExpanded(rowId, detailElement) {
             <div id="subtaskContainer_${row.id}">
                 <div class="table-loading"><div class="spinner"></div></div>
             </div>
-        </div>`;
-    }
-
-    // Aktions-Buttons
-    if (perm.isCreator || perm.isOwnTask || perm.isLegacy) {
-        html += `<div class="detail-edit-actions">
-            <button class="action-btn danger" onclick="deleteTask(${row.id})">Loeschen</button>
         </div>`;
     }
 
