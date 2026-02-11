@@ -60,6 +60,7 @@ async function initAufgabenTab() {
         // Tabelle erstellen
         aufgabenTable = new ExpandableTable(aufgabenConfig, 'aufgabenTableContainer', {
             onRowExpanded: onTaskRowExpanded,
+            onDataLoaded: () => buildCategoryButtons(),
         });
 
         // Custom Renderer registrieren
@@ -139,6 +140,81 @@ function toggleAllExpand() {
     if (btn) {
         btn.textContent = allExpanded ? 'Alle zuklappen' : 'Alle aufklappen';
         btn.classList.toggle('active', allExpanded);
+    }
+}
+
+// ========================================
+// Category Filter Buttons
+// ========================================
+
+const _categoryLabels = {
+    'team': 'Team',
+    'zugewiesene': 'Zugewiesen',
+    'vergebene': 'Vergeben',
+    'eigene': 'Eigene',
+};
+
+function buildCategoryButtons() {
+    if (!aufgabenTable) return;
+
+    // Vorhandene Kategorien zaehlen
+    const counts = {};
+    (aufgabenTable.data || []).forEach(item => {
+        const cat = item._category;
+        if (cat) counts[cat] = (counts[cat] || 0) + 1;
+    });
+
+    // Container finden oder erstellen
+    let container = document.getElementById('categoryFilterGroup');
+    if (!container) {
+        const controlBar = document.querySelector('.control-bar');
+        if (!controlBar) return;
+        // Nach dem Separator einfuegen
+        const separator = controlBar.querySelector('.separator');
+        if (!separator) return;
+        container = document.createElement('div');
+        container.id = 'categoryFilterGroup';
+        container.className = 'category-filter-group';
+        separator.after(container);
+    }
+
+    // Aktive Filter merken
+    const activeSet = aufgabenTable.activeFilters['_category'] || new Set();
+
+    // Buttons nur fuer vorhandene Kategorien erzeugen (feste Reihenfolge)
+    const order = ['team', 'zugewiesene', 'vergebene', 'eigene'];
+    let html = '';
+    order.forEach(cat => {
+        if (!counts[cat]) return;
+        const isActive = activeSet.has(cat);
+        const label = _categoryLabels[cat] || cat;
+        html += `<button class="control-btn category-btn${isActive ? ' active' : ''}" data-category="${cat}" onclick="toggleCategoryFilter('${cat}')">${label} (${counts[cat]})</button>`;
+    });
+
+    container.innerHTML = html;
+
+    // Ausblenden wenn nur eine Kategorie (kein Filtern noetig)
+    container.style.display = Object.keys(counts).length <= 1 ? 'none' : '';
+}
+
+function toggleCategoryFilter(category) {
+    if (!aufgabenTable) return;
+
+    // activeFilters initialisieren falls noetig
+    if (!aufgabenTable.activeFilters['_category']) {
+        aufgabenTable.activeFilters['_category'] = new Set();
+    }
+
+    aufgabenTable.toggleButtonFilter('_category', category);
+
+    // Button-Styling aktualisieren
+    const container = document.getElementById('categoryFilterGroup');
+    if (container) {
+        const activeSet = aufgabenTable.activeFilters['_category'];
+        container.querySelectorAll('.category-btn').forEach(btn => {
+            const cat = btn.dataset.category;
+            btn.classList.toggle('active', activeSet.has(cat));
+        });
     }
 }
 

@@ -134,9 +134,28 @@ async def get_tasks(user=Depends(get_current_user)):
 
         items = []
         for row in rows:
+            # Kategorie berechnen
+            created_by = row["created_by"]
+            assigned_to = row["assigned_to"]
+            is_team = bool(row["is_team_member"])
+
+            if not created_by:
+                category = "eigene"
+            elif created_by == user["id"] and (not assigned_to or assigned_to == user["id"]):
+                category = "eigene"
+            elif created_by == user["id"] and assigned_to != user["id"]:
+                category = "vergebene"
+            elif assigned_to == user["id"] and created_by != user["id"]:
+                category = "zugewiesene"
+            elif is_team and created_by != user["id"] and assigned_to != user["id"]:
+                category = "team"
+            else:
+                category = "eigene"
+
             items.append({
                 "id": row["id"],
                 "_type": "task",
+                "_category": category,
                 "name": row["name"],
                 "created_at": _format_date(row["created_at"]),
                 "deadline": _format_date(row["deadline"]),
@@ -180,6 +199,7 @@ async def get_tasks(user=Depends(get_current_user)):
             items.append({
                 "id": -st["id"],
                 "_type": "assigned_subtask",
+                "_category": "zugewiesene",
                 "_subtask_id": st["id"],
                 "_project_id": st["project_id"],
                 "_project_name": st["project_name"],

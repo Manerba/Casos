@@ -62,6 +62,18 @@
     border-color: var(--accent-primary);
 }
 
+/* Category Filter Buttons */
+.category-filter-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.category-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+}
+
 .control-search {
     padding: 6px 10px;
     border: 1px solid var(--border-color);

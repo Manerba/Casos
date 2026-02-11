@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 03:15;0.0.1+36;Feature;Kategorie-Filter: Toggle-Buttons (Team/Zugewiesen/Vergeben/Eigene) im Aufgaben-Tab mit dynamischer Anzeige und Count-Badges
 11.02.2026 02:30;0.0.1+35;Aenderung;Teilaufgaben-Status: Prozentbalken durch Offen/In Arbeit/Erledigt-Schema ersetzt (Tabelle und Detail)
 11.02.2026 02:00;0.0.1+34;Feature;Auto-Save: Alle Aenderungen an Aufgaben, Projekten und Teilaufgaben werden sofort gespeichert
 11.02.2026 02:00;0.0.1+34;Aenderung;Speichern-Button bei Aufgaben, Projekten und Teilaufgaben entfernt (Loeschen-Button bleibt)
