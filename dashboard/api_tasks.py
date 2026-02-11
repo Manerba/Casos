@@ -93,6 +93,19 @@ def _format_date(iso_str: Optional[str]) -> str:
         return iso_str or ""
 
 
+def _project_status(row) -> str:
+    """Berechnet den Projektstatus aus Teilaufgaben-Fortschritt."""
+    total = row["subtask_total"] or 0
+    done = row["subtask_done"] or 0
+    if total == 0:
+        return "offen"
+    if done >= total:
+        return "erledigt"
+    if done > 0:
+        return "in_arbeit"
+    return "offen"
+
+
 def _parse_date_input(date_str: Optional[str]) -> Optional[str]:
     """Konvertiert Benutzereingabe zu ISO-Datum fuer DB."""
     if not date_str or not date_str.strip():
@@ -161,7 +174,7 @@ async def get_tasks(user=Depends(get_current_user)):
                 "deadline": _format_date(row["deadline"]),
                 "priority": row["priority"],
                 "task_type": row["task_type"],
-                "status": row["status"],
+                "status": _project_status(row) if row["task_type"] == "projekt" else row["status"],
                 "description": row["description"] or "",
                 "created_by": row["created_by"],
                 "assigned_to": row["assigned_to"],

@@ -335,14 +335,14 @@ async function onTaskRowExpanded(rowId, detailElement) {
             <label>Prioritaet</label>
             <input type="number" id="editPriority_${row.id}" value="${row.priority}" min="1" max="100" style="width:70px" ${prioReadonly} class="${prioReadonly ? 'field-readonly' : ''}">
         </div>
-        <div class="detail-edit-field">
+        ${row.task_type !== 'projekt' ? `<div class="detail-edit-field">
             <label>Status</label>
             <select id="editStatus_${row.id}" ${statusReadonly} class="${statusReadonly ? 'field-readonly' : ''}">
                 <option value="offen" ${row.status === 'offen' ? 'selected' : ''}>Offen</option>
                 <option value="in_arbeit" ${row.status === 'in_arbeit' ? 'selected' : ''}>In Arbeit</option>
                 <option value="erledigt" ${row.status === 'erledigt' ? 'selected' : ''}>Erledigt</option>
             </select>
-        </div>`;
+        </div>` : ''}`;
 
     // Zuweisungs-Dropdown (nur fuer Ersteller oder Altdaten)
     if (perm.isCreator || perm.isOwnTask || perm.isLegacy) {

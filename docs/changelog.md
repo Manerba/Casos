@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.02.2026 03:28;0.0.1+38;Aenderung;Projektstatus wird automatisch aus Teilaufgaben berechnet, Status-Dropdown bei Projekten entfernt
 11.02.2026 03:25;0.0.1+37;Aenderung;Loeschen-Button von Detailansicht in Tabellenzeile verlegt (Aufgaben/Projekte)
 11.02.2026 03:15;0.0.1+36;Feature;Kategorie-Filter: Toggle-Buttons (Team/Zugewiesen/Vergeben/Eigene) im Aufgaben-Tab mit dynamischer Anzeige und Count-Badges
 11.02.2026 02:30;0.0.1+35;Aenderung;Teilaufgaben-Status: Prozentbalken durch Offen/In Arbeit/Erledigt-Schema ersetzt (Tabelle und Detail)
