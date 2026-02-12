@@ -946,7 +946,13 @@ function renderSubTasks(taskId, subtasks) {
 
         // Vorgaenger-Optionen und Chips (nur niedrigere Positionen, keine transitiven Abhaengigkeiten)
         const transitivePreds = getTransitivePredecessors(st.id, subtasks);
-        const predOptions = subtasks
+        let predOptions = '';
+        // "Pos 0: Projekt" nur anbieten wenn keine Vorgaenger vorhanden
+        if (predIds.length === 0) {
+            const projName = parentRow ? parentRow.name : 'Projekt';
+            predOptions += `<option value="0">Pos. 0: ${escapeHtml(projName)}</option>`;
+        }
+        predOptions += subtasks
             .filter(other =>
                 other.id !== st.id &&
                 other.position_number < st.position_number &&
@@ -957,7 +963,7 @@ function renderSubTasks(taskId, subtasks) {
 
         const predChips = predIds.map(pid => {
             const pred = subtasks.find(s => s.id === pid);
-            const posLabel = pred ? pred.position_number : '?';
+            const posLabel = pred ? (pid === 0 ? '0' : pred.position_number) : (pid === 0 ? '0' : '?');
             return `<span class="predecessor-chip" data-pred-id="${pid}"><span>${posLabel}</span><button class="remove" onclick="event.stopPropagation(); removePredecessor(${taskId}, ${st.id}, ${pid})">&times;</button></span>`;
         }).join('');
 
@@ -1797,6 +1803,18 @@ function getNodeColor(statusPercent, colors) {
 }
 
 function _computeValidNetzplanTargets(sourceId, subtasks) {
+    // Spezialfall: Projektknoten (Node 0) - nur Nodes ohne Vorgaenger sind gueltig
+    if (sourceId === 0) {
+        const valid = new Set();
+        subtasks.forEach(target => {
+            const predIds = target.predecessor_ids || [];
+            if (predIds.length === 0) {
+                valid.add(target.id);
+            }
+        });
+        return valid;
+    }
+
     const st = subtasks.find(s => s.id === sourceId);
     if (!st) return new Set();
 
@@ -2210,7 +2228,7 @@ function openNetzplan(taskId) {
             }
         });
 
-        // Projektknoten dimmen (ist kein gueltiges Ziel)
+        // Projektknoten: hervorheben wenn Source, sonst dimmen
         const projectNode = data.nodes.get(0);
         if (projectNode) {
             _originalNodeStyles[0] = {
@@ -2219,7 +2237,15 @@ function openNetzplan(taskId) {
                 borderWidth: projectNode.borderWidth,
                 opacity: projectNode.opacity,
             };
-            data.nodes.update({ id: 0, opacity: 0.3 });
+            if (nodeId === 0) {
+                data.nodes.update({
+                    id: 0,
+                    borderWidth: 4,
+                    color: { ...projectNode.color, border: '#e67e22' },
+                });
+            } else {
+                data.nodes.update({ id: 0, opacity: 0.3 });
+            }
         }
 
         // Header-Text aendern
@@ -2392,8 +2418,8 @@ function openNetzplan(taskId) {
 
         if (!_netzplanLinkState) {
             // Kein Linking-Modus
-            if (clickedNodeId !== null && clickedNodeId !== 0) {
-                // Klick auf Knoten -> Linking-Modus starten (nicht fuer Projektknoten)
+            if (clickedNodeId !== null) {
+                // Klick auf Knoten -> Linking-Modus starten
                 enterLinkingMode(clickedNodeId);
             } else if (clickedEdgeId !== null) {
                 // Klick auf Kante -> Loeschen mit Bestaetigung
@@ -2402,7 +2428,7 @@ function openNetzplan(taskId) {
 
                 const fromSt = subtasks.find(s => s.id === edgeData.from);
                 const toSt = subtasks.find(s => s.id === edgeData.to);
-                const fromLabel = fromSt ? `${fromSt.position_number}: ${fromSt.name}` : `#${edgeData.from}`;
+                const fromLabel = edgeData.from === 0 ? 'Projekt' : (fromSt ? `${fromSt.position_number}: ${fromSt.name}` : `#${edgeData.from}`);
                 const toLabel = toSt ? `${toSt.position_number}: ${toSt.name}` : `#${edgeData.to}`;
 
                 const confirmed = await msgbox('cancel/yes', 'confirm', `Abhaengigkeit "${fromLabel}" → "${toLabel}" wirklich entfernen?`);

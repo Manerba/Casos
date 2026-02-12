@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+12.02.2026 04:00;0.0.1+52;Feature;Netzplan: Projektknoten (Node 0) als Vorgaenger waehlbar - im Netzplan per Linking und in der Teilaufgaben-Liste per Dropdown (nur wenn keine Vorgaenger vorhanden)
 12.02.2026 03:00;0.0.1+51;Bugfix;Inline-Editing: Teilaufgaben-Name und andere Felder werden nach Silent-Save sofort in der Tabellenzeile aktualisiert (kein Neuladen noetig)
 12.02.2026 02:15;0.0.1+50;Bugfix;Mail: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte Zertifikate
 12.02.2026 02:00;0.0.1+49;Feature;Mail-Integration: SMTP-Konfiguration, Testmail, Mail-Vorlagen (Admin-Tab), Benutzer-Benachrichtigungs-Einstellungen (Modal), Event-getriggerter Sofort-Versand bei Zuweisung/Statusaenderung, taeglicher Scheduler fuer Faelligkeits-Mails, Einladungsmail an Benutzer

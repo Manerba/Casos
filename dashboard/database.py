@@ -134,6 +134,10 @@ def init_db():
     if "netzplan_project_y" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN netzplan_project_y REAL")
 
+    # Migration: Abhaengigkeit vom Projektknoten
+    if "depends_on_project" not in sub_cols:
+        conn.execute("ALTER TABLE sub_tasks ADD COLUMN depends_on_project INTEGER DEFAULT 0")
+
     # Migration: Notes-Tabellen
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS task_notes (

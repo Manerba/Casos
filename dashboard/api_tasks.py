@@ -526,6 +526,8 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
                     continue
 
             pred_ids = deps.get(row["id"], [])
+            if row["depends_on_project"]:
+                pred_ids = [0] + pred_ids
             pred_positions = sorted(id_to_pos.get(pid, 0) or 0 for pid in pred_ids)
             items.append({
                 "id": row["id"],
@@ -548,6 +550,7 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
                 "permissions": permissions,
                 "netzplan_x": row["netzplan_x"],
                 "netzplan_y": row["netzplan_y"],
+                "depends_on_project": bool(row["depends_on_project"]),
             })
 
         return {
@@ -687,7 +690,15 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(g
             db.execute(
                 "DELETE FROM sub_task_dependencies WHERE sub_task_id = ?", (subtask_id,)
             )
+            # depends_on_project aus predecessor_ids extrahieren
+            has_project_dep = 0 in subtask.predecessor_ids
+            db.execute(
+                "UPDATE sub_tasks SET depends_on_project = ? WHERE id = ?",
+                (1 if has_project_dep else 0, subtask_id),
+            )
             for pred_id in subtask.predecessor_ids:
+                if pred_id == 0:
+                    continue  # Projektknoten wird ueber depends_on_project behandelt
                 db.execute(
                     "INSERT OR IGNORE INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
                     (subtask_id, pred_id),
@@ -839,6 +850,26 @@ async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_c
         if not is_creator and not is_legacy:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
+        # Spezialfall: Projektknoten als Vorgaenger
+        if dep.from_id == 0:
+            to_st = db.execute(
+                "SELECT id, depends_on_project FROM sub_tasks WHERE id = ? AND project_id = ?",
+                (dep.to_id, task_id),
+            ).fetchone()
+            if not to_st:
+                raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
+            # Nur erlaubt wenn Ziel keine Vorgaenger hat
+            has_preds = db.execute(
+                "SELECT 1 FROM sub_task_dependencies WHERE sub_task_id = ?", (dep.to_id,)
+            ).fetchone()
+            if has_preds or to_st["depends_on_project"]:
+                raise HTTPException(status_code=400, detail="Nur erlaubt wenn keine Vorgaenger vorhanden")
+            db.execute(
+                "UPDATE sub_tasks SET depends_on_project = 1 WHERE id = ?", (dep.to_id,)
+            )
+            db.commit()
+            return {"message": "Projekt-Abhaengigkeit hinzugefuegt", "new_positions": {}}
+
         # Beide Subtasks muessen zum Projekt gehoeren
         from_st = db.execute(
             "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?", (dep.from_id, task_id)
@@ -929,6 +960,15 @@ async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(ge
         is_legacy = task["created_by"] is None
         if not is_creator and not is_legacy:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
+
+        # Spezialfall: Projektknoten-Abhaengigkeit entfernen
+        if dep.from_id == 0:
+            db.execute(
+                "UPDATE sub_tasks SET depends_on_project = 0 WHERE id = ? AND project_id = ?",
+                (dep.to_id, task_id),
+            )
+            db.commit()
+            return {"message": "Projekt-Abhaengigkeit entfernt", "new_positions": {}}
 
         # Dependency loeschen
         db.execute(
