@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+12.02.2026 03:00;0.0.1+51;Bugfix;Inline-Editing: Teilaufgaben-Name und andere Felder werden nach Silent-Save sofort in der Tabellenzeile aktualisiert (kein Neuladen noetig)
 12.02.2026 02:15;0.0.1+50;Bugfix;Mail: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte Zertifikate
 12.02.2026 02:00;0.0.1+49;Feature;Mail-Integration: SMTP-Konfiguration, Testmail, Mail-Vorlagen (Admin-Tab), Benutzer-Benachrichtigungs-Einstellungen (Modal), Event-getriggerter Sofort-Versand bei Zuweisung/Statusaenderung, taeglicher Scheduler fuer Faelligkeits-Mails, Einladungsmail an Benutzer
 12.02.2026 02:00;0.0.1+49;Aenderung;DB-Schema: mail_config, mail_templates, user_mail_preferences Tabellen mit Default-Templates (6 Event-Typen)

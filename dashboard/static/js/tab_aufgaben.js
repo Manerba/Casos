@@ -1183,6 +1183,45 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
         if (!silent) {
             showNotification('Teilaufgabe gespeichert', 'success');
             await loadSubTasks(taskId);
+        } else if (st) {
+            // Lokale Daten aktualisieren damit Zuklappen korrekte Werte zeigt
+            if (body.name !== undefined) st.name = body.name;
+            if (body.area_id !== undefined) st.area_id = body.area_id;
+            if (body.deadline !== undefined) st.deadline = body.deadline;
+            if (body.priority !== undefined) st.priority = body.priority;
+            if (body.status_percent !== undefined) st.status_percent = body.status_percent;
+            if (body.assigned_to !== undefined) st.assigned_to = body.assigned_to;
+            if (body.description !== undefined) st.description = body.description;
+
+            // Text-Spans in der Tabellenzeile aktualisieren
+            const dataRow = document.querySelector(`tr.subtask-row[data-subtask-id="${subtaskId}"]`);
+            if (dataRow) {
+                const cells = dataRow.querySelectorAll('td');
+                cells.forEach(cell => {
+                    const textSpan = cell.querySelector('.st-cell-text');
+                    if (!textSpan) return;
+                    const input = cell.querySelector('input, select');
+                    if (!input) return;
+                    const inputId = input.id || '';
+                    if (inputId.startsWith('stEditName_')) {
+                        textSpan.textContent = input.value;
+                    } else if (inputId.startsWith('stEditStatus_')) {
+                        textSpan.textContent = input.value + '%';
+                    } else if (inputId.startsWith('stEditPriority_')) {
+                        textSpan.textContent = input.value;
+                    } else if (inputId.startsWith('stEditDeadline_')) {
+                        textSpan.textContent = input.value || '-';
+                    } else if (inputId.startsWith('stEditArea_')) {
+                        const opt = input.options[input.selectedIndex];
+                        textSpan.textContent = opt && opt.value ? opt.textContent : '-';
+                        st.area_name = opt && opt.value ? opt.textContent : '';
+                    } else if (inputId.startsWith('stEditAssigned_')) {
+                        const opt = input.options[input.selectedIndex];
+                        textSpan.textContent = opt && opt.value ? opt.textContent : '-';
+                        st.assigned_to_name = opt && opt.value ? opt.textContent : '';
+                    }
+                });
+            }
         }
     } catch (error) {
         console.error('SubTask speichern fehlgeschlagen:', error);
