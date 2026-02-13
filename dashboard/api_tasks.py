@@ -1071,7 +1071,7 @@ async def get_users_list():
 # ============================================================
 
 @router.get("/api/tasks/{task_id}/notes")
-async def get_task_notes(task_id: int):
+async def get_task_notes(task_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Aufgabe abrufen."""
     db = get_db()
     try:
@@ -1118,7 +1118,7 @@ async def upsert_task_note(task_id: int, note: NoteUpdate, user=Depends(get_curr
 
 
 @router.get("/api/tasks/{task_id}/subtasks/{subtask_id}/notes")
-async def get_subtask_notes(task_id: int, subtask_id: int):
+async def get_subtask_notes(task_id: int, subtask_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Teilaufgabe abrufen."""
     db = get_db()
     try:
