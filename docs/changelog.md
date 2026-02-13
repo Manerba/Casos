@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+70;Security;DOM-Selector-Injection via rowId behoben: escapeAttr() fuer HTML-Attribute, CSS.escape() fuer querySelector in ExpandableTable
 13.02.2026;0.0.1+69;Refactoring;escapeAttr() zentralisiert in app_core.js - 4 Duplikate aus tab_aufgaben.js, tab_mail.js, tab_ldap.js, tab_benutzer.js entfernt
 13.02.2026;0.0.1+68;Security;CSRF-Protection: Middleware prueft X-Requested-With Header bei mutierenden API-Requests. Globaler fetch-Wrapper setzt Header automatisch. WOPI-Endpunkte ausgenommen
 13.02.2026;0.0.1+67;Feature;Konfigurierbare Server-Adresse: Admin-Tab "Allgemein" mit Server-Adresse-Feld, Protokoll aus TLS-Config abgeleitet, {app_url}-Platzhalter in allen Mail-Templates, hardcodierte IP in Einladungsmail ersetzt

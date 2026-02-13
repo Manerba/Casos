@@ -582,12 +582,13 @@ class ExpandableTable {
 
     renderRow(row, index) {
         const rowId = row.id || index;
+        const safeRowId = escapeAttr(String(rowId));
 
-        let html = `<div class="table-row-wrapper" data-row-id="${rowId}">`;
+        let html = `<div class="table-row-wrapper" data-row-id="${safeRowId}">`;
 
         // Haupt-Zeile
         const clickHandler = this.config.expandable
-            ? `onclick="tables['${this.config.id}'].toggleRow('${rowId}')"`
+            ? `onclick="tables['${escapeAttr(this.config.id)}'].toggleRow('${safeRowId}')"`
             : '';
         const cursorClass = this.config.expandable ? 'clickable' : '';
 
@@ -778,7 +779,7 @@ class ExpandableTable {
     // ========================================
 
     toggleRow(rowId) {
-        const wrapper = document.querySelector(`[data-row-id="${rowId}"]`);
+        const wrapper = document.querySelector(`[data-row-id="${CSS.escape(rowId)}"]`);
         if (wrapper) {
             const wasExpanded = wrapper.classList.contains('expanded');
 
