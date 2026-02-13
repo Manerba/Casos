@@ -185,15 +185,16 @@ function renderTemplatesSection() {
     };
 
     const placeholderHints = {
-        'task_assigned': '{recipient_name}, {task_name}, {actor_name}, {deadline}, {priority}',
-        'status_change': '{recipient_name}, {task_name}, {actor_name}, {new_status}',
-        'deadline_reached': '{recipient_name}, {task_name}',
-        'deadline_warning': '{recipient_name}, {task_name}, {days_before}, {deadline}',
+        'task_assigned': '{recipient_name}, {task_name}, {actor_name}, {deadline}, {priority}, {app_url}',
+        'status_change': '{recipient_name}, {task_name}, {actor_name}, {new_status}, {app_url}',
+        'deadline_reached': '{recipient_name}, {task_name}, {app_url}',
+        'deadline_warning': '{recipient_name}, {task_name}, {days_before}, {deadline}, {app_url}',
         'invite': '{recipient_name}, {username}, {app_url}',
         'test': '(keine Platzhalter)',
     };
 
     let html = '<div class="mail-section"><h3>Mail-Vorlagen</h3>';
+    html += '<div class="mail-status-info" style="margin-bottom: 16px;">Der Platzhalter <code>{app_url}</code> wird automatisch aus der Server-Adresse unter <strong>Allgemein</strong> abgeleitet.</div>';
 
     for (const tmpl of mailTemplates) {
         const label = eventLabels[tmpl.event_type] || tmpl.event_type;

@@ -15,6 +15,7 @@ from dashboard.mail_service import (
     render_template,
     build_html_mail,
     ensure_default_prefs,
+    get_app_url,
 )
 
 mail_admin_router = APIRouter()
@@ -211,7 +212,7 @@ async def send_invite_mail(user_id: int, user=Depends(get_admin_user)):
     placeholders = {
         "recipient_name": recipient_name,
         "username": target["username"],
-        "app_url": "http://10.0.12.7:8504",
+        "app_url": get_app_url(),
     }
 
     result = render_template("invite", placeholders)

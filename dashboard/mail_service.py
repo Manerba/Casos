@@ -10,9 +10,24 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from dashboard.database import get_db
-from dashboard.tls_utils import get_tls_verify_config
+from dashboard.tls_utils import get_tls_config, get_tls_verify_config
 
 logger = logging.getLogger(__name__)
+
+
+def get_app_url() -> str:
+    """Baut die App-URL aus server_address (DB) und TLS-Config.
+    Fallback: http://localhost:8504"""
+    db = get_db()
+    try:
+        row = db.execute("SELECT server_address FROM app_config WHERE id = 1").fetchone()
+        address = row["server_address"] if row else "localhost:8504"
+    finally:
+        db.close()
+
+    tls = get_tls_config()
+    protocol = "https" if tls and tls.get("enabled") else "http"
+    return f"{protocol}://{address}"
 
 
 def get_smtp_config() -> dict | None:
@@ -181,6 +196,10 @@ def notify_event(event_type: str, recipient_user_id: int, placeholders: dict) ->
     # Empfaenger-Name in Platzhalter einfuegen
     recipient_name = f"{user['vorname']} {user['nachname']}".strip() or "Benutzer"
     placeholders["recipient_name"] = recipient_name
+
+    # App-URL automatisch einfuegen (Caller kann ueberschreiben)
+    if "app_url" not in placeholders:
+        placeholders["app_url"] = get_app_url()
 
     # Template rendern
     result = render_template(event_type, placeholders)

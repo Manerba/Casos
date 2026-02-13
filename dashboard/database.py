@@ -246,6 +246,14 @@ def init_db():
     if "nextcloud_path" not in task_cols2:
         conn.execute("ALTER TABLE tasks ADD COLUMN nextcloud_path TEXT")
 
+    # App-Config Tabelle
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS app_config (
+            id INTEGER PRIMARY KEY,
+            server_address TEXT NOT NULL DEFAULT 'localhost:8504'
+        );
+    """)
+
     # TLS-Config Tabelle
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS tls_config (
@@ -303,13 +311,13 @@ def init_db():
     if tmpl_count == 0:
         default_templates = [
             ("task_assigned", "Aufgabe zugewiesen: {task_name}",
-             "Hallo {recipient_name},\n\nDir wurde die Aufgabe \"{task_name}\" von {actor_name} zugewiesen.\n\nDeadline: {deadline}\nPrioritaet: {priority}\n\nViele Gruesse\nTareas"),
+             "Hallo {recipient_name},\n\nDir wurde die Aufgabe \"{task_name}\" von {actor_name} zugewiesen.\n\nDeadline: {deadline}\nPrioritaet: {priority}\n\nViele Gruesse\nTareas\n\n{app_url}"),
             ("status_change", "Status geaendert: {task_name}",
-             "Hallo {recipient_name},\n\nDer Status der Aufgabe \"{task_name}\" wurde von {actor_name} auf \"{new_status}\" geaendert.\n\nViele Gruesse\nTareas"),
+             "Hallo {recipient_name},\n\nDer Status der Aufgabe \"{task_name}\" wurde von {actor_name} auf \"{new_status}\" geaendert.\n\nViele Gruesse\nTareas\n\n{app_url}"),
             ("deadline_reached", "Faelligkeit heute: {task_name}",
-             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist heute faellig.\n\nBitte pruefe den aktuellen Stand.\n\nViele Gruesse\nTareas"),
+             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist heute faellig.\n\nBitte pruefe den aktuellen Stand.\n\nViele Gruesse\nTareas\n\n{app_url}"),
             ("deadline_warning", "Faelligkeit in {days_before} Tagen: {task_name}",
-             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist in {days_before} Tagen faellig (Deadline: {deadline}).\n\nViele Gruesse\nTareas"),
+             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist in {days_before} Tagen faellig (Deadline: {deadline}).\n\nViele Gruesse\nTareas\n\n{app_url}"),
             ("invite", "Einladung zu Tareas",
              "Hallo {recipient_name},\n\nDu wurdest zu Tareas eingeladen.\n\nBenutzername: {username}\nURL: {app_url}\n\nBitte melde dich an und aendere dein Passwort.\n\nViele Gruesse\nTareas"),
             ("test", "Testmail von Tareas",

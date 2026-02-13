@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+67;Feature;Konfigurierbare Server-Adresse: Admin-Tab "Allgemein" mit Server-Adresse-Feld, Protokoll aus TLS-Config abgeleitet, {app_url}-Platzhalter in allen Mail-Templates, hardcodierte IP in Einladungsmail ersetzt
+13.02.2026;0.0.1+67;Aenderung;DB-Schema: app_config Tabelle. Neue Dateien: api_app.py (Config-API), tab_allgemein.js (Admin-Tab). Default-Templates mit {app_url} am Ende
 13.02.2026;0.0.1+66;Security;Notes-Endpunkte: Fehlende Authentifizierung bei GET task_notes und subtask_notes ergaenzt (Depends get_current_user)
 13.02.2026;0.0.1+65;Security;Rate-Limiting am Login (Fritz!Box-Style): Nach 3 Fehlversuchen 10s Sperre, +5s pro weiterem Fehlversuch. Frontend zeigt Countdown mit gesperrten Eingabefeldern
 13.02.2026;0.0.1+64;Infra;Komplettes Logging auf /var/log/tareas.log umgestellt: Uvicorn-Access/Error + alle App-Module, log_config=None verhindert Uvicorn-Override
