@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_current_user
 
 router = APIRouter()
@@ -56,8 +56,7 @@ def _check_project_creator(db, task_id: int, user: dict):
 @router.get("/api/tasks/{task_id}/members")
 async def get_members(task_id: int, user=Depends(get_current_user)):
     """Alle Teammitglieder eines Projekts mit Berechtigungen."""
-    db = get_db()
-    try:
+    with db_query() as db:
         _check_project_creator(db, task_id, user)
         rows = db.execute(
             """SELECT pm.*, u.vorname, u.nachname, u.email
@@ -82,15 +81,12 @@ async def get_members(task_id: int, user=Depends(get_current_user)):
                 for r in rows
             ]
         }
-    finally:
-        db.close()
 
 
 @router.post("/api/tasks/{task_id}/members")
 async def add_member(task_id: int, member: MemberAdd, user=Depends(get_current_user)):
     """Mitglied zum Projekt-Team hinzufuegen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         _check_project_creator(db, task_id, user)
 
         # User existiert?
@@ -115,17 +111,13 @@ async def add_member(task_id: int, member: MemberAdd, user=Depends(get_current_u
                VALUES (?, ?, ?, ?, ?)""",
             (task_id, member.user_id, int(member.can_read), int(member.can_edit), int(member.can_create)),
         )
-        db.commit()
         return {"message": "Mitglied hinzugefuegt"}
-    finally:
-        db.close()
 
 
 @router.put("/api/tasks/{task_id}/members/{member_user_id}")
 async def update_member(task_id: int, member_user_id: int, member: MemberUpdate, user=Depends(get_current_user)):
     """Berechtigungen eines Teammitglieds aendern."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         _check_project_creator(db, task_id, user)
 
         existing = db.execute(
@@ -140,17 +132,13 @@ async def update_member(task_id: int, member_user_id: int, member: MemberUpdate,
                WHERE project_id = ? AND user_id = ?""",
             (int(member.can_read), int(member.can_edit), int(member.can_create), task_id, member_user_id),
         )
-        db.commit()
         return {"message": "Berechtigungen aktualisiert"}
-    finally:
-        db.close()
 
 
 @router.delete("/api/tasks/{task_id}/members/{member_user_id}")
 async def remove_member(task_id: int, member_user_id: int, user=Depends(get_current_user)):
     """Mitglied aus Team entfernen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         _check_project_creator(db, task_id, user)
 
         existing = db.execute(
@@ -164,7 +152,4 @@ async def remove_member(task_id: int, member_user_id: int, user=Depends(get_curr
             "DELETE FROM project_members WHERE project_id = ? AND user_id = ?",
             (task_id, member_user_id),
         )
-        db.commit()
         return {"message": "Mitglied entfernt"}
-    finally:
-        db.close()

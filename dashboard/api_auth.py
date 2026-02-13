@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import (
     verify_password,
     hash_password,
@@ -106,13 +106,10 @@ async def login(data: LoginRequest, request: Request):
             headers={"Retry-After": str(remaining)},
         )
 
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute(
             "SELECT * FROM users WHERE username = ?", (data.username,)
         ).fetchone()
-    finally:
-        db.close()
 
     if not row:
         _record_fail(client_ip)
@@ -129,11 +126,8 @@ async def login(data: LoginRequest, request: Request):
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
         # LDAP-Config laden und Authentifizierung
-        config_db = get_db()
-        try:
+        with db_query() as config_db:
             config_row = config_db.execute("SELECT * FROM ldap_config WHERE id = 1").fetchone()
-        finally:
-            config_db.close()
 
         if not config_row:
             raise HTTPException(status_code=503, detail="LDAP-Server nicht konfiguriert")
@@ -209,8 +203,7 @@ async def me(user=Depends(get_current_user)):
 @router.put("/password")
 async def change_password(data: PasswordChangeRequest, user=Depends(get_current_user)):
     """Passwort aendern."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         row = db.execute(
             "SELECT password_hash FROM users WHERE id = ?", (user["id"],)
         ).fetchone()
@@ -223,8 +216,5 @@ async def change_password(data: PasswordChangeRequest, user=Depends(get_current_
             "UPDATE users SET password_hash = ? WHERE id = ?",
             (new_hash, user["id"]),
         )
-        db.commit()
-    finally:
-        db.close()
 
     return {"message": "Passwort geaendert"}

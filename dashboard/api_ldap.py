@@ -9,7 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_admin_user
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
@@ -44,8 +44,7 @@ class GroupSelectRequest(BaseModel):
 @router.get("/config")
 async def get_ldap_config(user=Depends(get_admin_user)):
     """Aktuelle LDAP-Konfiguration laden (bind_password maskiert)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM ldap_config WHERE id = 1").fetchone()
         if not row:
             return {"config": None}
@@ -63,8 +62,6 @@ async def get_ldap_config(user=Depends(get_admin_user)):
                 "last_sync_at": row["last_sync_at"],
             }
         }
-    finally:
-        db.close()
 
 
 @router.post("/config")
@@ -92,8 +89,7 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
         raise HTTPException(status_code=400, detail=f"Verbindungstest fehlgeschlagen: {error}")
 
     # Config speichern (UPSERT)
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id FROM ldap_config WHERE id = 1").fetchone()
 
         if existing:
@@ -126,30 +122,22 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
                  data.search_base.strip(), data.sync_interval_minutes),
             )
 
-        db.commit()
         return {"message": "LDAP-Konfiguration gespeichert"}
-    finally:
-        db.close()
 
 
 @router.delete("/config")
 async def delete_ldap_config(user=Depends(get_admin_user)):
     """LDAP-Konfiguration loeschen und alle LDAP-Benutzer deaktivieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute("DELETE FROM ldap_config WHERE id = 1")
         db.execute("UPDATE users SET is_active = 0 WHERE auth_source = 'ldap'")
-        db.commit()
         return {"message": "LDAP-Konfiguration geloescht, LDAP-Benutzer deaktiviert"}
-    finally:
-        db.close()
 
 
 @router.get("/groups")
 async def get_ldap_groups(user=Depends(get_admin_user)):
     """Verfuegbare AD-Gruppen im search_base auflisten."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM ldap_config WHERE id = 1").fetchone()
         if not row:
             raise HTTPException(status_code=400, detail="Keine LDAP-Konfiguration vorhanden")
@@ -164,8 +152,6 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
             "search_base": row["search_base"],
             "verify_cert": verify_cfg["verify_ldap"],
         }
-    finally:
-        db.close()
 
     try:
         groups = await asyncio.to_thread(list_groups, config)
@@ -177,8 +163,7 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
 @router.post("/group")
 async def select_group(data: GroupSelectRequest, user=Depends(get_admin_user)):
     """Gruppe auswaehlen und sofort Sync ausfuehren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id FROM ldap_config WHERE id = 1").fetchone()
         if not existing:
             raise HTTPException(status_code=400, detail="Keine LDAP-Konfiguration vorhanden")
@@ -187,9 +172,6 @@ async def select_group(data: GroupSelectRequest, user=Depends(get_admin_user)):
             "UPDATE ldap_config SET group_dn = ?, group_name = ? WHERE id = 1",
             (data.group_dn, data.group_name),
         )
-        db.commit()
-    finally:
-        db.close()
 
     # Sofort Sync ausfuehren
     result = await asyncio.to_thread(sync_ldap_users)
@@ -206,16 +188,12 @@ async def select_group(data: GroupSelectRequest, user=Depends(get_admin_user)):
 @router.delete("/group")
 async def deselect_group(user=Depends(get_admin_user)):
     """Gruppenauswahl aufheben und alle LDAP-Benutzer deaktivieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute(
             "UPDATE ldap_config SET group_dn = NULL, group_name = NULL WHERE id = 1"
         )
         db.execute("UPDATE users SET is_active = 0 WHERE auth_source = 'ldap'")
-        db.commit()
         return {"message": "Gruppenauswahl aufgehoben, LDAP-Benutzer deaktiviert"}
-    finally:
-        db.close()
 
 
 @router.post("/sync")

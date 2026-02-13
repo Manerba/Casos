@@ -6,7 +6,7 @@ TLS-Konfiguration: Zertifikate verwalten, aktivieren/deaktivieren.
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction, upsert_singleton_config
 from dashboard.auth import get_admin_user
 from dashboard.tls_utils import validate_cert_files, get_tls_verify_config
 
@@ -42,8 +42,7 @@ class TlsVerifyConfigRequest(BaseModel):
 @router.get("/config")
 async def get_tls_config(user=Depends(get_admin_user)):
     """Aktuelle TLS-Konfiguration laden."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM tls_config WHERE id = 1").fetchone()
         if not row:
             return {"config": None}
@@ -55,8 +54,6 @@ async def get_tls_config(user=Depends(get_admin_user)):
                 "created_at": row["created_at"],
             }
         }
-    finally:
-        db.close()
 
 
 @router.post("/config")
@@ -73,23 +70,13 @@ async def save_tls_config(req: TlsConfigRequest, user=Depends(get_admin_user)):
     if error:
         raise HTTPException(status_code=400, detail=error)
 
-    db = get_db()
-    try:
-        existing = db.execute("SELECT id FROM tls_config WHERE id = 1").fetchone()
-        if existing:
-            db.execute(
-                "UPDATE tls_config SET cert_path = ?, key_path = ?, enabled = ? WHERE id = 1",
-                (cert_path, key_path, req.enabled),
-            )
-        else:
-            db.execute(
-                "INSERT INTO tls_config (id, cert_path, key_path, enabled) VALUES (1, ?, ?, ?)",
-                (cert_path, key_path, req.enabled),
-            )
-        db.commit()
+    with db_transaction() as db:
+        upsert_singleton_config(db, "tls_config", {
+            "cert_path": cert_path,
+            "key_path": key_path,
+            "enabled": req.enabled,
+        })
         return {"status": "ok", "message": "TLS-Konfiguration gespeichert"}
-    finally:
-        db.close()
 
 
 @router.post("/validate")
@@ -110,13 +97,9 @@ async def validate_tls_files(req: TlsValidateRequest, user=Depends(get_admin_use
 @router.delete("/config")
 async def delete_tls_config(user=Depends(get_admin_user)):
     """TLS-Konfiguration loeschen (zurueck zu HTTP)."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute("DELETE FROM tls_config WHERE id = 1")
-        db.commit()
         return {"status": "ok", "message": "TLS-Konfiguration geloescht"}
-    finally:
-        db.close()
 
 
 @router.get("/verify")
@@ -128,22 +111,11 @@ async def get_verify_config(user=Depends(get_admin_user)):
 @router.post("/verify")
 async def save_verify_config(req: TlsVerifyConfigRequest, user=Depends(get_admin_user)):
     """Zertifikatsvalidierungs-Konfiguration speichern."""
-    db = get_db()
-    try:
-        existing = db.execute("SELECT id FROM tls_verify_config WHERE id = 1").fetchone()
-        if existing:
-            db.execute(
-                """UPDATE tls_verify_config SET verify_nextcloud = ?, verify_onlyoffice = ?,
-                   verify_smtp = ?, verify_ldap = ? WHERE id = 1""",
-                (req.verify_nextcloud, req.verify_onlyoffice, req.verify_smtp, req.verify_ldap),
-            )
-        else:
-            db.execute(
-                """INSERT INTO tls_verify_config (id, verify_nextcloud, verify_onlyoffice,
-                   verify_smtp, verify_ldap) VALUES (1, ?, ?, ?, ?)""",
-                (req.verify_nextcloud, req.verify_onlyoffice, req.verify_smtp, req.verify_ldap),
-            )
-        db.commit()
+    with db_transaction() as db:
+        upsert_singleton_config(db, "tls_verify_config", {
+            "verify_nextcloud": req.verify_nextcloud,
+            "verify_onlyoffice": req.verify_onlyoffice,
+            "verify_smtp": req.verify_smtp,
+            "verify_ldap": req.verify_ldap,
+        })
         return {"status": "ok", "message": "Zertifikatsvalidierung gespeichert"}
-    finally:
-        db.close()

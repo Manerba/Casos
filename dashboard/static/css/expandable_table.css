@@ -280,13 +280,7 @@
     color: var(--color-unclear);
 }
 
-/* Status-Anzeigen */
-.table-loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 50px;
-}
+/* Status-Anzeigen (Spinner/Loading aus style.css) */
 
 .table-no-data,
 .table-error {
@@ -298,20 +292,6 @@
 
 .table-error {
     color: var(--color-bearish);
-}
-
-/* Spinner */
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--accent-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 /* Icon mit Tooltip */

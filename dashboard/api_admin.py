@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import hash_password, get_admin_user
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -42,8 +42,7 @@ class UserUpdate(BaseModel):
 @router.get("/users")
 async def get_users(user=Depends(get_admin_user)):
     """Alle Benutzer auflisten."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute(
             """SELECT id, username, vorname, nachname, email, is_admin, created_at,
                       auth_source, is_active
@@ -66,8 +65,6 @@ async def get_users(user=Depends(get_admin_user)):
             ],
             "total": len(rows),
         }
-    finally:
-        db.close()
 
 
 @router.post("/users")
@@ -78,8 +75,7 @@ async def create_user(data: UserCreate, user=Depends(get_admin_user)):
     if not data.password or len(data.password) < 4:
         raise HTTPException(status_code=400, detail="Passwort muss mindestens 4 Zeichen haben")
 
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute(
             "SELECT id FROM users WHERE username = ?", (data.username.strip(),)
         ).fetchone()
@@ -92,17 +88,13 @@ async def create_user(data: UserCreate, user=Depends(get_admin_user)):
                VALUES (?, ?, ?, ?, ?, ?)""",
             (data.username.strip(), hashed, data.vorname, data.nachname, data.email, data.is_admin),
         )
-        db.commit()
         return {"id": cursor.lastrowid, "message": "Benutzer erstellt"}
-    finally:
-        db.close()
 
 
 @router.put("/users/{user_id}")
 async def update_user(user_id: int, data: UserUpdate, user=Depends(get_admin_user)):
     """Benutzer aktualisieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
@@ -134,11 +126,8 @@ async def update_user(user_id: int, data: UserUpdate, user=Depends(get_admin_use
                 f"UPDATE users SET {', '.join(updates)} WHERE id = ?",
                 values,
             )
-            db.commit()
 
         return {"message": "Benutzer aktualisiert"}
-    finally:
-        db.close()
 
 
 @router.delete("/users/{user_id}")
@@ -147,8 +136,7 @@ async def delete_user(user_id: int, user=Depends(get_admin_user)):
     if user_id == user["id"]:
         raise HTTPException(status_code=400, detail="Eigenen Account kann man nicht loeschen")
 
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
@@ -156,7 +144,4 @@ async def delete_user(user_id: int, user=Depends(get_admin_user)):
         # Sessions mitloeschen (CASCADE sollte das tun, aber sicherheitshalber)
         db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
         db.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        db.commit()
         return {"message": "Benutzer geloescht"}
-    finally:
-        db.close()
