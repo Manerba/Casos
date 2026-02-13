@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+60;Security;ONLYOFFICE JWT Secret nicht mehr auf Admin-Seite sichtbar: API liefert kein Secret mehr aus, Formular leer bei Aenderung, Status zeigt nur ob konfiguriert
 13.02.2026;0.0.1+59;Security;XSS in msgbox() behoben: message-Parameter wird jetzt mit escapeHtml() sanitisiert
 13.02.2026;0.0.1+58;Security;Path Traversal bei Nextcloud-Dateioperationen behoben: Zentrale Pfadvalidierung (posixpath.normpath + doppelte URL-Dekodierung) fuer alle 7 Endpoints
 13.02.2026;0.0.1+57;Security;TLS-Zertifikatsvalidierung fuer Integrationen: Pro Integration (Nextcloud, ONLYOFFICE, SMTP, LDAP) konfigurierbar via Admin-UI, prueft gegen System-Trust-Store

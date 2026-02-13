@@ -282,7 +282,7 @@ async def get_config(user=Depends(get_admin_user)):
         return {
             "config": {
                 "server_url": row["server_url"],
-                "jwt_secret": row["jwt_secret"][:4] + "****" + row["jwt_secret"][-4:] if len(row["jwt_secret"]) > 8 else "********",
+                "jwt_secret_set": True,
             }
         }
     finally:

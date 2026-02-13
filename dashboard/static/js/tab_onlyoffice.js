@@ -69,8 +69,8 @@ function renderOoConfigSection(hasConfig) {
                     <div class="ldap-form-field">
                         <label>JWT Secret</label>
                         <input type="password" id="ooJwtSecret"
-                               value="${hasConfig ? escapeAttr(c.jwt_secret || '') : ''}"
-                               placeholder="JWT Secret vom Docker-Setup" autocomplete="new-password">
+                               value=""
+                               placeholder="${hasConfig ? 'Unveraendert (leer lassen)' : 'JWT Secret vom Docker-Setup'}" autocomplete="new-password">
                     </div>
                 </div>
                 <div class="ldap-form-actions">
@@ -85,7 +85,7 @@ function renderOoConfigSection(hasConfig) {
         html += `
             <div class="ldap-status-info">
                 <strong>Aktive Konfiguration:</strong>
-                ${escapeHtml(c.server_url)} | JWT: ${escapeHtml(c.jwt_secret)}
+                ${escapeHtml(c.server_url)} | JWT: konfiguriert
             </div>`;
     }
 
@@ -107,12 +107,20 @@ function renderOoConfigSection(hasConfig) {
 
 async function saveOoConfig() {
     const server_url = document.getElementById('ooServerUrl')?.value?.trim();
-    const jwt_secret = document.getElementById('ooJwtSecret')?.value?.trim();
+    const jwt_secret_input = document.getElementById('ooJwtSecret')?.value?.trim();
 
-    if (!server_url || !jwt_secret) {
-        showNotification('Bitte alle Felder ausfuellen', 'error');
+    if (!server_url) {
+        showNotification('Bitte Server-URL angeben', 'error');
         return;
     }
+
+    // Neukonfiguration: Secret ist Pflicht. Aenderung: leer = unveraendert
+    if (!ooConfig && !jwt_secret_input) {
+        showNotification('Bitte JWT Secret angeben', 'error');
+        return;
+    }
+
+    const jwt_secret = jwt_secret_input || '********';
 
     try {
         const resp = await fetch('/api/admin/onlyoffice/config', {
