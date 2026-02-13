@@ -23,6 +23,7 @@ from dashboard.api_nextcloud import files_router as nextcloud_files_router
 from dashboard.api_onlyoffice import wopi_router, editor_router
 from dashboard.api_mail import mail_user_router
 from dashboard.auth import get_current_user, _extract_user_from_request
+from dashboard.tls_utils import get_tls_config
 
 
 @asynccontextmanager
@@ -225,19 +226,29 @@ async def catch_all(path: str, request: Request = None):
 
 def main():
     """Dashboard starten."""
+    tls = get_tls_config()
+    use_tls = tls and tls["enabled"]
+    protocol = "https" if use_tls else "http"
+
     print("=" * 50)
     print("Tareas - Aufgabenplanung")
     print("=" * 50)
-    print("URL: http://10.0.12.7:8504")
+    print(f"URL: {protocol}://10.0.12.7:8504")
+    if use_tls:
+        print(f"TLS: {tls['cert_path']}")
     print("Strg+C zum Beenden")
     print("=" * 50)
 
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8504,
-        log_level="info",
-    )
+    kwargs = {
+        "host": "0.0.0.0",
+        "port": 8504,
+        "log_level": "info",
+    }
+    if use_tls:
+        kwargs["ssl_certfile"] = tls["cert_path"]
+        kwargs["ssl_keyfile"] = tls["key_path"]
+
+    uvicorn.run(app, **kwargs)
 
 
 if __name__ == "__main__":

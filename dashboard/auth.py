@@ -126,12 +126,17 @@ def unsign_token(signed: str) -> str | None:
 # ============================================================
 
 def set_session_cookie(response: Response, token: str):
+    from dashboard.tls_utils import get_tls_config
+    tls = get_tls_config()
+    use_secure = bool(tls and tls["enabled"])
+
     signed = sign_token(token)
     response.set_cookie(
         key=COOKIE_NAME,
         value=signed,
         max_age=SESSION_MAX_AGE,
         httponly=True,
+        secure=use_secure,
         samesite="lax",
         path="/",
     )

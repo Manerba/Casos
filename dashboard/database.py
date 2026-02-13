@@ -246,6 +246,17 @@ def init_db():
     if "nextcloud_path" not in task_cols2:
         conn.execute("ALTER TABLE tasks ADD COLUMN nextcloud_path TEXT")
 
+    # TLS-Config Tabelle
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS tls_config (
+            id INTEGER PRIMARY KEY,
+            enabled INTEGER DEFAULT 0,
+            cert_path TEXT NOT NULL,
+            key_path TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+    """)
+
     # Mail-Tabellen
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS mail_config (

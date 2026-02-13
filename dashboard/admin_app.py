@@ -23,7 +23,9 @@ from dashboard.api_ldap import router as ldap_router
 from dashboard.api_nextcloud import admin_router as nextcloud_admin_router
 from dashboard.api_onlyoffice import admin_router as onlyoffice_admin_router
 from dashboard.api_mail import mail_admin_router
+from dashboard.api_tls import router as tls_router
 from dashboard.auth import _extract_user_from_request, get_admin_user
+from dashboard.tls_utils import get_tls_config
 
 
 @asynccontextmanager
@@ -53,6 +55,9 @@ app.include_router(onlyoffice_admin_router)
 # Mail-Router (hat eigene get_admin_user Dependency pro Endpoint)
 app.include_router(mail_admin_router)
 
+# TLS-Router (hat eigene get_admin_user Dependency pro Endpoint)
+app.include_router(tls_router)
+
 # Verzeichnisse
 static_dir = Path(__file__).parent / "static"
 templates_dir = Path(__file__).parent / "templates"
@@ -77,11 +82,11 @@ async def no_cache_static(request, call_next):
 async def restart_dashboard(user=Depends(get_admin_user)):
     """Startet den Dashboard-Service neu (nur Admins)."""
     subprocess.Popen(
-        ["systemctl", "restart", "tareas.service"],
+        ["systemctl", "restart", "tareas.service", "tareas-admin.service"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    return {"status": "restarting", "message": "Dashboard wird neu gestartet..."}
+    return {"status": "restarting", "message": "Dashboard und Admin werden neu gestartet..."}
 
 
 # ============================================================
@@ -119,19 +124,29 @@ async def admin_catch_all(path: str, request: Request = None):
 
 def main():
     """Admin-App starten."""
+    tls = get_tls_config()
+    use_tls = tls and tls["enabled"]
+    protocol = "https" if use_tls else "http"
+
     print("=" * 50)
     print("Tareas Admin - Benutzerverwaltung")
     print("=" * 50)
-    print("URL: http://10.0.12.7:8505")
+    print(f"URL: {protocol}://10.0.12.7:8505")
+    if use_tls:
+        print(f"TLS: {tls['cert_path']}")
     print("Strg+C zum Beenden")
     print("=" * 50)
 
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8505,
-        log_level="info",
-    )
+    kwargs = {
+        "host": "0.0.0.0",
+        "port": 8505,
+        "log_level": "info",
+    }
+    if use_tls:
+        kwargs["ssl_certfile"] = tls["cert_path"]
+        kwargs["ssl_keyfile"] = tls["key_path"]
+
+    uvicorn.run(app, **kwargs)
 
 
 if __name__ == "__main__":

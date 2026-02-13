@@ -49,6 +49,7 @@
         <a class="tab" href="#" data-tab="nextcloud">Nextcloud</a>
         <a class="tab" href="#" data-tab="onlyoffice">ONLYOFFICE</a>
         <a class="tab" href="#" data-tab="mail">Mail</a>
+        <a class="tab" href="#" data-tab="tls">TLS</a>
     </nav>
 
     <!-- Filter Bar -->
@@ -69,6 +70,7 @@
     <script src="/static/js/tab_nextcloud.js"></script>
     <script src="/static/js/tab_onlyoffice.js"></script>
     <script src="/static/js/tab_mail.js"></script>
+    <script src="/static/js/tab_tls.js"></script>
     <script>
         // Admin-App: User laden und Tab initialisieren
         let adminCurrentTab = 'benutzer';
@@ -94,6 +96,8 @@
                 switchAdminTab('onlyoffice');
             } else if (path === '/mail') {
                 switchAdminTab('mail');
+            } else if (path === '/tls') {
+                switchAdminTab('tls');
             } else {
                 switchAdminTab('benutzer');
             }
@@ -109,7 +113,7 @@
             });
 
             // URL aktualisieren
-            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap', 'nextcloud': '/nextcloud', 'onlyoffice': '/onlyoffice', 'mail': '/mail' };
+            const pathMap = { 'benutzer': '/benutzer', 'ldap': '/ldap', 'nextcloud': '/nextcloud', 'onlyoffice': '/onlyoffice', 'mail': '/mail', 'tls': '/tls' };
             history.replaceState({}, '', pathMap[tab] || '/benutzer');
 
             // Tab-Inhalt laden
@@ -123,6 +127,8 @@
                 initOnlyOfficeTab();
             } else if (tab === 'mail') {
                 initMailTab();
+            } else if (tab === 'tls') {
+                initTlsTab();
             }
         }
     </script>
