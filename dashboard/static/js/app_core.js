@@ -692,7 +692,7 @@ async function msgbox(buttons, type, message) {
         overlay.innerHTML = `
             <div class="modal-content msgbox-dialog type-${type}">
                 <div class="modal-body">
-                    <p style="margin:0;font-size:14px">${message}</p>
+                    <p style="margin:0;font-size:14px">${escapeHtml(message)}</p>
                 </div>
                 <div class="modal-footer">
                     ${buttonsHtml}
