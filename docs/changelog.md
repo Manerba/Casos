@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+64;Infra;Komplettes Logging auf /var/log/tareas.log umgestellt: Uvicorn-Access/Error + alle App-Module, log_config=None verhindert Uvicorn-Override
 13.02.2026;0.0.1+63;Security;User-Enumeration beim Login behoben: Einheitliche Fehlermeldung, Details ins Log (/var/log/tareas.log). Globales Logging eingerichtet (Syslog-Format, RotatingFileHandler)
 13.02.2026;0.0.1+62;Bugfix;Netzplan-Positionen: Nicht-Ersteller mit Edit-Rechten koennen jetzt speichern (falsche Tabelle task_members -> project_members)
 13.02.2026;0.0.1+61;Security;SQL Injection in onlyoffice-setup.sh behoben: Single-Quote-Escaping fuer sqlite3-Variablen

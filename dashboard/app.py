@@ -27,7 +27,18 @@ except PermissionError:
     # Fallback: stderr wenn /var/log nicht beschreibbar
     _file_handler = logging.StreamHandler(sys.stderr)
     _file_handler.setFormatter(_log_formatter)
-logging.basicConfig(level=logging.INFO, handlers=[_file_handler])
+
+# Root-Logger konfigurieren (alle dashboard.* Module erben davon)
+_root_logger = logging.getLogger()
+_root_logger.setLevel(logging.INFO)
+_root_logger.addHandler(_file_handler)
+
+# Uvicorn-Logger auf denselben Handler umleiten
+for _uv_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
+    _uv_logger = logging.getLogger(_uv_name)
+    _uv_logger.handlers.clear()
+    _uv_logger.addHandler(_file_handler)
+    _uv_logger.propagate = False
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
@@ -261,7 +272,7 @@ def main():
     kwargs = {
         "host": "0.0.0.0",
         "port": 8504,
-        "log_level": "info",
+        "log_config": None,  # Eigenes Logging verwenden (nicht uvicorn-default)
     }
     if use_tls:
         kwargs["ssl_certfile"] = tls["cert_path"]
