@@ -112,6 +112,35 @@ async def csrf_protection(request: Request, call_next):
 
 
 @app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """Security-Header: CSP, X-Frame-Options, X-Content-Type-Options."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.url.path.startswith("/editor"):
+        # OnlyOffice laedt externe Scripts/Iframes vom Document Server
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https: http:; "
+            "style-src 'self' 'unsafe-inline' https: http:; "
+            "img-src 'self' data: blob: https: http:; "
+            "connect-src *; "
+            "frame-src *;"
+        )
+    else:
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self'; "
+            "frame-src 'none';"
+        )
+    return response
+
+
+@app.middleware("http")
 async def no_cache_static(request, call_next):
     """Statische Dateien: Browser muss immer beim Server revalidieren."""
     response = await call_next(request)
