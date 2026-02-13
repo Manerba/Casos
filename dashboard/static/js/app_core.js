@@ -500,6 +500,16 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function escapeAttr(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 /**
  * HTML-Sanitizer: Nur Tags/Attribute aus WYSIWYG-Editor-Allowlist durchlassen.
  * Unerlaubte Tags werden unwrapped (Textinhalt bleibt), Attribute entfernt.

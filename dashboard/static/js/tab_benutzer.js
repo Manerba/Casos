@@ -174,16 +174,6 @@ function onUserRowExpanded(rowId, detailElement) {
     detailElement.innerHTML = html;
 }
 
-function escapeAttr(text) {
-    if (text === null || text === undefined) return '';
-    return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
 // ========================================
 // User CRUD
 // ========================================
