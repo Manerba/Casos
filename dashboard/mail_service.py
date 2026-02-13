@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from dashboard.database import get_db
+from dashboard.tls_utils import get_tls_verify_config
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +43,15 @@ def _create_smtp_connection(config: dict):
     port = config["smtp_port"]
     encryption = config.get("encryption", "starttls")
 
-    # Zertifikatsvalidierung deaktivieren (selbst-signierte Zertifikate)
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
+    verify_cfg = get_tls_verify_config()
+    if verify_cfg["verify_smtp"]:
+        # System-CAs verwenden (Zertifikat muss im Trust-Store sein)
+        context = ssl.create_default_context()
+    else:
+        # Zertifikatsvalidierung deaktivieren (selbst-signierte Zertifikate)
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
 
     if encryption == "ssl":
         conn = smtplib.SMTP_SSL(server, port, context=context, timeout=10)

@@ -255,6 +255,14 @@ def init_db():
             key_path TEXT NOT NULL,
             created_at TEXT DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS tls_verify_config (
+            id INTEGER PRIMARY KEY,
+            verify_nextcloud INTEGER DEFAULT 0,
+            verify_onlyoffice INTEGER DEFAULT 0,
+            verify_smtp INTEGER DEFAULT 0,
+            verify_ldap INTEGER DEFAULT 0
+        );
     """)
 
     # Mail-Tabellen

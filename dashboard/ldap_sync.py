@@ -7,6 +7,7 @@ from datetime import datetime
 
 from dashboard.database import get_db
 from dashboard.ldap_utils import get_group_members
+from dashboard.tls_utils import get_tls_verify_config
 
 
 def sync_ldap_users():
@@ -28,6 +29,7 @@ def sync_ldap_users():
         if not config_row["group_dn"]:
             return {"error": "Keine AD-Gruppe ausgewaehlt"}
 
+        verify_cfg = get_tls_verify_config()
         config = {
             "server": config_row["server"],
             "port": config_row["port"],
@@ -36,6 +38,7 @@ def sync_ldap_users():
             "bind_password": config_row["bind_password"],
             "search_base": config_row["search_base"],
             "group_dn": config_row["group_dn"],
+            "verify_cert": verify_cfg["verify_ldap"],
         }
 
         # 2. Gruppenmitglieder abrufen

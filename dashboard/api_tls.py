@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from dashboard.database import get_db
 from dashboard.auth import get_admin_user
-from dashboard.tls_utils import validate_cert_files
+from dashboard.tls_utils import validate_cert_files, get_tls_verify_config
 
 router = APIRouter(prefix="/api/admin/tls", tags=["tls"])
 
@@ -26,6 +26,13 @@ class TlsConfigRequest(BaseModel):
 class TlsValidateRequest(BaseModel):
     cert_path: str
     key_path: str
+
+
+class TlsVerifyConfigRequest(BaseModel):
+    verify_nextcloud: int = 0
+    verify_onlyoffice: int = 0
+    verify_smtp: int = 0
+    verify_ldap: int = 0
 
 
 # ============================================================
@@ -108,5 +115,35 @@ async def delete_tls_config(user=Depends(get_admin_user)):
         db.execute("DELETE FROM tls_config WHERE id = 1")
         db.commit()
         return {"status": "ok", "message": "TLS-Konfiguration geloescht"}
+    finally:
+        db.close()
+
+
+@router.get("/verify")
+async def get_verify_config(user=Depends(get_admin_user)):
+    """Zertifikatsvalidierungs-Konfiguration laden."""
+    return {"config": get_tls_verify_config()}
+
+
+@router.post("/verify")
+async def save_verify_config(req: TlsVerifyConfigRequest, user=Depends(get_admin_user)):
+    """Zertifikatsvalidierungs-Konfiguration speichern."""
+    db = get_db()
+    try:
+        existing = db.execute("SELECT id FROM tls_verify_config WHERE id = 1").fetchone()
+        if existing:
+            db.execute(
+                """UPDATE tls_verify_config SET verify_nextcloud = ?, verify_onlyoffice = ?,
+                   verify_smtp = ?, verify_ldap = ? WHERE id = 1""",
+                (req.verify_nextcloud, req.verify_onlyoffice, req.verify_smtp, req.verify_ldap),
+            )
+        else:
+            db.execute(
+                """INSERT INTO tls_verify_config (id, verify_nextcloud, verify_onlyoffice,
+                   verify_smtp, verify_ldap) VALUES (1, ?, ?, ?, ?)""",
+                (req.verify_nextcloud, req.verify_onlyoffice, req.verify_smtp, req.verify_ldap),
+            )
+        db.commit()
+        return {"status": "ok", "message": "Zertifikatsvalidierung gespeichert"}
     finally:
         db.close()

@@ -13,6 +13,7 @@ from dashboard.database import get_db
 from dashboard.auth import get_admin_user
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
+from dashboard.tls_utils import get_tls_verify_config
 
 router = APIRouter(prefix="/api/admin/ldap", tags=["ldap"])
 
@@ -79,10 +80,12 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
         raise HTTPException(status_code=400, detail="Suchpfad ist Pflichtfeld")
 
     # Verbindungstest (in Thread-Pool, blockiert sonst den Event-Loop)
+    verify_cfg = get_tls_verify_config()
     success, error = await asyncio.to_thread(
         test_connection,
         data.server.strip(), data.port, data.use_ssl,
         data.bind_dn.strip(), data.bind_password, data.search_base.strip(),
+        verify_cfg["verify_ldap"],
     )
 
     if not success:
@@ -151,6 +154,7 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
         if not row:
             raise HTTPException(status_code=400, detail="Keine LDAP-Konfiguration vorhanden")
 
+        verify_cfg = get_tls_verify_config()
         config = {
             "server": row["server"],
             "port": row["port"],
@@ -158,6 +162,7 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
             "bind_dn": row["bind_dn"],
             "bind_password": row["bind_password"],
             "search_base": row["search_base"],
+            "verify_cert": verify_cfg["verify_ldap"],
         }
     finally:
         db.close()

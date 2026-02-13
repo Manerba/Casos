@@ -58,3 +58,30 @@ def validate_cert_files(cert_path: str, key_path: str) -> str | None:
         return f"Key-Datei ist kein gueltiges PEM-Format: {key_path}"
 
     return None
+
+
+def get_tls_verify_config() -> dict:
+    """Liest TLS-Verify-Config aus DB. Gibt Dict mit 4 Booleans zurueck (Default: alle False)."""
+    defaults = {
+        "verify_nextcloud": False,
+        "verify_onlyoffice": False,
+        "verify_smtp": False,
+        "verify_ldap": False,
+    }
+    if not DB_PATH.exists():
+        return defaults
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM tls_verify_config WHERE id = 1").fetchone()
+        conn.close()
+        if not row:
+            return defaults
+        return {
+            "verify_nextcloud": bool(row["verify_nextcloud"]),
+            "verify_onlyoffice": bool(row["verify_onlyoffice"]),
+            "verify_smtp": bool(row["verify_smtp"]),
+            "verify_ldap": bool(row["verify_ldap"]),
+        }
+    except Exception:
+        return defaults

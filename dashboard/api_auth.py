@@ -74,6 +74,8 @@ async def login(data: LoginRequest):
         if not config_row:
             raise HTTPException(status_code=503, detail="LDAP-Server nicht konfiguriert")
 
+        from dashboard.tls_utils import get_tls_verify_config
+        verify_cfg = get_tls_verify_config()
         config = {
             "server": config_row["server"],
             "port": config_row["port"],
@@ -81,6 +83,7 @@ async def login(data: LoginRequest):
             "bind_dn": config_row["bind_dn"],
             "bind_password": config_row["bind_password"],
             "search_base": config_row["search_base"],
+            "verify_cert": verify_cfg["verify_ldap"],
         }
 
         try:

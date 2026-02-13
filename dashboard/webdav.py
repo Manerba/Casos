@@ -10,6 +10,7 @@ from xml.etree import ElementTree as ET
 import httpx
 
 from dashboard.database import get_db
+from dashboard.tls_utils import get_tls_verify_config
 
 # WebDAV XML-Namespaces
 DAV_NS = "DAV:"
@@ -37,11 +38,13 @@ def _get_config() -> dict | None:
         row = db.execute("SELECT * FROM nextcloud_config WHERE id = 1").fetchone()
         if not row:
             return None
+        verify_cfg = get_tls_verify_config()
         return {
             "server_url": row["server_url"].rstrip("/"),
             "username": row["username"],
             "password": row["password"],
             "base_path": row["base_path"].strip("/"),
+            "verify": verify_cfg["verify_nextcloud"],
         }
     finally:
         db.close()
@@ -139,9 +142,10 @@ def test_connection(server_url: str, username: str, password: str, base_path: st
         url += f"/{base_path.strip('/')}"
 
     auth = httpx.BasicAuth(username, password)
+    verify = get_tls_verify_config()["verify_nextcloud"]
 
     try:
-        with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+        with httpx.Client(timeout=TIMEOUT, verify=verify) as client:
             resp = client.request(
                 "PROPFIND",
                 url,
@@ -177,7 +181,7 @@ def list_directory(rel_path: str = "") -> list[dict]:
     url = _build_webdav_url(config, rel_path)
     auth = _build_auth(config)
 
-    with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+    with httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False)) as client:
         resp = client.request(
             "PROPFIND",
             url,
@@ -217,7 +221,7 @@ def get_file(rel_path: str) -> tuple[bytes, str]:
     url = _build_webdav_url(config, rel_path)
     auth = _build_auth(config)
 
-    with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+    with httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False)) as client:
         resp = client.get(url, auth=auth)
         if resp.status_code == 404:
             raise FileNotFoundError(f"Datei nicht gefunden: {rel_path}")
@@ -241,7 +245,7 @@ def get_file_stream(rel_path: str):
     url = _build_webdav_url(config, rel_path)
     auth = _build_auth(config)
 
-    client = httpx.Client(timeout=TIMEOUT, verify=False)
+    client = httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False))
     resp = client.send(
         client.build_request("GET", url, headers={}),
         auth=auth,
@@ -270,7 +274,7 @@ def upload_file(rel_path: str, content: bytes, content_type: str = "application/
     url = _build_webdav_url(config, rel_path)
     auth = _build_auth(config)
 
-    with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+    with httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False)) as client:
         resp = client.put(
             url,
             content=content,
@@ -292,7 +296,7 @@ def create_directory(rel_path: str) -> bool:
     url = _build_webdav_url(config, rel_path)
     auth = _build_auth(config)
 
-    with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+    with httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False)) as client:
         resp = client.request("MKCOL", url, auth=auth)
         if resp.status_code == 405:
             raise FileExistsError(f"Ordner existiert bereits: {rel_path}")
@@ -311,7 +315,7 @@ def delete_item(rel_path: str) -> bool:
     url = _build_webdav_url(config, rel_path)
     auth = _build_auth(config)
 
-    with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+    with httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False)) as client:
         resp = client.delete(url, auth=auth)
         if resp.status_code == 404:
             raise FileNotFoundError(f"Nicht gefunden: {rel_path}")
@@ -331,7 +335,7 @@ def move_item(source_path: str, dest_path: str) -> bool:
     dest_url = _build_webdav_url(config, dest_path)
     auth = _build_auth(config)
 
-    with httpx.Client(timeout=TIMEOUT, verify=False) as client:
+    with httpx.Client(timeout=TIMEOUT, verify=config.get("verify", False)) as client:
         resp = client.request(
             "MOVE",
             source_url,

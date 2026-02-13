@@ -4,6 +4,7 @@
  */
 
 let tlsConfig = null;
+let tlsVerifyConfig = null;
 
 // ========================================
 // Tab Initialisierung
@@ -18,7 +19,7 @@ async function initTlsTab() {
     const filterBar = document.getElementById('filterBar');
     if (filterBar) filterBar.style.display = 'none';
 
-    await loadTlsConfig();
+    await Promise.all([loadTlsConfig(), loadTlsVerifyConfig()]);
     renderTlsTab();
 }
 
@@ -30,6 +31,17 @@ async function loadTlsConfig() {
         tlsConfig = data.config;
     } catch (e) {
         tlsConfig = null;
+    }
+}
+
+async function loadTlsVerifyConfig() {
+    try {
+        const resp = await fetch('/api/admin/tls/verify');
+        if (!resp.ok) throw new Error('Fehler beim Laden');
+        const data = await resp.json();
+        tlsVerifyConfig = data.config;
+    } catch (e) {
+        tlsVerifyConfig = null;
     }
 }
 
@@ -48,6 +60,9 @@ function renderTlsTab() {
 
     // Status-Sektion
     html += renderTlsStatusSection(hasConfig, isActive);
+
+    // Zertifikatsvalidierung-Sektion
+    html += renderTlsVerifySection();
 
     // Konfigurations-Sektion
     html += renderTlsConfigSection(hasConfig, isActive);
@@ -84,6 +99,53 @@ function renderTlsStatusSection(hasConfig, isActive) {
             </div>
         </div>`;
     return html;
+}
+
+function renderTlsVerifySection() {
+    const v = tlsVerifyConfig || {};
+
+    return `
+        <div class="ldap-section">
+            <h3>Zertifikatsvalidierung</h3>
+            <div class="ldap-status-info" style="opacity: 0.9; margin-bottom: 12px;">
+                Aktiviert die Pruefung des TLS-Zertifikats fuer ausgehende Verbindungen.
+                Das Zertifikat des Zielservers muss im System-Trust-Store vorhanden sein
+                (<code>/usr/local/share/ca-certificates/</code> + <code>update-ca-certificates</code>).
+            </div>
+            <div class="ldap-form">
+                <div class="ldap-form-row">
+                    <div class="ldap-form-field">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="verifyNextcloud" ${v.verify_nextcloud ? 'checked' : ''}>
+                            Nextcloud / WebDAV
+                        </label>
+                    </div>
+                    <div class="ldap-form-field">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="verifyOnlyoffice" ${v.verify_onlyoffice ? 'checked' : ''}>
+                            ONLYOFFICE
+                        </label>
+                    </div>
+                </div>
+                <div class="ldap-form-row">
+                    <div class="ldap-form-field">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="verifySmtp" ${v.verify_smtp ? 'checked' : ''}>
+                            SMTP (Mail)
+                        </label>
+                    </div>
+                    <div class="ldap-form-field">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="verifyLdap" ${v.verify_ldap ? 'checked' : ''}>
+                            LDAP
+                        </label>
+                    </div>
+                </div>
+                <div class="ldap-form-actions">
+                    <button class="action-btn primary" onclick="saveTlsVerifyConfig()">Speichern</button>
+                </div>
+            </div>
+        </div>`;
 }
 
 function renderTlsConfigSection(hasConfig, isActive) {
@@ -241,6 +303,32 @@ async function deleteTlsConfig() {
 
         // Services neu starten
         await fetch('/api/dashboard/restart', { method: 'POST' });
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+
+async function saveTlsVerifyConfig() {
+    const verify_nextcloud = document.getElementById('verifyNextcloud')?.checked ? 1 : 0;
+    const verify_onlyoffice = document.getElementById('verifyOnlyoffice')?.checked ? 1 : 0;
+    const verify_smtp = document.getElementById('verifySmtp')?.checked ? 1 : 0;
+    const verify_ldap = document.getElementById('verifyLdap')?.checked ? 1 : 0;
+
+    try {
+        const resp = await fetch('/api/admin/tls/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ verify_nextcloud, verify_onlyoffice, verify_smtp, verify_ldap }),
+        });
+
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.detail || 'Fehler beim Speichern');
+        }
+
+        tlsVerifyConfig = { verify_nextcloud: !!verify_nextcloud, verify_onlyoffice: !!verify_onlyoffice,
+                            verify_smtp: !!verify_smtp, verify_ldap: !!verify_ldap };
+        showNotification('Zertifikatsvalidierung gespeichert', 'success');
     } catch (error) {
         showNotification(error.message, 'error');
     }

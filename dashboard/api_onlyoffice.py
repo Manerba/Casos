@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from dashboard.database import get_db
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
+from dashboard.tls_utils import get_tls_verify_config
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,11 @@ def _get_onlyoffice_config() -> dict | None:
         row = db.execute("SELECT * FROM onlyoffice_config WHERE id = 1").fetchone()
         if not row:
             return None
+        verify_cfg = get_tls_verify_config()
         return {
             "server_url": row["server_url"].rstrip("/"),
             "jwt_secret": row["jwt_secret"],
+            "verify": verify_cfg["verify_onlyoffice"],
         }
     finally:
         db.close()
@@ -349,7 +352,7 @@ async def test_connection(user=Depends(get_admin_user)):
         raise HTTPException(status_code=400, detail="Keine ONLYOFFICE-Konfiguration vorhanden")
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0), verify=False) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0), verify=config.get("verify", False)) as client:
             resp = await client.get(f"{config['server_url']}/healthcheck")
             if resp.status_code == 200 and resp.text.strip().lower() == "true":
                 return {"status": "ok", "message": "ONLYOFFICE Document Server ist erreichbar"}
@@ -663,7 +666,7 @@ async def onlyoffice_callback(request: Request):
 
         # Download-URL kann von ONLYOFFICE-internem Netzwerk kommen
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), verify=False) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), verify=config.get("verify", False)) as client:
                 resp = await client.get(download_url)
                 if resp.status_code != 200:
                     logger.error(f"ONLYOFFICE Callback: Download fehlgeschlagen: {resp.status_code}")

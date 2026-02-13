@@ -7,9 +7,12 @@ from ldap3 import Server, Connection, NONE, SUBTREE, Tls
 import ssl
 
 
-def _create_server(server_addr, port, use_ssl):
+def _create_server(server_addr, port, use_ssl, verify_cert=False):
     """Erstellt ein ldap3.Server-Objekt. TLS-Objekt immer dabei (fuer StartTLS oder LDAPS)."""
-    tls = Tls(validate=ssl.CERT_NONE)
+    if verify_cert:
+        tls = Tls(validate=ssl.CERT_REQUIRED)
+    else:
+        tls = Tls(validate=ssl.CERT_NONE)
     return Server(server_addr, port=port, use_ssl=bool(use_ssl), tls=tls,
                   get_info=NONE, connect_timeout=10)
 
@@ -26,13 +29,13 @@ def _bind_connection(server, bind_dn, bind_password, use_ssl, receive_timeout=10
     return conn
 
 
-def test_connection(server_addr, port, use_ssl, bind_dn, bind_password, search_base):
+def test_connection(server_addr, port, use_ssl, bind_dn, bind_password, search_base, verify_cert=False):
     """
     Verbindungstest mit den angegebenen Parametern.
     Liefert (True, None) bei Erfolg, (False, Fehlermeldung) bei Fehler.
     """
     try:
-        srv = _create_server(server_addr, port, use_ssl)
+        srv = _create_server(server_addr, port, use_ssl, verify_cert=verify_cert)
         conn = _bind_connection(srv, bind_dn, bind_password, use_ssl)
         # Teste ob search_base erreichbar ist
         conn.search(search_base, '(objectClass=*)', search_scope=SUBTREE,
@@ -50,7 +53,8 @@ def list_groups(config):
     Liefert Liste von {dn, name}.
     """
     try:
-        srv = _create_server(config["server"], config["port"], config["use_ssl"])
+        srv = _create_server(config["server"], config["port"], config["use_ssl"],
+                             verify_cert=config.get("verify_cert", False))
         conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
                                 config["use_ssl"])
         conn.search(
@@ -79,7 +83,8 @@ def get_group_members(config):
     Liefert Liste von {dn, sAMAccountName, sn, givenName, mail}.
     """
     try:
-        srv = _create_server(config["server"], config["port"], config["use_ssl"])
+        srv = _create_server(config["server"], config["port"], config["use_ssl"],
+                             verify_cert=config.get("verify_cert", False))
         conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
                                 config["use_ssl"], receive_timeout=30)
 
@@ -129,7 +134,8 @@ def authenticate_user(config, username, password):
     Liefert (True, None) bei Erfolg, (False, Fehlermeldung) bei Fehler.
     """
     try:
-        srv = _create_server(config["server"], config["port"], config["use_ssl"])
+        srv = _create_server(config["server"], config["port"], config["use_ssl"],
+                             verify_cert=config.get("verify_cert", False))
 
         # Service-Account: DN des Benutzers suchen
         conn = _bind_connection(srv, config["bind_dn"], config["bind_password"],
