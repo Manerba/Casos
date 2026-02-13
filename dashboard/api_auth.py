@@ -4,6 +4,7 @@ Login, Logout, Me, Passwort-Aenderung.
 """
 
 import asyncio
+import logging
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -21,7 +22,11 @@ from dashboard.auth import (
     unsign_token,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+LOGIN_FAILED_MSG = "Anmeldung fehlgeschlagen"
 
 
 # ============================================================
@@ -54,7 +59,8 @@ async def login(data: LoginRequest):
         db.close()
 
     if not row:
-        raise HTTPException(status_code=401, detail="Benutzer nicht gefunden")
+        logger.warning("Login fehlgeschlagen: Benutzer '%s' nicht gefunden", data.username)
+        raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
     auth_source = row["auth_source"] if "auth_source" in row.keys() else "local"
     is_active = row["is_active"] if "is_active" in row.keys() else 1
@@ -62,7 +68,8 @@ async def login(data: LoginRequest):
     if auth_source == "ldap":
         # LDAP-Benutzer: Pruefen ob aktiv
         if not is_active:
-            raise HTTPException(status_code=401, detail="Benutzer deaktiviert")
+            logger.warning("Login fehlgeschlagen: LDAP-Benutzer '%s' deaktiviert", data.username)
+            raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
         # LDAP-Config laden und Authentifizierung
         config_db = get_db()
@@ -95,11 +102,13 @@ async def login(data: LoginRequest):
             raise HTTPException(status_code=503, detail="LDAP-Server nicht erreichbar")
 
         if not success:
-            raise HTTPException(status_code=401, detail=f"LDAP-Login fehlgeschlagen: {error}")
+            logger.warning("Login fehlgeschlagen: LDAP-Auth fuer '%s': %s", data.username, error)
+            raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
     else:
         # Lokaler Benutzer: Passwort-Hash pruefen
         if not verify_password(data.password, row["password_hash"]):
-            raise HTTPException(status_code=401, detail="Ungueltige Anmeldedaten")
+            logger.warning("Login fehlgeschlagen: Falsches Passwort fuer '%s'", data.username)
+            raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
     token = create_session(row["id"])
 

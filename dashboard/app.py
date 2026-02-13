@@ -3,12 +3,31 @@ Tareas - Aufgabenplanungs-Tool
 FastAPI Backend, Port 8504
 """
 
+import logging
+import logging.handlers
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Sicherstellen, dass 'dashboard' als Package importierbar ist
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Globales Logging: /var/log/tareas.log (Syslog-Format)
+LOG_PATH = "/var/log/tareas.log"
+_log_formatter = logging.Formatter(
+    fmt="%(asctime)s %(name)s[%(process)d]: %(levelname)s %(message)s",
+    datefmt="%b %d %H:%M:%S",
+)
+try:
+    _file_handler = logging.handlers.RotatingFileHandler(
+        LOG_PATH, maxBytes=5_000_000, backupCount=3, encoding="utf-8",
+    )
+    _file_handler.setFormatter(_log_formatter)
+except PermissionError:
+    # Fallback: stderr wenn /var/log nicht beschreibbar
+    _file_handler = logging.StreamHandler(sys.stderr)
+    _file_handler.setFormatter(_log_formatter)
+logging.basicConfig(level=logging.INFO, handlers=[_file_handler])
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
