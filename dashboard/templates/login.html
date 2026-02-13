@@ -168,6 +168,11 @@
 
                 if (!resp.ok) {
                     const data = await resp.json().catch(() => ({}));
+                    if (resp.status === 429) {
+                        const retryAfter = parseInt(resp.headers.get('Retry-After') || '10', 10);
+                        startCountdown(retryAfter, data.detail || 'Zu viele Fehlversuche');
+                        return;
+                    }
                     throw new Error(data.detail || 'Anmeldung fehlgeschlagen');
                 }
 
@@ -177,6 +182,28 @@
                 loginBtn.disabled = false;
                 loginBtn.textContent = 'Anmelden';
             }
+        }
+
+        function startCountdown(seconds, msg) {
+            loginBtn.disabled = true;
+            usernameInput.disabled = true;
+            passwordInput.disabled = true;
+            showError(msg);
+            let remaining = seconds;
+            loginBtn.textContent = `Gesperrt (${remaining}s)`;
+            const iv = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(iv);
+                    loginBtn.disabled = false;
+                    usernameInput.disabled = false;
+                    passwordInput.disabled = false;
+                    loginBtn.textContent = 'Anmelden';
+                    errorDiv.style.display = 'none';
+                } else {
+                    loginBtn.textContent = `Gesperrt (${remaining}s)`;
+                }
+            }, 1000);
         }
 
         function showError(msg) {

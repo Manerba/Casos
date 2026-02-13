@@ -5,6 +5,7 @@ Login, Logout, Me, Passwort-Aenderung.
 
 import asyncio
 import logging
+import time
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -28,6 +29,49 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 LOGIN_FAILED_MSG = "Anmeldung fehlgeschlagen"
 
+# ============================================================
+# Rate-Limiting (Fritz!Box-Style)
+# Nach 3 Fehlversuchen: 10s Sperre, danach +5s pro Fehlversuch
+# ============================================================
+
+_login_fails: dict[str, dict] = {}  # {ip: {"count": int, "last_fail": float}}
+_RATE_LIMIT_THRESHOLD = 3
+_RATE_LIMIT_BASE_DELAY = 10   # Sekunden nach 3. Fehlversuch
+_RATE_LIMIT_INCREMENT = 5     # Sekunden pro weiterem Fehlversuch
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _check_rate_limit(ip: str) -> int | None:
+    """Gibt verbleibende Wartezeit in Sekunden zurueck, oder None."""
+    entry = _login_fails.get(ip)
+    if not entry or entry["count"] < _RATE_LIMIT_THRESHOLD:
+        return None
+    extra = entry["count"] - _RATE_LIMIT_THRESHOLD
+    wait = _RATE_LIMIT_BASE_DELAY + extra * _RATE_LIMIT_INCREMENT
+    elapsed = time.monotonic() - entry["last_fail"]
+    if elapsed < wait:
+        return int(wait - elapsed) + 1
+    return None
+
+
+def _record_fail(ip: str):
+    entry = _login_fails.get(ip)
+    if entry:
+        entry["count"] += 1
+        entry["last_fail"] = time.monotonic()
+    else:
+        _login_fails[ip] = {"count": 1, "last_fail": time.monotonic()}
+
+
+def _reset_fails(ip: str):
+    _login_fails.pop(ip, None)
+
 
 # ============================================================
 # Pydantic-Modelle
@@ -48,8 +92,20 @@ class PasswordChangeRequest(BaseModel):
 # ============================================================
 
 @router.post("/login")
-async def login(data: LoginRequest):
+async def login(data: LoginRequest, request: Request):
     """Benutzer anmelden, Session erstellen, Cookie setzen."""
+    client_ip = _get_client_ip(request)
+
+    # Rate-Limit pruefen
+    remaining = _check_rate_limit(client_ip)
+    if remaining is not None:
+        logger.warning("Rate-Limit: IP %s muss noch %ds warten", client_ip, remaining)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Zu viele Fehlversuche. Bitte {remaining}s warten.",
+            headers={"Retry-After": str(remaining)},
+        )
+
     db = get_db()
     try:
         row = db.execute(
@@ -59,7 +115,8 @@ async def login(data: LoginRequest):
         db.close()
 
     if not row:
-        logger.warning("Login fehlgeschlagen: Benutzer '%s' nicht gefunden", data.username)
+        _record_fail(client_ip)
+        logger.warning("Login fehlgeschlagen: Benutzer '%s' nicht gefunden (IP: %s)", data.username, client_ip)
         raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
     auth_source = row["auth_source"] if "auth_source" in row.keys() else "local"
@@ -102,14 +159,18 @@ async def login(data: LoginRequest):
             raise HTTPException(status_code=503, detail="LDAP-Server nicht erreichbar")
 
         if not success:
-            logger.warning("Login fehlgeschlagen: LDAP-Auth fuer '%s': %s", data.username, error)
+            _record_fail(client_ip)
+            logger.warning("Login fehlgeschlagen: LDAP-Auth fuer '%s': %s (IP: %s)", data.username, error, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
     else:
         # Lokaler Benutzer: Passwort-Hash pruefen
         if not verify_password(data.password, row["password_hash"]):
-            logger.warning("Login fehlgeschlagen: Falsches Passwort fuer '%s'", data.username)
+            _record_fail(client_ip)
+            logger.warning("Login fehlgeschlagen: Falsches Passwort fuer '%s' (IP: %s)", data.username, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
+    # Erfolgreicher Login: Fehlzaehler zuruecksetzen
+    _reset_fails(client_ip)
     token = create_session(row["id"])
 
     user_data = {
