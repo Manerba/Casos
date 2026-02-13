@@ -1019,15 +1019,12 @@ async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, 
 
         is_creator = task["created_by"] == user["id"]
         is_legacy = task["created_by"] is None
-        can_edit = False
         if not is_creator and not is_legacy:
-            member = db.execute(
-                "SELECT role FROM task_members WHERE task_id = ? AND user_id = ?",
+            membership = db.execute(
+                "SELECT can_edit FROM project_members WHERE project_id = ? AND user_id = ?",
                 (task_id, user["id"]),
             ).fetchone()
-            if member and member["role"] in ("admin", "member"):
-                can_edit = True
-            if not can_edit:
+            if not membership or not membership["can_edit"]:
                 raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         for pos in payload.positions:

@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+62;Bugfix;Netzplan-Positionen: Nicht-Ersteller mit Edit-Rechten koennen jetzt speichern (falsche Tabelle task_members -> project_members)
 13.02.2026;0.0.1+61;Security;SQL Injection in onlyoffice-setup.sh behoben: Single-Quote-Escaping fuer sqlite3-Variablen
 13.02.2026;0.0.1+60;Security;ONLYOFFICE JWT Secret nicht mehr auf Admin-Seite sichtbar: API liefert kein Secret mehr aus, Formular leer bei Aenderung, Status zeigt nur ob konfiguriert
 13.02.2026;0.0.1+59;Security;XSS in msgbox() behoben: message-Parameter wird jetzt mit escapeHtml() sanitisiert
