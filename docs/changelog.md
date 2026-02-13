@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+58;Security;Path Traversal bei Nextcloud-Dateioperationen behoben: Zentrale Pfadvalidierung (posixpath.normpath + doppelte URL-Dekodierung) fuer alle 7 Endpoints
 13.02.2026;0.0.1+57;Security;TLS-Zertifikatsvalidierung fuer Integrationen: Pro Integration (Nextcloud, ONLYOFFICE, SMTP, LDAP) konfigurierbar via Admin-UI, prueft gegen System-Trust-Store
 13.02.2026;0.0.1+56;Security;TLS-Support als optionales Feature: Admin-UI Tab, Zertifikats-Validierung, Uvicorn SSL-Startup, Cookie Secure-Flag bei aktivem TLS
 13.02.2026;0.0.1+55;Security;Task-API Autorisierung: Update nur fuer Ersteller/Team/Zugewiesene (Zugewiesene nur Status), Delete nur fuer Ersteller/Admin

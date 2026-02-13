@@ -4,6 +4,7 @@ Admin-Konfiguration und Dateioperationen via WebDAV.
 """
 
 import asyncio
+import posixpath
 from urllib.parse import unquote
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
@@ -42,6 +43,39 @@ class MoveRequest(BaseModel):
 
 class MkdirRequest(BaseModel):
     name: str
+
+
+# ============================================================
+# Path-Traversal-Schutz
+# ============================================================
+
+def _safe_rel_path(user_path: str) -> str:
+    """
+    Validiert einen vom Client uebergebenen relativen Pfad.
+    Blockiert Path-Traversal-Versuche (z.B. ../../etc/passwd, %2e%2e).
+    Gibt den bereinigten Pfad zurueck oder wirft HTTPException 400.
+    """
+    # URL-Dekodierung (faengt %2e%2e, %2f etc. ab)
+    decoded = unquote(unquote(user_path))  # doppelt fuer doppelte Kodierung
+    # Normalisieren: loest ./ und ../ auf
+    normalized = posixpath.normpath(decoded)
+    # Nach normpath: ".." am Anfang oder absoluter Pfad = Traversal
+    if normalized.startswith("..") or normalized.startswith("/"):
+        raise HTTPException(status_code=400, detail="Ungueltiger Pfad: Verzeichniswechsel nicht erlaubt")
+    # normpath("") => "." -- zurueck zu leerem String
+    if normalized == ".":
+        return ""
+    return normalized
+
+
+def _safe_filename(name: str) -> str:
+    """
+    Validiert einen Datei-/Ordnernamen (einzelnes Segment, keine Pfadtrenner).
+    """
+    decoded = unquote(unquote(name))
+    if not decoded or "/" in decoded or "\\" in decoded or decoded in (".", ".."):
+        raise HTTPException(status_code=400, detail="Ungueltiger Dateiname")
+    return decoded
 
 
 # ============================================================
@@ -162,6 +196,7 @@ async def get_nextcloud_directories(
     user=Depends(get_current_user),
 ):
     """Unterordner auflisten (optional ab Unterpfad, fuer Browse-Dialog)."""
+    path = _safe_rel_path(path)
     try:
         dirs = await asyncio.to_thread(webdav.list_subdirectories, path)
         return {
@@ -233,11 +268,12 @@ async def list_task_files(
 ):
     """Verzeichnisinhalt eines Projekt-Verzeichnisses auflisten."""
     nc_path = _get_task_nextcloud_path(task_id, user)
+    path = _safe_rel_path(path)
 
     # Pfad zusammenbauen: nc_path + relativer Unterpfad
     full_path = nc_path
     if path:
-        full_path = f"{nc_path}/{path.strip('/')}"
+        full_path = f"{nc_path}/{path}"
 
     try:
         entries = await asyncio.to_thread(webdav.list_directory, full_path)
@@ -277,7 +313,8 @@ async def download_task_file(
 ):
     """Datei aus dem Projektverzeichnis herunterladen oder inline anzeigen."""
     nc_path = _get_task_nextcloud_path(task_id, user)
-    full_path = f"{nc_path}/{path.strip('/')}"
+    path = _safe_rel_path(path)
+    full_path = f"{nc_path}/{path}"
 
     try:
         content, content_type = await asyncio.to_thread(webdav.get_file, full_path)
@@ -308,12 +345,14 @@ async def upload_task_file(
 ):
     """Datei in das Projektverzeichnis hochladen."""
     nc_path = _get_task_nextcloud_path(task_id, user)
+    path = _safe_rel_path(path)
+    filename = _safe_filename(file.filename)
 
     # Ziel-Pfad zusammenbauen
     target = nc_path
     if path:
-        target = f"{nc_path}/{path.strip('/')}"
-    target = f"{target}/{file.filename}"
+        target = f"{nc_path}/{path}"
+    target = f"{target}/{filename}"
 
     content = await file.read()
     content_type = file.content_type or "application/octet-stream"
@@ -335,11 +374,13 @@ async def create_task_directory(
 ):
     """Neuen Ordner im Projektverzeichnis erstellen."""
     nc_path = _get_task_nextcloud_path(task_id, user)
+    path = _safe_rel_path(path)
+    dirname = _safe_filename(body.name)
 
     target = nc_path
     if path:
-        target = f"{nc_path}/{path.strip('/')}"
-    target = f"{target}/{body.name}"
+        target = f"{nc_path}/{path}"
+    target = f"{target}/{dirname}"
 
     try:
         await asyncio.to_thread(webdav.create_directory, target)
@@ -359,7 +400,8 @@ async def delete_task_file(
 ):
     """Datei oder Ordner im Projektverzeichnis loeschen."""
     nc_path = _get_task_nextcloud_path(task_id, user)
-    full_path = f"{nc_path}/{path.strip('/')}"
+    path = _safe_rel_path(path)
+    full_path = f"{nc_path}/{path}"
 
     try:
         await asyncio.to_thread(webdav.delete_item, full_path)
@@ -379,8 +421,8 @@ async def move_task_file(
 ):
     """Datei/Ordner im Projektverzeichnis verschieben oder umbenennen."""
     nc_path = _get_task_nextcloud_path(task_id, user)
-    source = f"{nc_path}/{body.source.strip('/')}"
-    dest = f"{nc_path}/{body.destination.strip('/')}"
+    source = f"{nc_path}/{_safe_rel_path(body.source)}"
+    dest = f"{nc_path}/{_safe_rel_path(body.destination)}"
 
     try:
         await asyncio.to_thread(webdav.move_item, source, dest)
