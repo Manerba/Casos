@@ -4,7 +4,7 @@ Hashing, Sessions, Cookie-Signing, FastAPI-Dependencies.
 """
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import bcrypt
@@ -55,7 +55,7 @@ def verify_password(password: str, hashed: str) -> bool:
 def create_session(user_id: int) -> str:
     """Erstellt eine neue Session in der DB, gibt den Token zurueck."""
     token = secrets.token_hex(32)
-    expires_at = (datetime.utcnow() + timedelta(seconds=SESSION_MAX_AGE)).strftime(
+    expires_at = (datetime.now(timezone.utc) + timedelta(seconds=SESSION_MAX_AGE)).strftime(
         "%Y-%m-%d %H:%M:%S"
     )
     db = get_db()

@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+72;Bugfix;datetime.utcnow() durch datetime.now(timezone.utc) ersetzt - 8 Stellen in auth.py, api_onlyoffice.py, ldap_sync.py, ldap_sync_cron.py (deprecated seit Python 3.12)
 13.02.2026;0.0.1+71;Security;Security-Header: CSP (script/style 'self' 'unsafe-inline'), X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy. Editor-Seite mit lockerer CSP fuer OnlyOffice
 13.02.2026;0.0.1+70;Security;DOM-Selector-Injection via rowId behoben: escapeAttr() fuer HTML-Attribute, CSS.escape() fuer querySelector in ExpandableTable
 13.02.2026;0.0.1+69;Refactoring;escapeAttr() zentralisiert in app_core.js - 4 Duplikate aus tab_aufgaben.js, tab_mail.js, tab_ldap.js, tab_benutzer.js entfernt

@@ -6,7 +6,7 @@ Prueft ob genug Zeit seit dem letzten Sync vergangen ist.
 """
 
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Projekt-Root zum Path hinzufuegen
@@ -38,7 +38,7 @@ def main():
 
         if last_sync:
             last_dt = datetime.strptime(last_sync, "%Y-%m-%d %H:%M:%S")
-            elapsed = (datetime.utcnow() - last_dt).total_seconds() / 60
+            elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds() / 60
             if elapsed < interval:
                 print(f"Letzter Sync vor {elapsed:.0f} Min. (Intervall: {interval} Min.), ueberspringe.")
                 return

@@ -12,7 +12,7 @@ import logging
 import os
 import secrets
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlparse
 
 import httpx
@@ -137,7 +137,7 @@ def _generate_wopi_token(user_id: int, task_id: int, file_path: str, permissions
     Gibt (token, expires_at_epoch_ms) zurueck.
     """
     token = secrets.token_hex(32)
-    expires_at = datetime.utcnow() + timedelta(hours=8)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=8)
     expires_str = expires_at.strftime("%Y-%m-%d %H:%M:%S")
     expires_epoch_ms = str(int(expires_at.timestamp() * 1000))
 
@@ -515,7 +515,7 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
             if old_lock_id:
                 # Unlock-and-Relock
                 if existing_lock and existing_lock["lock_id"] == old_lock_id:
-                    expires = (datetime.utcnow() + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+                    expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
                     db.execute(
                         "UPDATE wopi_locks SET lock_id = ?, expires_at = ? WHERE file_id = ?",
                         (lock_id, expires, file_id),
@@ -531,7 +531,7 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
             if existing_lock:
                 if existing_lock["lock_id"] == lock_id:
                     # RefreshLock
-                    expires = (datetime.utcnow() + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+                    expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
                     db.execute(
                         "UPDATE wopi_locks SET expires_at = ? WHERE file_id = ?",
                         (expires, file_id),
@@ -544,7 +544,7 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
                     return resp
 
             # Neuen Lock erstellen
-            expires = (datetime.utcnow() + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+            expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
             db.execute(
                 "INSERT OR REPLACE INTO wopi_locks (file_id, lock_id, user_id, expires_at) VALUES (?, ?, ?, ?)",
                 (file_id, lock_id, token_data["user_id"], expires),
@@ -568,7 +568,7 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
 
         elif override == "REFRESH_LOCK":
             if existing_lock and existing_lock["lock_id"] == lock_id:
-                expires = (datetime.utcnow() + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+                expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
                 db.execute(
                     "UPDATE wopi_locks SET expires_at = ? WHERE file_id = ?",
                     (expires, file_id),

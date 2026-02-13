@@ -3,7 +3,7 @@ Tareas - LDAP Synchronisierung
 Synchronisiert AD-Gruppenmitglieder mit der lokalen users-Tabelle.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from dashboard.database import get_db
 from dashboard.ldap_utils import get_group_members
@@ -99,7 +99,7 @@ def sync_ldap_users():
                 stats["deactivated"] += 1
 
         # 5. last_sync_at aktualisieren
-        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         db.execute("UPDATE ldap_config SET last_sync_at = ? WHERE id = 1", (now,))
 
         db.commit()
