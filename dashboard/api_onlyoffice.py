@@ -20,7 +20,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request, Query, Body
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction, upsert_singleton_config
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
 from dashboard.tls_utils import get_tls_verify_config
@@ -70,8 +70,7 @@ class OnlyOfficeConfigRequest(BaseModel):
 
 def _get_onlyoffice_config() -> dict | None:
     """Config aus DB laden."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM onlyoffice_config WHERE id = 1").fetchone()
         if not row:
             return None
@@ -81,8 +80,6 @@ def _get_onlyoffice_config() -> dict | None:
             "jwt_secret": row["jwt_secret"],
             "verify": verify_cfg["verify_onlyoffice"],
         }
-    finally:
-        db.close()
 
 
 def _encode_file_id(task_id: int, file_path: str) -> str:
@@ -106,8 +103,7 @@ def _decode_file_id(file_id: str) -> tuple[int, str]:
 
 def _validate_wopi_token(token: str) -> dict | None:
     """Token validieren + User-Daten joinen. Gibt dict oder None zurueck."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute(
             """SELECT wt.*, u.username, u.vorname, u.nachname
                FROM wopi_tokens wt
@@ -127,8 +123,6 @@ def _validate_wopi_token(token: str) -> dict | None:
             "vorname": row["vorname"],
             "nachname": row["nachname"],
         }
-    finally:
-        db.close()
 
 
 def _generate_wopi_token(user_id: int, task_id: int, file_path: str, permissions: str = "edit") -> tuple[str, str]:
@@ -141,8 +135,7 @@ def _generate_wopi_token(user_id: int, task_id: int, file_path: str, permissions
     expires_str = expires_at.strftime("%Y-%m-%d %H:%M:%S")
     expires_epoch_ms = str(int(expires_at.timestamp() * 1000))
 
-    db = get_db()
-    try:
+    with db_transaction() as db:
         # Cleanup abgelaufener Tokens
         db.execute("DELETE FROM wopi_tokens WHERE expires_at < datetime('now')")
 
@@ -151,9 +144,6 @@ def _generate_wopi_token(user_id: int, task_id: int, file_path: str, permissions
                VALUES (?, ?, ?, ?, ?, ?)""",
             (token, user_id, task_id, file_path, permissions, expires_str),
         )
-        db.commit()
-    finally:
-        db.close()
 
     return token, expires_epoch_ms
 
@@ -231,8 +221,7 @@ def _validate_callback_url(url: str) -> bool:
 
 def _check_user_can_edit(task_id: int, user: dict) -> bool:
     """Schreibrecht pruefen (Ersteller/Legacy/Teammitglied mit can_edit)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         task = db.execute(
             "SELECT created_by FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
@@ -249,22 +238,17 @@ def _check_user_can_edit(task_id: int, user: dict) -> bool:
             (task_id, user["id"]),
         ).fetchone()
         return bool(membership and membership["can_edit"])
-    finally:
-        db.close()
 
 
 def _get_task_nc_path(task_id: int) -> str | None:
     """Nextcloud-Pfad fuer eine Aufgabe ermitteln."""
-    db = get_db()
-    try:
+    with db_query() as db:
         task = db.execute(
             "SELECT nextcloud_path FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
         if not task or not task["nextcloud_path"]:
             return None
         return task["nextcloud_path"]
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -274,8 +258,7 @@ def _get_task_nc_path(task_id: int) -> str | None:
 @admin_router.get("/config")
 async def get_config(user=Depends(get_admin_user)):
     """Aktuelle ONLYOFFICE-Konfiguration laden (Secret maskiert)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM onlyoffice_config WHERE id = 1").fetchone()
         if not row:
             return {"config": None}
@@ -285,8 +268,6 @@ async def get_config(user=Depends(get_admin_user)):
                 "jwt_secret_set": True,
             }
         }
-    finally:
-        db.close()
 
 
 @admin_router.post("/config")
@@ -302,46 +283,28 @@ async def save_config(data: OnlyOfficeConfigRequest, user=Depends(get_admin_user
 
     # JWT Secret ggf. aus DB holen wenn maskiert
     if "****" in jwt_secret:
-        db = get_db()
-        try:
+        with db_query() as db:
             existing = db.execute("SELECT jwt_secret FROM onlyoffice_config WHERE id = 1").fetchone()
             if existing:
                 jwt_secret = existing["jwt_secret"]
             else:
                 raise HTTPException(status_code=400, detail="Kein gespeichertes Secret vorhanden")
-        finally:
-            db.close()
 
     # Config speichern (UPSERT)
-    db = get_db()
-    try:
-        existing = db.execute("SELECT id FROM onlyoffice_config WHERE id = 1").fetchone()
-        if existing:
-            db.execute(
-                "UPDATE onlyoffice_config SET server_url = ?, jwt_secret = ? WHERE id = 1",
-                (server_url, jwt_secret),
-            )
-        else:
-            db.execute(
-                "INSERT INTO onlyoffice_config (id, server_url, jwt_secret) VALUES (1, ?, ?)",
-                (server_url, jwt_secret),
-            )
-        db.commit()
+    with db_transaction() as db:
+        upsert_singleton_config(db, "onlyoffice_config", {
+            "server_url": server_url,
+            "jwt_secret": jwt_secret,
+        })
         return {"message": "ONLYOFFICE-Konfiguration gespeichert"}
-    finally:
-        db.close()
 
 
 @admin_router.delete("/config")
 async def delete_config(user=Depends(get_admin_user)):
     """ONLYOFFICE-Konfiguration loeschen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute("DELETE FROM onlyoffice_config WHERE id = 1")
-        db.commit()
         return {"message": "ONLYOFFICE-Konfiguration geloescht"}
-    finally:
-        db.close()
 
 
 @admin_router.get("/test")
@@ -505,8 +468,12 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
     lock_id = request.headers.get("X-WOPI-Lock", "")
     old_lock_id = request.headers.get("X-WOPI-OldLock", "")
 
-    db = get_db()
-    try:
+    # WOPI Lock braucht spezielle Behandlung:
+    # - Bedingte commits an verschiedenen Stellen
+    # - Cleanup am Ende (immer)
+    # Deshalb verwenden wir hier db_transaction() NICHT, sondern manuelles Management
+    # mit db_query() fuer die Hauptlogik und separaten Transaktionen fuer Writes
+    with db_transaction() as db:
         existing_lock = db.execute(
             "SELECT * FROM wopi_locks WHERE file_id = ?", (file_id,)
         ).fetchone()
@@ -520,12 +487,15 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
                         "UPDATE wopi_locks SET lock_id = ?, expires_at = ? WHERE file_id = ?",
                         (lock_id, expires, file_id),
                     )
-                    db.commit()
+                    # Cleanup abgelaufener Locks
+                    db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                     return Response(status_code=200)
                 else:
                     resp = Response(status_code=409)
                     if existing_lock:
                         resp.headers["X-WOPI-Lock"] = existing_lock["lock_id"]
+                    # Cleanup abgelaufener Locks
+                    db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                     return resp
 
             if existing_lock:
@@ -536,11 +506,14 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
                         "UPDATE wopi_locks SET expires_at = ? WHERE file_id = ?",
                         (expires, file_id),
                     )
-                    db.commit()
+                    # Cleanup abgelaufener Locks
+                    db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                     return Response(status_code=200)
                 else:
                     resp = Response(status_code=409)
                     resp.headers["X-WOPI-Lock"] = existing_lock["lock_id"]
+                    # Cleanup abgelaufener Locks
+                    db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                     return resp
 
             # Neuen Lock erstellen
@@ -549,21 +522,27 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
                 "INSERT OR REPLACE INTO wopi_locks (file_id, lock_id, user_id, expires_at) VALUES (?, ?, ?, ?)",
                 (file_id, lock_id, token_data["user_id"], expires),
             )
-            db.commit()
+            # Cleanup abgelaufener Locks
+            db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
             return Response(status_code=200)
 
         elif override == "UNLOCK":
             if existing_lock and existing_lock["lock_id"] == lock_id:
                 db.execute("DELETE FROM wopi_locks WHERE file_id = ?", (file_id,))
-                db.commit()
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return Response(status_code=200)
             elif existing_lock:
                 resp = Response(status_code=409)
                 resp.headers["X-WOPI-Lock"] = existing_lock["lock_id"]
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return resp
             else:
                 resp = Response(status_code=409)
                 resp.headers["X-WOPI-Lock"] = ""
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return resp
 
         elif override == "REFRESH_LOCK":
@@ -573,34 +552,39 @@ async def wopi_lock(file_id: str, request: Request, access_token: str = Query(..
                     "UPDATE wopi_locks SET expires_at = ? WHERE file_id = ?",
                     (expires, file_id),
                 )
-                db.commit()
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return Response(status_code=200)
             elif existing_lock:
                 resp = Response(status_code=409)
                 resp.headers["X-WOPI-Lock"] = existing_lock["lock_id"]
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return resp
             else:
                 resp = Response(status_code=409)
                 resp.headers["X-WOPI-Lock"] = ""
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return resp
 
         elif override == "GET_LOCK":
             if existing_lock:
                 resp = Response(status_code=200)
                 resp.headers["X-WOPI-Lock"] = existing_lock["lock_id"]
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return resp
             else:
                 resp = Response(status_code=200)
                 resp.headers["X-WOPI-Lock"] = ""
+                # Cleanup abgelaufener Locks
+                db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
                 return resp
 
-        return Response(status_code=501)
-
-    finally:
-        # Abgelaufene Locks aufraeumen
+        # Cleanup abgelaufener Locks
         db.execute("DELETE FROM wopi_locks WHERE expires_at < datetime('now')")
-        db.commit()
-        db.close()
+        return Response(status_code=501)
 
 
 # ============================================================

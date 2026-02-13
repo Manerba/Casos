@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard.mail_service import (
     test_smtp_connection,
@@ -63,8 +63,7 @@ class MailPreferencesSave(BaseModel):
 @mail_admin_router.get("/api/admin/mail/config")
 async def get_mail_config(user=Depends(get_admin_user)):
     """Mail-Config laden (Passwort maskiert)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM mail_config WHERE id = 1").fetchone()
         if not row:
             return {"config": None}
@@ -73,41 +72,39 @@ async def get_mail_config(user=Depends(get_admin_user)):
         if config.get("password"):
             config["password"] = "********"
         return {"config": config}
-    finally:
-        db.close()
 
 
 @mail_admin_router.post("/api/admin/mail/config")
 async def save_mail_config(data: MailConfigSave, user=Depends(get_admin_user)):
     """Mail-Config speichern (UPSERT, Verbindungstest vorher)."""
-    db = get_db()
-    try:
-        # Bestehendes Passwort beibehalten wenn maskiert
-        password = data.password
-        if password == "********":
+    # Bestehendes Passwort beibehalten wenn maskiert
+    password = data.password
+    if password == "********":
+        with db_query() as db:
             existing = db.execute("SELECT password FROM mail_config WHERE id = 1").fetchone()
             if existing:
                 password = existing["password"]
             else:
                 raise HTTPException(status_code=400, detail="Passwort muss angegeben werden")
 
-        config = {
-            "smtp_server": data.smtp_server,
-            "smtp_port": data.smtp_port,
-            "encryption": data.encryption,
-            "auth_enabled": 1 if data.auth_enabled else 0,
-            "username": data.username,
-            "password": password,
-            "from_address": data.from_address,
-            "from_name": data.from_name,
-        }
+    config = {
+        "smtp_server": data.smtp_server,
+        "smtp_port": data.smtp_port,
+        "encryption": data.encryption,
+        "auth_enabled": 1 if data.auth_enabled else 0,
+        "username": data.username,
+        "password": password,
+        "from_address": data.from_address,
+        "from_name": data.from_name,
+    }
 
-        # Verbindungstest
-        error = test_smtp_connection(config)
-        if error:
-            raise HTTPException(status_code=400, detail=f"SMTP-Verbindung fehlgeschlagen: {error}")
+    # Verbindungstest
+    error = test_smtp_connection(config)
+    if error:
+        raise HTTPException(status_code=400, detail=f"SMTP-Verbindung fehlgeschlagen: {error}")
 
-        # UPSERT
+    # UPSERT
+    with db_transaction() as db:
         db.execute(
             """INSERT INTO mail_config (id, smtp_server, smtp_port, encryption, auth_enabled,
                                         username, password, from_address, from_name)
@@ -125,40 +122,29 @@ async def save_mail_config(data: MailConfigSave, user=Depends(get_admin_user)):
              1 if data.auth_enabled else 0, data.username, password,
              data.from_address, data.from_name),
         )
-        db.commit()
         return {"message": "Mail-Konfiguration gespeichert (Verbindung OK)"}
-    finally:
-        db.close()
 
 
 @mail_admin_router.delete("/api/admin/mail/config")
 async def delete_mail_config(user=Depends(get_admin_user)):
     """Mail-Config loeschen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute("DELETE FROM mail_config WHERE id = 1")
-        db.commit()
         return {"message": "Mail-Konfiguration geloescht"}
-    finally:
-        db.close()
 
 
 @mail_admin_router.get("/api/admin/mail/templates")
 async def get_mail_templates(user=Depends(get_admin_user)):
     """Alle Mail-Templates laden."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute("SELECT * FROM mail_templates ORDER BY event_type").fetchall()
         return {"templates": [dict(r) for r in rows]}
-    finally:
-        db.close()
 
 
 @mail_admin_router.put("/api/admin/mail/templates/{event_type}")
 async def update_mail_template(event_type: str, data: TemplateUpdate, user=Depends(get_admin_user)):
     """Mail-Template aktualisieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute(
             "SELECT id FROM mail_templates WHERE event_type = ?", (event_type,)
         ).fetchone()
@@ -169,10 +155,7 @@ async def update_mail_template(event_type: str, data: TemplateUpdate, user=Depen
             "UPDATE mail_templates SET subject = ?, body_text = ? WHERE event_type = ?",
             (data.subject, data.body_text, event_type),
         )
-        db.commit()
         return {"message": "Template aktualisiert"}
-    finally:
-        db.close()
 
 
 @mail_admin_router.post("/api/admin/mail/test")
@@ -195,8 +178,7 @@ async def send_test_mail(data: TestMailRequest, user=Depends(get_admin_user)):
 @mail_admin_router.post("/api/admin/mail/invite/{user_id}")
 async def send_invite_mail(user_id: int, user=Depends(get_admin_user)):
     """Einladungsmail an Benutzer senden."""
-    db = get_db()
-    try:
+    with db_query() as db:
         target = db.execute(
             "SELECT id, username, vorname, nachname, email FROM users WHERE id = ?",
             (user_id,),
@@ -205,8 +187,6 @@ async def send_invite_mail(user_id: int, user=Depends(get_admin_user)):
             raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
         if not target["email"]:
             raise HTTPException(status_code=400, detail="Benutzer hat keine E-Mail-Adresse")
-    finally:
-        db.close()
 
     recipient_name = f"{target['vorname']} {target['nachname']}".strip() or target["username"]
     placeholders = {
@@ -239,22 +219,18 @@ async def get_mail_preferences(user=Depends(get_current_user)):
     # Defaults anlegen falls noetig
     ensure_default_prefs(user["id"])
 
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute(
             "SELECT event_type, enabled, days_before FROM user_mail_preferences WHERE user_id = ?",
             (user["id"],),
         ).fetchall()
         return {"preferences": [dict(r) for r in rows]}
-    finally:
-        db.close()
 
 
 @mail_user_router.put("/api/user/mail/preferences")
 async def save_mail_preferences(data: MailPreferencesSave, user=Depends(get_current_user)):
     """Eigene Mail-Prefs speichern."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         for pref in data.preferences:
             db.execute(
                 """INSERT INTO user_mail_preferences (user_id, event_type, enabled, days_before)
@@ -264,7 +240,4 @@ async def save_mail_preferences(data: MailPreferencesSave, user=Depends(get_curr
                        days_before = excluded.days_before""",
                 (user["id"], pref.event_type, 1 if pref.enabled else 0, pref.days_before),
             )
-        db.commit()
         return {"message": "Mail-Einstellungen gespeichert"}
-    finally:
-        db.close()

@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
 from typing import Optional
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
 
@@ -85,8 +85,7 @@ def _safe_filename(name: str) -> str:
 @admin_router.get("/config")
 async def get_nextcloud_config(user=Depends(get_admin_user)):
     """Aktuelle Nextcloud-Konfiguration laden (Passwort maskiert)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM nextcloud_config WHERE id = 1").fetchone()
         if not row:
             return {"config": None}
@@ -98,8 +97,6 @@ async def get_nextcloud_config(user=Depends(get_admin_user)):
                 "base_path": row["base_path"],
             }
         }
-    finally:
-        db.close()
 
 
 @admin_router.post("/config")
@@ -117,15 +114,12 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
     # Passwort ggf. aus DB holen wenn nicht geaendert
     actual_password = data.password
     if data.password == "********":
-        db = get_db()
-        try:
+        with db_query() as db:
             existing = db.execute("SELECT password FROM nextcloud_config WHERE id = 1").fetchone()
             if existing:
                 actual_password = existing["password"]
             else:
                 raise HTTPException(status_code=400, detail="Kein gespeichertes Passwort vorhanden")
-        finally:
-            db.close()
 
     # Verbindungstest (in Thread-Pool)
     success, error = await asyncio.to_thread(
@@ -140,8 +134,7 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
         raise HTTPException(status_code=400, detail=f"Verbindungstest fehlgeschlagen: {error}")
 
     # Config speichern (UPSERT)
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id FROM nextcloud_config WHERE id = 1").fetchone()
 
         if existing:
@@ -166,24 +159,17 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
                  actual_password, data.base_path.strip()),
             )
 
-        db.commit()
         return {"message": "Nextcloud-Konfiguration gespeichert"}
-    finally:
-        db.close()
 
 
 @admin_router.delete("/config")
 async def delete_nextcloud_config(user=Depends(get_admin_user)):
     """Nextcloud-Konfiguration loeschen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute("DELETE FROM nextcloud_config WHERE id = 1")
         # nextcloud_path in allen tasks zuruecksetzen
         db.execute("UPDATE tasks SET nextcloud_path = NULL WHERE nextcloud_path IS NOT NULL")
-        db.commit()
         return {"message": "Nextcloud-Konfiguration geloescht"}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -215,12 +201,9 @@ async def get_nextcloud_directories(
 @files_router.get("/api/nextcloud/status")
 async def get_nextcloud_status(user=Depends(get_current_user)):
     """Pruefen ob Nextcloud konfiguriert ist (fuer Frontend)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT id FROM nextcloud_config WHERE id = 1").fetchone()
         return {"configured": row is not None}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -232,8 +215,7 @@ def _get_task_nextcloud_path(task_id: int, user: dict) -> str:
     Nextcloud-Pfad fuer eine Aufgabe/Projekt ermitteln und Zugriff pruefen.
     Gibt den relativen Pfad zum Verzeichnis zurueck.
     """
-    db = get_db()
-    try:
+    with db_query() as db:
         task = db.execute(
             "SELECT id, task_type, nextcloud_path, created_by FROM tasks WHERE id = ?",
             (task_id,),
@@ -256,8 +238,6 @@ def _get_task_nextcloud_path(task_id: int, user: dict) -> str:
                 raise HTTPException(status_code=403, detail="Kein Zugriff auf dieses Projekt")
 
         return task["nextcloud_path"]
-    finally:
-        db.close()
 
 
 @files_router.get("/api/tasks/{task_id}/files")

@@ -5,7 +5,7 @@ Tareas - API-Router fuer App-Konfiguration (Server-Adresse etc.).
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_admin_user
 
 app_config_router = APIRouter()
@@ -18,14 +18,11 @@ class AppConfigSave(BaseModel):
 @app_config_router.get("/api/admin/app/config")
 async def get_app_config(user=Depends(get_admin_user)):
     """App-Config laden."""
-    db = get_db()
-    try:
+    with db_query() as db:
         row = db.execute("SELECT * FROM app_config WHERE id = 1").fetchone()
         if not row:
             return {"config": None}
         return {"config": dict(row)}
-    finally:
-        db.close()
 
 
 @app_config_router.post("/api/admin/app/config")
@@ -40,8 +37,7 @@ async def save_app_config(data: AppConfigSave, user=Depends(get_admin_user)):
     # Trailing Slash entfernen
     address = address.rstrip("/")
 
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute(
             """INSERT INTO app_config (id, server_address)
                VALUES (1, ?)
@@ -49,7 +45,4 @@ async def save_app_config(data: AppConfigSave, user=Depends(get_admin_user)):
                    server_address = excluded.server_address""",
             (address,),
         )
-        db.commit()
         return {"message": "App-Konfiguration gespeichert"}
-    finally:
-        db.close()

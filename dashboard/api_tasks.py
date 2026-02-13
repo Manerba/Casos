@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
-from dashboard.database import get_db
+from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
 from dashboard.mail_service import notify_event
@@ -227,8 +227,7 @@ async def _send_status_mail(user_id, task_name, actor_name, new_status):
 @router.get("/api/tasks")
 async def get_tasks(user=Depends(get_current_user)):
     """Aufgaben abrufen (eigene/zugewiesene/Team-Mitglied + Altdaten ohne created_by)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute(
             """SELECT t.*,
                       uc.vorname || ' ' || uc.nachname AS created_by_name,
@@ -332,32 +331,25 @@ async def get_tasks(user=Depends(get_current_user)):
             })
 
         return {"items": items, "total": len(items)}
-    finally:
-        db.close()
 
 
 @router.post("/api/tasks")
 async def create_task(task: TaskCreate, user=Depends(get_current_user)):
     """Neue Aufgabe anlegen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         deadline = _parse_date_input(task.deadline)
         cursor = db.execute(
             """INSERT INTO tasks (name, deadline, priority, task_type, status, description, created_by)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (task.name, deadline, task.priority, task.task_type, task.status, task.description, user["id"]),
         )
-        db.commit()
         return {"id": cursor.lastrowid, "message": "Aufgabe erstellt"}
-    finally:
-        db.close()
 
 
 @router.put("/api/tasks/{task_id}")
 async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_user)):
     """Aufgabe aktualisieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute(
             "SELECT id, created_by, assigned_to FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
@@ -424,12 +416,13 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                 f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?",
                 values,
             )
-            db.commit()
 
         # Mail-Benachrichtigungen (non-blocking)
         actor_name = f"{user.get('vorname', '')} {user.get('nachname', '')}".strip() or user["username"]
         task_row = db.execute("SELECT name, deadline, priority, assigned_to, status FROM tasks WHERE id = ?", (task_id,)).fetchone()
 
+    # Mail-Versand ausserhalb der Transaktion (non-blocking)
+    if task_row:
         # Bei Zuweisung: Mail an neuen Zugewiesenen
         if task.assigned_to is not None and task.assigned_to > 0:
             old_assigned = existing["assigned_to"]
@@ -445,16 +438,13 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                 task_row["assigned_to"], task_row["name"], actor_name, task.status
             ))
 
-        return {"message": "Aufgabe aktualisiert"}
-    finally:
-        db.close()
+    return {"message": "Aufgabe aktualisiert"}
 
 
 @router.delete("/api/tasks/{task_id}")
 async def delete_task(task_id: int, user=Depends(get_current_user)):
     """Aufgabe loeschen (inkl. SubTasks durch CASCADE)."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
@@ -466,10 +456,7 @@ async def delete_task(task_id: int, user=Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Keine Berechtigung zum Loeschen")
 
         db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
-        db.commit()
         return {"message": "Aufgabe geloescht"}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -479,8 +466,7 @@ async def delete_task(task_id: int, user=Depends(get_current_user)):
 @router.get("/api/tasks/{task_id}/subtasks")
 async def get_subtasks(task_id: int, user=Depends(get_current_user)):
     """Teilaufgaben eines Projekts abrufen (mit Berechtigungsfilter)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         # Projekt pruefen
         task = db.execute(
             "SELECT id, created_by, netzplan_project_x, netzplan_project_y FROM tasks WHERE id = ?", (task_id,)
@@ -582,15 +568,12 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
             "netzplan_project_x": task["netzplan_project_x"],
             "netzplan_project_y": task["netzplan_project_y"],
         }
-    finally:
-        db.close()
 
 
 @router.post("/api/tasks/{task_id}/subtasks")
 async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_current_user)):
     """Teilaufgabe anlegen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
@@ -628,17 +611,13 @@ async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_
                 (new_id, pred_id),
             )
 
-        db.commit()
         return {"id": new_id, "position_number": next_pos, "message": "Teilaufgabe erstellt"}
-    finally:
-        db.close()
 
 
 @router.put("/api/subtasks/{subtask_id}")
 async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(get_current_user)):
     """Teilaufgabe aktualisieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute(
             "SELECT id, project_id FROM sub_tasks WHERE id = ?", (subtask_id,)
         ).fetchone()
@@ -727,17 +706,13 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(g
                     (subtask_id, pred_id),
                 )
 
-        db.commit()
         return {"message": "Teilaufgabe aktualisiert"}
-    finally:
-        db.close()
 
 
 @router.delete("/api/subtasks/{subtask_id}")
 async def delete_subtask(subtask_id: int, user=Depends(get_current_user)):
     """Teilaufgabe loeschen (nur Ersteller oder Legacy)."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         existing = db.execute("SELECT id, project_id FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
@@ -752,10 +727,7 @@ async def delete_subtask(subtask_id: int, user=Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Nur der Ersteller kann Teilaufgaben loeschen")
 
         db.execute("DELETE FROM sub_tasks WHERE id = ?", (subtask_id,))
-        db.commit()
         return {"message": "Teilaufgabe geloescht"}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -765,8 +737,7 @@ async def delete_subtask(subtask_id: int, user=Depends(get_current_user)):
 @router.post("/api/subtasks/{subtask_id}/move")
 async def move_subtask(subtask_id: int, move: SubTaskMove, user=Depends(get_current_user)):
     """Teilaufgabe nach oben/unten verschieben (Position tauschen)."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         # Subtask laden
         current = db.execute(
             "SELECT id, project_id, position_number FROM sub_tasks WHERE id = ?",
@@ -847,10 +818,7 @@ async def move_subtask(subtask_id: int, move: SubTaskMove, user=Depends(get_curr
                     "depends_on_id": dep["depends_on_id"],
                 })
 
-        db.commit()
         return {"message": "Position getauscht", "removed_dependencies": removed}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -860,8 +828,7 @@ async def move_subtask(subtask_id: int, move: SubTaskMove, user=Depends(get_curr
 @router.post("/api/tasks/{task_id}/subtasks/add-dependency")
 async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_current_user)):
     """Abhaengigkeit zwischen Teilaufgaben hinzufuegen (from_id -> to_id)."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         # Projekt pruefen
         task = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not task:
@@ -890,7 +857,6 @@ async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_c
             db.execute(
                 "UPDATE sub_tasks SET depends_on_project = 1 WHERE id = ?", (dep.to_id,)
             )
-            db.commit()
             return {"message": "Projekt-Abhaengigkeit hinzugefuegt", "new_positions": {}}
 
         # Beide Subtasks muessen zum Projekt gehoeren
@@ -961,18 +927,14 @@ async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_c
 
         # Topologische Neuordnung
         new_positions = _topological_reorder(db, task_id)
-        db.commit()
 
         return {"message": "Abhaengigkeit hinzugefuegt", "new_positions": new_positions}
-    finally:
-        db.close()
 
 
 @router.post("/api/tasks/{task_id}/subtasks/remove-dependency")
 async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(get_current_user)):
     """Abhaengigkeit zwischen Teilaufgaben entfernen."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         # Projekt pruefen
         task = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not task:
@@ -990,7 +952,6 @@ async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(ge
                 "UPDATE sub_tasks SET depends_on_project = 0 WHERE id = ? AND project_id = ?",
                 (dep.to_id, task_id),
             )
-            db.commit()
             return {"message": "Projekt-Abhaengigkeit entfernt", "new_positions": {}}
 
         # Dependency loeschen
@@ -1001,18 +962,14 @@ async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(ge
 
         # Topologische Neuordnung
         new_positions = _topological_reorder(db, task_id)
-        db.commit()
 
         return {"message": "Abhaengigkeit entfernt", "new_positions": new_positions}
-    finally:
-        db.close()
 
 
 @router.post("/api/tasks/{task_id}/subtasks/save-netzplan-positions")
 async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, user=Depends(get_current_user)):
     """Netzplan-Positionen fuer Teilaufgaben speichern."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         task = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not task:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
@@ -1038,10 +995,7 @@ async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, 
                     "UPDATE sub_tasks SET netzplan_x = ?, netzplan_y = ? WHERE id = ? AND project_id = ?",
                     (pos.x, pos.y, pos.id, task_id),
                 )
-        db.commit()
         return {"message": "Positionen gespeichert"}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -1051,8 +1005,7 @@ async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, 
 @router.get("/api/users/list")
 async def get_users_list():
     """Alle Benutzer als Liste (fuer Zuweisungs-Dropdown)."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute(
             "SELECT id, vorname, nachname FROM users ORDER BY vorname, nachname"
         ).fetchall()
@@ -1062,8 +1015,6 @@ async def get_users_list():
                 for r in rows
             ]
         }
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -1073,8 +1024,7 @@ async def get_users_list():
 @router.get("/api/tasks/{task_id}/notes")
 async def get_task_notes(task_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Aufgabe abrufen."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute(
             """SELECT tn.*, u.vorname || ' ' || u.nachname AS user_name
                FROM task_notes tn
@@ -1094,15 +1044,12 @@ async def get_task_notes(task_id: int, user=Depends(get_current_user)):
                 for r in rows
             ]
         }
-    finally:
-        db.close()
 
 
 @router.put("/api/tasks/{task_id}/notes")
 async def upsert_task_note(task_id: int, note: NoteUpdate, user=Depends(get_current_user)):
     """Eigene Notiz fuer eine Aufgabe erstellen/aktualisieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute(
             """INSERT INTO task_notes (task_id, user_id, content, updated_at)
                VALUES (?, ?, ?, datetime('now'))
@@ -1111,17 +1058,13 @@ async def upsert_task_note(task_id: int, note: NoteUpdate, user=Depends(get_curr
                    updated_at = datetime('now')""",
             (task_id, user["id"], note.content),
         )
-        db.commit()
         return {"message": "Notiz gespeichert"}
-    finally:
-        db.close()
 
 
 @router.get("/api/tasks/{task_id}/subtasks/{subtask_id}/notes")
 async def get_subtask_notes(task_id: int, subtask_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Teilaufgabe abrufen."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute(
             """SELECT sn.*, u.vorname || ' ' || u.nachname AS user_name
                FROM sub_task_notes sn
@@ -1141,15 +1084,12 @@ async def get_subtask_notes(task_id: int, subtask_id: int, user=Depends(get_curr
                 for r in rows
             ]
         }
-    finally:
-        db.close()
 
 
 @router.put("/api/tasks/{task_id}/subtasks/{subtask_id}/notes")
 async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, user=Depends(get_current_user)):
     """Eigene Notiz fuer eine Teilaufgabe erstellen/aktualisieren."""
-    db = get_db()
-    try:
+    with db_transaction() as db:
         db.execute(
             """INSERT INTO sub_task_notes (sub_task_id, user_id, content, updated_at)
                VALUES (?, ?, ?, datetime('now'))
@@ -1158,10 +1098,7 @@ async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, u
                    updated_at = datetime('now')""",
             (subtask_id, user["id"], note.content),
         )
-        db.commit()
         return {"message": "Notiz gespeichert"}
-    finally:
-        db.close()
 
 
 # ============================================================
@@ -1171,26 +1108,20 @@ async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, u
 @router.get("/api/areas")
 async def get_areas():
     """Alle Bereiche abrufen."""
-    db = get_db()
-    try:
+    with db_query() as db:
         rows = db.execute("SELECT * FROM areas ORDER BY name").fetchall()
         return {"items": [{"id": r["id"], "name": r["name"]} for r in rows]}
-    finally:
-        db.close()
 
 
 @router.post("/api/areas")
 async def create_area(area: AreaCreate):
     """Neuen Bereich anlegen."""
-    db = get_db()
     try:
-        cursor = db.execute("INSERT INTO areas (name) VALUES (?)", (area.name,))
-        db.commit()
-        return {"id": cursor.lastrowid, "name": area.name}
+        with db_transaction() as db:
+            cursor = db.execute("INSERT INTO areas (name) VALUES (?)", (area.name,))
+            return {"id": cursor.lastrowid, "name": area.name}
     except Exception:
         raise HTTPException(status_code=400, detail="Bereich existiert bereits")
-    finally:
-        db.close()
 
 
 # ============================================================
