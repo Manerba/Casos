@@ -10,29 +10,15 @@ let ldapConfig = null;
 // ========================================
 
 async function initLdapTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = 'none';
-
-    // Config laden
-    await loadLdapConfig();
-
-    renderLdapTab();
+    await initTabGeneric({
+        showFilterBar: false,
+        loadFn: loadLdapConfig,
+        renderFn: renderLdapTab,
+    });
 }
 
 async function loadLdapConfig() {
-    try {
-        const resp = await fetch('/api/admin/ldap/config');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        ldapConfig = data.config;
-    } catch (e) {
-        ldapConfig = null;
-    }
+    ldapConfig = await loadConfigFromAPI('/api/admin/ldap/config');
 }
 
 // ========================================
@@ -192,39 +178,27 @@ async function saveLdapConfig() {
         return;
     }
 
-    try {
-        const resp = await fetch('/api/admin/ldap/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ server, port, use_ssl, bind_dn, bind_password, search_base, sync_interval_minutes }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        showNotification('LDAP-Konfiguration gespeichert (Verbindung OK)', 'success');
-        await loadLdapConfig();
-        renderLdapTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/ldap/config',
+        data: { server, port, use_ssl, bind_dn, bind_password, search_base, sync_interval_minutes },
+        successMessage: 'LDAP-Konfiguration gespeichert (Verbindung OK)',
+        onSuccess: async () => {
+            await loadLdapConfig();
+            renderLdapTab();
+        },
+    });
 }
 
 async function deleteLdapConfig() {
-    if (!await msgbox('cancel/yes', 'warning', 'LDAP-Konfiguration wirklich loeschen? Alle LDAP-Benutzer werden deaktiviert.')) return;
-
-    try {
-        const resp = await fetch('/api/admin/ldap/config', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('Fehler beim Loeschen');
-
-        showNotification('LDAP-Konfiguration geloescht', 'success');
-        ldapConfig = null;
-        renderLdapTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await deleteConfigFromAPI({
+        endpoint: '/api/admin/ldap/config',
+        confirmMessage: 'LDAP-Konfiguration wirklich loeschen? Alle LDAP-Benutzer werden deaktiviert.',
+        successMessage: 'LDAP-Konfiguration geloescht',
+        onSuccess: () => {
+            ldapConfig = null;
+            renderLdapTab();
+        },
+    });
 }
 
 // ========================================

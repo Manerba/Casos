@@ -236,98 +236,77 @@ async function deleteUser(userId, username) {
 // ========================================
 
 function openNewUserModal() {
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">Neuer Benutzer</div>
-            <div class="modal-body">
-                <div class="modal-field">
-                    <label>Benutzername *</label>
-                    <input type="text" id="newUsername" placeholder="Benutzername..." autofocus autocomplete="off">
-                </div>
-                <div class="modal-field">
-                    <label>Vorname</label>
-                    <input type="text" id="newVorname" placeholder="Vorname...">
-                </div>
-                <div class="modal-field">
-                    <label>Nachname</label>
-                    <input type="text" id="newNachname" placeholder="Nachname...">
-                </div>
-                <div class="modal-field">
-                    <label>E-Mail</label>
-                    <input type="email" id="newEmail" placeholder="E-Mail...">
-                </div>
-                <div class="modal-field">
-                    <label>Passwort *</label>
-                    <input type="password" id="newPassword" placeholder="Passwort..." autocomplete="new-password">
-                </div>
-                <div class="modal-field">
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                        <input type="checkbox" id="newIsAdmin">
-                        Administrator
-                    </label>
-                </div>
+    createModal({
+        title: 'Neuer Benutzer',
+        body: `
+            <div class="modal-field">
+                <label>Benutzername *</label>
+                <input type="text" id="newUsername" placeholder="Benutzername..." autofocus autocomplete="off">
             </div>
-            <div class="modal-footer">
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-                <button class="action-btn primary" id="createUserBtn">Erstellen</button>
+            <div class="modal-field">
+                <label>Vorname</label>
+                <input type="text" id="newVorname" placeholder="Vorname...">
             </div>
-        </div>
-    `;
+            <div class="modal-field">
+                <label>Nachname</label>
+                <input type="text" id="newNachname" placeholder="Nachname...">
+            </div>
+            <div class="modal-field">
+                <label>E-Mail</label>
+                <input type="email" id="newEmail" placeholder="E-Mail...">
+            </div>
+            <div class="modal-field">
+                <label>Passwort *</label>
+                <input type="password" id="newPassword" placeholder="Passwort..." autocomplete="new-password">
+            </div>
+            <div class="modal-field">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+                    <input type="checkbox" id="newIsAdmin">
+                    Administrator
+                </label>
+            </div>`,
+        footer: '<button class="action-btn" onclick="closeModal()">Abbrechen</button>' +
+                '<button class="action-btn primary" id="createUserBtn">Erstellen</button>',
+        onOpen: () => {
+            document.getElementById('newUsername').focus();
 
-    document.body.appendChild(overlay);
+            document.getElementById('createUserBtn').addEventListener('click', async () => {
+                const username = document.getElementById('newUsername').value.trim();
+                const password = document.getElementById('newPassword').value;
+                const vorname = document.getElementById('newVorname').value.trim();
+                const nachname = document.getElementById('newNachname').value.trim();
+                const email = document.getElementById('newEmail').value.trim();
+                const is_admin = document.getElementById('newIsAdmin').checked ? 1 : 0;
 
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
+                if (!username) {
+                    showNotification('Benutzername ist Pflichtfeld', 'error');
+                    return;
+                }
+                if (!password || password.length < 4) {
+                    showNotification('Passwort muss mindestens 4 Zeichen haben', 'error');
+                    return;
+                }
 
-    document.getElementById('newUsername').focus();
+                try {
+                    const resp = await fetch('/api/admin/users', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password, vorname, nachname, email, is_admin }),
+                    });
 
-    document.getElementById('createUserBtn').addEventListener('click', async () => {
-        const username = document.getElementById('newUsername').value.trim();
-        const password = document.getElementById('newPassword').value;
-        const vorname = document.getElementById('newVorname').value.trim();
-        const nachname = document.getElementById('newNachname').value.trim();
-        const email = document.getElementById('newEmail').value.trim();
-        const is_admin = document.getElementById('newIsAdmin').checked ? 1 : 0;
+                    if (!resp.ok) {
+                        const data = await resp.json().catch(() => ({}));
+                        throw new Error(data.detail || 'Fehler beim Erstellen');
+                    }
 
-        if (!username) {
-            showNotification('Benutzername ist Pflichtfeld', 'error');
-            return;
-        }
-        if (!password || password.length < 4) {
-            showNotification('Passwort muss mindestens 4 Zeichen haben', 'error');
-            return;
-        }
-
-        try {
-            const resp = await fetch('/api/admin/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, vorname, nachname, email, is_admin }),
+                    closeModal();
+                    showNotification('Benutzer erstellt', 'success');
+                    await benutzerTable.loadData();
+                } catch (error) {
+                    showNotification(error.message, 'error');
+                }
             });
-
-            if (!resp.ok) {
-                const data = await resp.json().catch(() => ({}));
-                throw new Error(data.detail || 'Fehler beim Erstellen');
-            }
-
-            overlay.remove();
-            showNotification('Benutzer erstellt', 'success');
-            await benutzerTable.loadData();
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
+        },
     });
 }
 

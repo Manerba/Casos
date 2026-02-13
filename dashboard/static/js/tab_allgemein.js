@@ -6,27 +6,15 @@
 let appConfig = null;
 
 async function initAllgemeinTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = 'none';
-
-    await loadAppConfig();
-    renderAllgemeinTab();
+    await initTabGeneric({
+        showFilterBar: false,
+        loadFn: loadAppConfig,
+        renderFn: renderAllgemeinTab,
+    });
 }
 
 async function loadAppConfig() {
-    try {
-        const resp = await fetch('/api/admin/app/config');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        appConfig = data.config;
-    } catch (e) {
-        appConfig = null;
-    }
+    appConfig = await loadConfigFromAPI('/api/admin/app/config');
 }
 
 function renderAllgemeinTab() {
@@ -68,22 +56,13 @@ async function saveAppConfig() {
         return;
     }
 
-    try {
-        const resp = await fetch('/api/admin/app/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ server_address }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        showNotification('App-Konfiguration gespeichert', 'success');
-        await loadAppConfig();
-        renderAllgemeinTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/app/config',
+        data: { server_address },
+        successMessage: 'App-Konfiguration gespeichert',
+        onSuccess: async () => {
+            await loadAppConfig();
+            renderAllgemeinTab();
+        },
+    });
 }

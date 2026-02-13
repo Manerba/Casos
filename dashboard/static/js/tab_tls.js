@@ -11,38 +11,19 @@ let tlsVerifyConfig = null;
 // ========================================
 
 async function initTlsTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = 'none';
-
-    await Promise.all([loadTlsConfig(), loadTlsVerifyConfig()]);
-    renderTlsTab();
+    await initTabGeneric({
+        showFilterBar: false,
+        loadFn: () => Promise.all([loadTlsConfig(), loadTlsVerifyConfig()]),
+        renderFn: renderTlsTab,
+    });
 }
 
 async function loadTlsConfig() {
-    try {
-        const resp = await fetch('/api/admin/tls/config');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        tlsConfig = data.config;
-    } catch (e) {
-        tlsConfig = null;
-    }
+    tlsConfig = await loadConfigFromAPI('/api/admin/tls/config');
 }
 
 async function loadTlsVerifyConfig() {
-    try {
-        const resp = await fetch('/api/admin/tls/verify');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        tlsVerifyConfig = data.config;
-    } catch (e) {
-        tlsVerifyConfig = null;
-    }
+    tlsVerifyConfig = await loadConfigFromAPI('/api/admin/tls/verify');
 }
 
 // ========================================
@@ -269,43 +250,27 @@ async function saveTlsConfig() {
     const action = enabled ? 'TLS aktivieren und Services neu starten?' : 'TLS-Konfiguration speichern und Services neu starten?';
     if (!await msgbox('cancel/yes', 'warning', action)) return;
 
-    try {
-        const resp = await fetch('/api/admin/tls/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cert_path, key_path, enabled }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        showNotification('TLS-Konfiguration gespeichert, Services werden neu gestartet...', 'success');
-
-        // Services neu starten
-        await fetch('/api/dashboard/restart', { method: 'POST' });
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/tls/config',
+        data: { cert_path, key_path, enabled },
+        successMessage: 'TLS-Konfiguration gespeichert, Services werden neu gestartet...',
+        onSuccess: async () => {
+            await fetch('/api/dashboard/restart', { method: 'POST' });
+        },
+    });
 }
 
 async function deleteTlsConfig() {
-    if (!await msgbox('cancel/yes', 'warning', 'TLS-Konfiguration wirklich loeschen? Services werden auf HTTP zurueckgesetzt.')) return;
-
-    try {
-        const resp = await fetch('/api/admin/tls/config', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('Fehler beim Loeschen');
-
-        showNotification('TLS-Konfiguration geloescht, Services werden neu gestartet...', 'success');
-        tlsConfig = null;
-        renderTlsTab();
-
-        // Services neu starten
-        await fetch('/api/dashboard/restart', { method: 'POST' });
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await deleteConfigFromAPI({
+        endpoint: '/api/admin/tls/config',
+        confirmMessage: 'TLS-Konfiguration wirklich loeschen? Services werden auf HTTP zurueckgesetzt.',
+        successMessage: 'TLS-Konfiguration geloescht, Services werden neu gestartet...',
+        onSuccess: async () => {
+            tlsConfig = null;
+            renderTlsTab();
+            await fetch('/api/dashboard/restart', { method: 'POST' });
+        },
+    });
 }
 
 async function saveTlsVerifyConfig() {
@@ -314,22 +279,13 @@ async function saveTlsVerifyConfig() {
     const verify_smtp = document.getElementById('verifySmtp')?.checked ? 1 : 0;
     const verify_ldap = document.getElementById('verifyLdap')?.checked ? 1 : 0;
 
-    try {
-        const resp = await fetch('/api/admin/tls/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ verify_nextcloud, verify_onlyoffice, verify_smtp, verify_ldap }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        tlsVerifyConfig = { verify_nextcloud: !!verify_nextcloud, verify_onlyoffice: !!verify_onlyoffice,
-                            verify_smtp: !!verify_smtp, verify_ldap: !!verify_ldap };
-        showNotification('Zertifikatsvalidierung gespeichert', 'success');
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/tls/verify',
+        data: { verify_nextcloud, verify_onlyoffice, verify_smtp, verify_ldap },
+        successMessage: 'Zertifikatsvalidierung gespeichert',
+        onSuccess: () => {
+            tlsVerifyConfig = { verify_nextcloud: !!verify_nextcloud, verify_onlyoffice: !!verify_onlyoffice,
+                                verify_smtp: !!verify_smtp, verify_ldap: !!verify_ldap };
+        },
+    });
 }

@@ -152,84 +152,63 @@ async function logout() {
 function openPasswordChangeModal() {
     toggleSettingsDropdown(false);
 
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">Passwort aendern</div>
-            <div class="modal-body">
-                <div class="modal-field">
-                    <label>Altes Passwort</label>
-                    <input type="password" id="pwdOld" autocomplete="current-password">
-                </div>
-                <div class="modal-field">
-                    <label>Neues Passwort</label>
-                    <input type="password" id="pwdNew" autocomplete="new-password">
-                </div>
-                <div class="modal-field">
-                    <label>Neues Passwort bestaetigen</label>
-                    <input type="password" id="pwdConfirm" autocomplete="new-password">
-                </div>
+    createModal({
+        title: 'Passwort aendern',
+        body: `
+            <div class="modal-field">
+                <label>Altes Passwort</label>
+                <input type="password" id="pwdOld" autocomplete="current-password">
             </div>
-            <div class="modal-footer">
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-                <button class="action-btn primary" id="pwdSaveBtn">Aendern</button>
+            <div class="modal-field">
+                <label>Neues Passwort</label>
+                <input type="password" id="pwdNew" autocomplete="new-password">
             </div>
-        </div>
-    `;
+            <div class="modal-field">
+                <label>Neues Passwort bestaetigen</label>
+                <input type="password" id="pwdConfirm" autocomplete="new-password">
+            </div>`,
+        footer: '<button class="action-btn" onclick="closeModal()">Abbrechen</button>' +
+                '<button class="action-btn primary" id="pwdSaveBtn">Aendern</button>',
+        onOpen: () => {
+            document.getElementById('pwdOld').focus();
 
-    document.body.appendChild(overlay);
+            document.getElementById('pwdSaveBtn').addEventListener('click', async () => {
+                const oldPwd = document.getElementById('pwdOld').value;
+                const newPwd = document.getElementById('pwdNew').value;
+                const confirmPwd = document.getElementById('pwdConfirm').value;
 
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
+                if (!oldPwd || !newPwd) {
+                    showNotification('Bitte alle Felder ausfuellen', 'error');
+                    return;
+                }
+                if (newPwd !== confirmPwd) {
+                    showNotification('Neue Passwoerter stimmen nicht ueberein', 'error');
+                    return;
+                }
+                if (newPwd.length < 4) {
+                    showNotification('Passwort muss mindestens 4 Zeichen haben', 'error');
+                    return;
+                }
 
-    document.getElementById('pwdOld').focus();
+                try {
+                    const resp = await fetch('/api/auth/password', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ old_password: oldPwd, new_password: newPwd }),
+                    });
 
-    document.getElementById('pwdSaveBtn').addEventListener('click', async () => {
-        const oldPwd = document.getElementById('pwdOld').value;
-        const newPwd = document.getElementById('pwdNew').value;
-        const confirmPwd = document.getElementById('pwdConfirm').value;
+                    if (!resp.ok) {
+                        const data = await resp.json().catch(() => ({}));
+                        throw new Error(data.detail || 'Fehler');
+                    }
 
-        if (!oldPwd || !newPwd) {
-            showNotification('Bitte alle Felder ausfuellen', 'error');
-            return;
-        }
-        if (newPwd !== confirmPwd) {
-            showNotification('Neue Passwoerter stimmen nicht ueberein', 'error');
-            return;
-        }
-        if (newPwd.length < 4) {
-            showNotification('Passwort muss mindestens 4 Zeichen haben', 'error');
-            return;
-        }
-
-        try {
-            const resp = await fetch('/api/auth/password', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ old_password: oldPwd, new_password: newPwd }),
+                    showNotification('Passwort geaendert', 'success');
+                    closeModal();
+                } catch (error) {
+                    showNotification(error.message, 'error');
+                }
             });
-
-            if (!resp.ok) {
-                const data = await resp.json().catch(() => ({}));
-                throw new Error(data.detail || 'Fehler');
-            }
-
-            showNotification('Passwort geaendert', 'success');
-            overlay.remove();
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
+        },
     });
 }
 
@@ -572,35 +551,13 @@ function formatPercent(value) {
 async function openMailPreferencesModal() {
     toggleSettingsDropdown(false);
 
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="modal-content" style="max-width:500px">
-            <div class="modal-header">Mail-Benachrichtigungen</div>
-            <div class="modal-body">
-                <div class="table-loading"><div class="spinner"></div></div>
-            </div>
-            <div class="modal-footer">
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-                <button class="action-btn primary" id="mailPrefsSaveBtn" disabled>Speichern</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
+    const overlay = createModal({
+        title: 'Mail-Benachrichtigungen',
+        maxWidth: '500px',
+        body: '<div class="table-loading"><div class="spinner"></div></div>',
+        footer: '<button class="action-btn" onclick="closeModal()">Abbrechen</button>' +
+                '<button class="action-btn primary" id="mailPrefsSaveBtn" disabled>Speichern</button>',
+    });
 
     // Prefs laden
     try {
@@ -667,7 +624,7 @@ async function openMailPreferencesModal() {
                 }
 
                 showNotification('Mail-Einstellungen gespeichert', 'success');
-                overlay.remove();
+                closeModal();
             } catch (error) {
                 showNotification(error.message, 'error');
             }
@@ -675,6 +632,179 @@ async function openMailPreferencesModal() {
     } catch (error) {
         const modalBody = overlay.querySelector('.modal-body');
         modalBody.innerHTML = '<p style="color:var(--color-bearish)">Fehler beim Laden der Einstellungen</p>';
+    }
+}
+
+// ============================================================================
+// Modal-Hilfsfunktionen
+// ============================================================================
+
+/**
+ * Erstellt ein Modal-Dialog mit Overlay, ESC-Handler und Click-Outside-Close.
+ * @param {Object} config
+ * @param {string} config.title - Modal-Titel
+ * @param {string} config.body - HTML fuer den Modal-Body
+ * @param {string} [config.footer] - HTML fuer den Footer (Buttons). Standard: Abbrechen-Button
+ * @param {string} [config.maxWidth] - Max-Breite (z.B. '500px', '700px')
+ * @param {string} [config.cssClass] - Zusaetzliche CSS-Klasse fuer modal-content (z.B. 'modal-wide')
+ * @param {Function} [config.onOpen] - Callback nach dem Oeffnen (erhaelt overlay-Element)
+ * @param {Function} [config.onClose] - Callback beim Schliessen
+ * @returns {HTMLElement} Das Overlay-Element
+ */
+function createModal(config) {
+    // Bestehendes Modal entfernen
+    const existing = document.querySelector('.modal-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+
+    const maxWidthStyle = config.maxWidth ? ` style="max-width:${config.maxWidth}"` : '';
+    const cssClass = config.cssClass ? ` ${config.cssClass}` : '';
+    const footer = config.footer !== undefined ? config.footer :
+        '<button class="action-btn" onclick="closeModal()">Abbrechen</button>';
+
+    overlay.innerHTML = `
+        <div class="modal-content${cssClass}"${maxWidthStyle}>
+            <div class="modal-header">${config.title}</div>
+            <div class="modal-body">${config.body}</div>
+            ${footer ? `<div class="modal-footer">${footer}</div>` : ''}
+        </div>
+    `;
+
+    // Click-Outside schliessen
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+    });
+
+    document.body.appendChild(overlay);
+
+    // ESC-Handler
+    const escHandler = (e) => {
+        if (e.key === 'Escape') closeModal();
+    };
+    document.addEventListener('keydown', escHandler);
+    overlay._escHandler = escHandler;
+
+    if (config.onClose) overlay._onClose = config.onClose;
+    if (config.onOpen) config.onOpen(overlay);
+
+    return overlay;
+}
+
+/**
+ * Schliesst das aktuell offene Modal.
+ */
+function closeModal() {
+    const overlay = document.querySelector('.modal-overlay');
+    if (!overlay) return;
+    if (overlay._escHandler) {
+        document.removeEventListener('keydown', overlay._escHandler);
+    }
+    if (overlay._onClose) overlay._onClose();
+    overlay.remove();
+}
+
+// ============================================================================
+// Tab-Initialisierung Hilfsfunktion
+// ============================================================================
+
+/**
+ * Generische Tab-Initialisierung: Spinner anzeigen, FilterBar steuern, laden + rendern.
+ * @param {Object} config
+ * @param {boolean} [config.showFilterBar=false] - FilterBar anzeigen?
+ * @param {Function} [config.loadFn] - Async-Funktion zum Laden der Daten
+ * @param {Function} config.renderFn - Funktion zum Rendern des Tabs
+ */
+async function initTabGeneric(config) {
+    const container = document.getElementById('contentContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
+
+    const filterBar = document.getElementById('filterBar');
+    if (filterBar) filterBar.style.display = config.showFilterBar ? 'flex' : 'none';
+
+    if (config.loadFn) await config.loadFn();
+    if (config.renderFn) config.renderFn();
+}
+
+// ============================================================================
+// Config-CRUD Hilfsfunktionen
+// ============================================================================
+
+/**
+ * Laedt eine Konfiguration vom Server.
+ * @param {string} endpoint - API-Endpunkt (z.B. '/api/admin/ldap/config')
+ * @returns {Object|null} Config-Objekt oder null bei Fehler
+ */
+async function loadConfigFromAPI(endpoint) {
+    try {
+        const resp = await fetch(endpoint);
+        if (!resp.ok) throw new Error('Fehler beim Laden');
+        const data = await resp.json();
+        return data.config !== undefined ? data.config : data;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Speichert eine Konfiguration auf dem Server (POST).
+ * @param {Object} config
+ * @param {string} config.endpoint - API-Endpunkt
+ * @param {Object} config.data - Zu sendende Daten
+ * @param {string} config.successMessage - Erfolgsmeldung
+ * @param {Function} [config.onSuccess] - Callback nach Erfolg (z.B. reload + render)
+ * @returns {boolean} true bei Erfolg, false bei Fehler
+ */
+async function saveConfigToAPI(config) {
+    try {
+        const resp = await fetch(config.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config.data),
+        });
+
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Fehler beim Speichern');
+        }
+
+        showNotification(config.successMessage, 'success');
+        if (config.onSuccess) await config.onSuccess();
+        return true;
+    } catch (error) {
+        showNotification(error.message, 'error');
+        return false;
+    }
+}
+
+/**
+ * Loescht eine Konfiguration auf dem Server (DELETE) mit Bestaetigungsdialog.
+ * @param {Object} config
+ * @param {string} config.endpoint - API-Endpunkt
+ * @param {string} config.confirmMessage - Bestaetigungsfrage
+ * @param {string} config.successMessage - Erfolgsmeldung
+ * @param {Function} [config.onSuccess] - Callback nach Erfolg
+ * @returns {boolean} true bei Erfolg, false bei Abbruch/Fehler
+ */
+async function deleteConfigFromAPI(config) {
+    if (!await msgbox('cancel/yes', 'warning', config.confirmMessage)) return false;
+
+    try {
+        const resp = await fetch(config.endpoint, { method: 'DELETE' });
+        if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Fehler beim Loeschen');
+        }
+
+        showNotification(config.successMessage, 'success');
+        if (config.onSuccess) await config.onSuccess();
+        return true;
+    } catch (error) {
+        showNotification(error.message, 'error');
+        return false;
     }
 }
 

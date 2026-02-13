@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+76;Refactoring;Sprint 2-4: config_utils.py (get_masked_config, resolve_masked_password), user_utils.py (get_display_name), JS-Helpers (loadConfigFromAPI/saveConfigToAPI/deleteConfigFromAPI, createModal/closeModal, initTabGeneric). 15 Dateien refactored, ~170 Zeilen netto reduziert
 14.02.2026;0.0.1+75;Refactoring;db_utils.py: Zentrale DB-Context-Manager (db_query/db_transaction) + upsert_singleton_config + build_update_query. Alle 10 api_*.py refactored: try/finally durch with-Bloecke ersetzt, get_db-Import entfernt
 14.02.2026;0.0.1+74;Refactoring;CSS-Duplikate konsolidiert: Login-CSS in login.css extrahiert, Spinner-Duplikate aus expandable_table.css/editor.html entfernt, Shadow Custom Properties (--shadow-focus/sm/md/lg), escapeHtml()-Duplikate in ExpandableTable/WidgetDashboard delegieren an globale Funktion
 13.02.2026 23:39;0.0.1+72;Bugfix;datetime.utcnow() durch datetime.now(timezone.utc) ersetzt - 8 Stellen in auth.py, api_onlyoffice.py, ldap_sync.py, ldap_sync_cron.py (deprecated seit Python 3.12)

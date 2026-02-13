@@ -10,27 +10,15 @@ let ooConfig = null;
 // ========================================
 
 async function initOnlyOfficeTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = 'none';
-
-    await loadOoConfig();
-    renderOnlyOfficeTab();
+    await initTabGeneric({
+        showFilterBar: false,
+        loadFn: loadOoConfig,
+        renderFn: renderOnlyOfficeTab,
+    });
 }
 
 async function loadOoConfig() {
-    try {
-        const resp = await fetch('/api/admin/onlyoffice/config');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        ooConfig = data.config;
-    } catch (e) {
-        ooConfig = null;
-    }
+    ooConfig = await loadConfigFromAPI('/api/admin/onlyoffice/config');
 }
 
 // ========================================
@@ -122,24 +110,15 @@ async function saveOoConfig() {
 
     const jwt_secret = jwt_secret_input || '********';
 
-    try {
-        const resp = await fetch('/api/admin/onlyoffice/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ server_url, jwt_secret }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        showNotification('ONLYOFFICE-Konfiguration gespeichert', 'success');
-        await loadOoConfig();
-        renderOnlyOfficeTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/onlyoffice/config',
+        data: { server_url, jwt_secret },
+        successMessage: 'ONLYOFFICE-Konfiguration gespeichert',
+        onSuccess: async () => {
+            await loadOoConfig();
+            renderOnlyOfficeTab();
+        },
+    });
 }
 
 async function testOoConnection() {
@@ -157,16 +136,13 @@ async function testOoConnection() {
 }
 
 async function deleteOoConfig() {
-    if (!await msgbox('cancel/yes', 'warning', 'ONLYOFFICE-Konfiguration wirklich loeschen?')) return;
-
-    try {
-        const resp = await fetch('/api/admin/onlyoffice/config', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('Fehler beim Loeschen');
-
-        showNotification('ONLYOFFICE-Konfiguration geloescht', 'success');
-        ooConfig = null;
-        renderOnlyOfficeTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await deleteConfigFromAPI({
+        endpoint: '/api/admin/onlyoffice/config',
+        confirmMessage: 'ONLYOFFICE-Konfiguration wirklich loeschen?',
+        successMessage: 'ONLYOFFICE-Konfiguration geloescht',
+        onSuccess: () => {
+            ooConfig = null;
+            renderOnlyOfficeTab();
+        },
+    });
 }

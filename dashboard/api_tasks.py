@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.user_utils import get_display_name
 from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
 from dashboard.mail_service import notify_event
@@ -418,7 +419,7 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
             )
 
         # Mail-Benachrichtigungen (non-blocking)
-        actor_name = f"{user.get('vorname', '')} {user.get('nachname', '')}".strip() or user["username"]
+        actor_name = get_display_name(user)
         task_row = db.execute("SELECT name, deadline, priority, assigned_to, status FROM tasks WHERE id = ?", (task_id,)).fetchone()
 
     # Mail-Versand ausserhalb der Transaktion (non-blocking)

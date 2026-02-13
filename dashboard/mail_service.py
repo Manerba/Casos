@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from dashboard.database import get_db
+from dashboard.user_utils import get_display_name
 from dashboard.tls_utils import get_tls_config, get_tls_verify_config
 
 logger = logging.getLogger(__name__)
@@ -194,7 +195,7 @@ def notify_event(event_type: str, recipient_user_id: int, placeholders: dict) ->
         db.close()
 
     # Empfaenger-Name in Platzhalter einfuegen
-    recipient_name = f"{user['vorname']} {user['nachname']}".strip() or "Benutzer"
+    recipient_name = get_display_name(user)
     placeholders["recipient_name"] = recipient_name
 
     # App-URL automatisch einfuegen (Caller kann ueberschreiben)

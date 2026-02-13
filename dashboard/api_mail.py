@@ -8,7 +8,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.config_utils import get_masked_config, resolve_masked_password
 from dashboard.auth import get_admin_user, get_current_user
+from dashboard.user_utils import get_display_name
 from dashboard.mail_service import (
     test_smtp_connection,
     send_mail,
@@ -63,29 +65,16 @@ class MailPreferencesSave(BaseModel):
 @mail_admin_router.get("/api/admin/mail/config")
 async def get_mail_config(user=Depends(get_admin_user)):
     """Mail-Config laden (Passwort maskiert)."""
-    with db_query() as db:
-        row = db.execute("SELECT * FROM mail_config WHERE id = 1").fetchone()
-        if not row:
-            return {"config": None}
-        config = dict(row)
-        # Passwort maskieren
-        if config.get("password"):
-            config["password"] = "********"
-        return {"config": config}
+    config = get_masked_config("mail_config", ["password"])
+    return {"config": config}
 
 
 @mail_admin_router.post("/api/admin/mail/config")
 async def save_mail_config(data: MailConfigSave, user=Depends(get_admin_user)):
     """Mail-Config speichern (UPSERT, Verbindungstest vorher)."""
     # Bestehendes Passwort beibehalten wenn maskiert
-    password = data.password
-    if password == "********":
-        with db_query() as db:
-            existing = db.execute("SELECT password FROM mail_config WHERE id = 1").fetchone()
-            if existing:
-                password = existing["password"]
-            else:
-                raise HTTPException(status_code=400, detail="Passwort muss angegeben werden")
+    with db_query() as db:
+        password = resolve_masked_password(db, "mail_config", "password", data.password)
 
     config = {
         "smtp_server": data.smtp_server,
@@ -188,7 +177,7 @@ async def send_invite_mail(user_id: int, user=Depends(get_admin_user)):
         if not target["email"]:
             raise HTTPException(status_code=400, detail="Benutzer hat keine E-Mail-Adresse")
 
-    recipient_name = f"{target['vorname']} {target['nachname']}".strip() or target["username"]
+    recipient_name = get_display_name(target)
     placeholders = {
         "recipient_name": recipient_name,
         "username": target["username"],

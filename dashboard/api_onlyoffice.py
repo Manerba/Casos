@@ -21,6 +21,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction, upsert_singleton_config
+from dashboard.user_utils import get_display_name
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
 from dashboard.tls_utils import get_tls_verify_config
@@ -372,9 +373,7 @@ async def wopi_check_file_info(file_id: str, access_token: str = Query(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    user_friendly_name = f"{token_data['vorname']} {token_data['nachname']}".strip()
-    if not user_friendly_name:
-        user_friendly_name = token_data["username"]
+    user_friendly_name = get_display_name(token_data)
 
     can_write = token_data["permissions"] == "edit"
 
@@ -752,7 +751,7 @@ async def open_editor(
             "callbackUrl": f"{wopi_base}/api/onlyoffice/callback",
             "user": {
                 "id": str(user["id"]),
-                "name": f"{user.get('vorname', '')} {user.get('nachname', '')}".strip() or user["username"],
+                "name": get_display_name(user),
             },
         },
     }

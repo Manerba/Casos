@@ -10,27 +10,15 @@ let ncConfig = null;
 // ========================================
 
 async function initNextcloudTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = 'none';
-
-    await loadNcConfig();
-    renderNextcloudTab();
+    await initTabGeneric({
+        showFilterBar: false,
+        loadFn: loadNcConfig,
+        renderFn: renderNextcloudTab,
+    });
 }
 
 async function loadNcConfig() {
-    try {
-        const resp = await fetch('/api/admin/nextcloud/config');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        ncConfig = data.config;
-    } catch (e) {
-        ncConfig = null;
-    }
+    ncConfig = await loadConfigFromAPI('/api/admin/nextcloud/config');
 }
 
 // ========================================
@@ -119,37 +107,25 @@ async function saveNcConfig() {
         return;
     }
 
-    try {
-        const resp = await fetch('/api/admin/nextcloud/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ server_url, username, password, base_path }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        showNotification('Nextcloud-Konfiguration gespeichert (Verbindung OK)', 'success');
-        await loadNcConfig();
-        renderNextcloudTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/nextcloud/config',
+        data: { server_url, username, password, base_path },
+        successMessage: 'Nextcloud-Konfiguration gespeichert (Verbindung OK)',
+        onSuccess: async () => {
+            await loadNcConfig();
+            renderNextcloudTab();
+        },
+    });
 }
 
 async function deleteNcConfig() {
-    if (!await msgbox('cancel/yes', 'warning', 'Nextcloud-Konfiguration wirklich loeschen? Alle Verzeichniszuordnungen werden entfernt.')) return;
-
-    try {
-        const resp = await fetch('/api/admin/nextcloud/config', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('Fehler beim Loeschen');
-
-        showNotification('Nextcloud-Konfiguration geloescht', 'success');
-        ncConfig = null;
-        renderNextcloudTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await deleteConfigFromAPI({
+        endpoint: '/api/admin/nextcloud/config',
+        confirmMessage: 'Nextcloud-Konfiguration wirklich loeschen? Alle Verzeichniszuordnungen werden entfernt.',
+        successMessage: 'Nextcloud-Konfiguration geloescht',
+        onSuccess: () => {
+            ncConfig = null;
+            renderNextcloudTab();
+        },
+    });
 }

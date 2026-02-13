@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.config_utils import get_masked_config, resolve_masked_password
 from dashboard.auth import get_admin_user
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
@@ -44,24 +45,8 @@ class GroupSelectRequest(BaseModel):
 @router.get("/config")
 async def get_ldap_config(user=Depends(get_admin_user)):
     """Aktuelle LDAP-Konfiguration laden (bind_password maskiert)."""
-    with db_query() as db:
-        row = db.execute("SELECT * FROM ldap_config WHERE id = 1").fetchone()
-        if not row:
-            return {"config": None}
-        return {
-            "config": {
-                "server": row["server"],
-                "port": row["port"],
-                "use_ssl": row["use_ssl"],
-                "bind_dn": row["bind_dn"],
-                "bind_password": "********",
-                "search_base": row["search_base"],
-                "group_dn": row["group_dn"],
-                "group_name": row["group_name"],
-                "sync_interval_minutes": row["sync_interval_minutes"],
-                "last_sync_at": row["last_sync_at"],
-            }
-        }
+    config = get_masked_config("ldap_config", ["bind_password"])
+    return {"config": config}
 
 
 @router.post("/config")
@@ -76,12 +61,16 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
     if not data.search_base.strip():
         raise HTTPException(status_code=400, detail="Suchpfad ist Pflichtfeld")
 
+    # Passwort ggf. aus DB holen wenn maskiert
+    with db_query() as db:
+        actual_password = resolve_masked_password(db, "ldap_config", "bind_password", data.bind_password)
+
     # Verbindungstest (in Thread-Pool, blockiert sonst den Event-Loop)
     verify_cfg = get_tls_verify_config()
     success, error = await asyncio.to_thread(
         test_connection,
         data.server.strip(), data.port, data.use_ssl,
-        data.bind_dn.strip(), data.bind_password, data.search_base.strip(),
+        data.bind_dn.strip(), actual_password, data.search_base.strip(),
         verify_cfg["verify_ldap"],
     )
 
@@ -93,32 +82,20 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
         existing = db.execute("SELECT id FROM ldap_config WHERE id = 1").fetchone()
 
         if existing:
-            # Pruefen ob Password geaendert wurde
-            if data.bind_password == "********":
-                # Password nicht aendern
-                db.execute(
-                    """UPDATE ldap_config SET server = ?, port = ?, use_ssl = ?,
-                       bind_dn = ?, search_base = ?, sync_interval_minutes = ?
-                       WHERE id = 1""",
-                    (data.server.strip(), data.port, data.use_ssl,
-                     data.bind_dn.strip(), data.search_base.strip(),
-                     data.sync_interval_minutes),
-                )
-            else:
-                db.execute(
-                    """UPDATE ldap_config SET server = ?, port = ?, use_ssl = ?,
-                       bind_dn = ?, bind_password = ?, search_base = ?,
-                       sync_interval_minutes = ? WHERE id = 1""",
-                    (data.server.strip(), data.port, data.use_ssl,
-                     data.bind_dn.strip(), data.bind_password,
-                     data.search_base.strip(), data.sync_interval_minutes),
-                )
+            db.execute(
+                """UPDATE ldap_config SET server = ?, port = ?, use_ssl = ?,
+                   bind_dn = ?, bind_password = ?, search_base = ?,
+                   sync_interval_minutes = ? WHERE id = 1""",
+                (data.server.strip(), data.port, data.use_ssl,
+                 data.bind_dn.strip(), actual_password,
+                 data.search_base.strip(), data.sync_interval_minutes),
+            )
         else:
             db.execute(
                 """INSERT INTO ldap_config (id, server, port, use_ssl, bind_dn, bind_password,
                    search_base, sync_interval_minutes) VALUES (1, ?, ?, ?, ?, ?, ?, ?)""",
                 (data.server.strip(), data.port, data.use_ssl,
-                 data.bind_dn.strip(), data.bind_password,
+                 data.bind_dn.strip(), actual_password,
                  data.search_base.strip(), data.sync_interval_minutes),
             )
 

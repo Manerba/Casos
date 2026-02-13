@@ -11,27 +11,15 @@ let mailTemplates = [];
 // ========================================
 
 async function initMailTab() {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = 'none';
-
-    await Promise.all([loadMailConfig(), loadMailTemplates()]);
-    renderMailTab();
+    await initTabGeneric({
+        showFilterBar: false,
+        loadFn: () => Promise.all([loadMailConfig(), loadMailTemplates()]),
+        renderFn: renderMailTab,
+    });
 }
 
 async function loadMailConfig() {
-    try {
-        const resp = await fetch('/api/admin/mail/config');
-        if (!resp.ok) throw new Error('Fehler beim Laden');
-        const data = await resp.json();
-        mailConfig = data.config;
-    } catch (e) {
-        mailConfig = null;
-    }
+    mailConfig = await loadConfigFromAPI('/api/admin/mail/config');
 }
 
 async function loadMailTemplates() {
@@ -251,39 +239,27 @@ async function saveMailConfig() {
         return;
     }
 
-    try {
-        const resp = await fetch('/api/admin/mail/config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ smtp_server, smtp_port, encryption, auth_enabled, username, password, from_address, from_name }),
-        });
-
-        if (!resp.ok) {
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.detail || 'Fehler beim Speichern');
-        }
-
-        showNotification('Mail-Konfiguration gespeichert (Verbindung OK)', 'success');
-        await loadMailConfig();
-        renderMailTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await saveConfigToAPI({
+        endpoint: '/api/admin/mail/config',
+        data: { smtp_server, smtp_port, encryption, auth_enabled, username, password, from_address, from_name },
+        successMessage: 'Mail-Konfiguration gespeichert (Verbindung OK)',
+        onSuccess: async () => {
+            await loadMailConfig();
+            renderMailTab();
+        },
+    });
 }
 
 async function deleteMailConfig() {
-    if (!await msgbox('cancel/yes', 'warning', 'Mail-Konfiguration wirklich loeschen?')) return;
-
-    try {
-        const resp = await fetch('/api/admin/mail/config', { method: 'DELETE' });
-        if (!resp.ok) throw new Error('Fehler beim Loeschen');
-
-        showNotification('Mail-Konfiguration geloescht', 'success');
-        mailConfig = null;
-        renderMailTab();
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
+    await deleteConfigFromAPI({
+        endpoint: '/api/admin/mail/config',
+        confirmMessage: 'Mail-Konfiguration wirklich loeschen?',
+        successMessage: 'Mail-Konfiguration geloescht',
+        onSuccess: () => {
+            mailConfig = null;
+            renderMailTab();
+        },
+    });
 }
 
 // ========================================

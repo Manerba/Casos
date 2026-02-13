@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.config_utils import get_masked_config, resolve_masked_password
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
 
@@ -85,18 +86,8 @@ def _safe_filename(name: str) -> str:
 @admin_router.get("/config")
 async def get_nextcloud_config(user=Depends(get_admin_user)):
     """Aktuelle Nextcloud-Konfiguration laden (Passwort maskiert)."""
-    with db_query() as db:
-        row = db.execute("SELECT * FROM nextcloud_config WHERE id = 1").fetchone()
-        if not row:
-            return {"config": None}
-        return {
-            "config": {
-                "server_url": row["server_url"],
-                "username": row["username"],
-                "password": "********",
-                "base_path": row["base_path"],
-            }
-        }
+    config = get_masked_config("nextcloud_config", ["password"])
+    return {"config": config}
 
 
 @admin_router.post("/config")
@@ -112,14 +103,8 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
         raise HTTPException(status_code=400, detail="Wurzelverzeichnis ist Pflichtfeld")
 
     # Passwort ggf. aus DB holen wenn nicht geaendert
-    actual_password = data.password
-    if data.password == "********":
-        with db_query() as db:
-            existing = db.execute("SELECT password FROM nextcloud_config WHERE id = 1").fetchone()
-            if existing:
-                actual_password = existing["password"]
-            else:
-                raise HTTPException(status_code=400, detail="Kein gespeichertes Passwort vorhanden")
+    with db_query() as db:
+        actual_password = resolve_masked_password(db, "nextcloud_config", "password", data.password)
 
     # Verbindungstest (in Thread-Pool)
     success, error = await asyncio.to_thread(
@@ -138,19 +123,12 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
         existing = db.execute("SELECT id FROM nextcloud_config WHERE id = 1").fetchone()
 
         if existing:
-            if data.password == "********":
-                db.execute(
-                    """UPDATE nextcloud_config SET server_url = ?, username = ?,
-                       base_path = ? WHERE id = 1""",
-                    (data.server_url.strip(), data.username.strip(), data.base_path.strip()),
-                )
-            else:
-                db.execute(
-                    """UPDATE nextcloud_config SET server_url = ?, username = ?,
-                       password = ?, base_path = ? WHERE id = 1""",
-                    (data.server_url.strip(), data.username.strip(),
-                     data.password, data.base_path.strip()),
-                )
+            db.execute(
+                """UPDATE nextcloud_config SET server_url = ?, username = ?,
+                   password = ?, base_path = ? WHERE id = 1""",
+                (data.server_url.strip(), data.username.strip(),
+                 actual_password, data.base_path.strip()),
+            )
         else:
             db.execute(
                 """INSERT INTO nextcloud_config (id, server_url, username, password, base_path)

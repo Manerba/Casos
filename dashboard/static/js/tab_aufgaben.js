@@ -1492,64 +1492,41 @@ async function addNewArea(btn, subtaskId) {
 // ========================================
 
 function openNewTaskModal() {
-    // Bestehende Modals entfernen
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">Neue Aufgabe</div>
-            <div class="modal-body">
-                <div class="modal-field">
-                    <label>Name *</label>
-                    <input type="text" id="newTaskName" placeholder="Aufgabenname..." autofocus>
-                </div>
-                <div class="modal-field">
-                    <label>Typ</label>
-                    <select id="newTaskType">
-                        <option value="aufgabe">Aufgabe</option>
-                        <option value="projekt">Projekt</option>
-                    </select>
-                </div>
-                <div class="modal-field">
-                    <label>Deadline</label>
-                    <input type="date" id="newTaskDeadline">
-                </div>
-                <div class="modal-field">
-                    <label>Prioritaet (1-100)</label>
-                    <input type="number" id="newTaskPriority" value="50" min="1" max="100">
-                </div>
+    createModal({
+        title: 'Neue Aufgabe',
+        body: `
+            <div class="modal-field">
+                <label>Name *</label>
+                <input type="text" id="newTaskName" placeholder="Aufgabenname..." autofocus>
             </div>
-            <div class="modal-footer">
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-                <button class="action-btn primary" onclick="createNewTask()">Erstellen</button>
+            <div class="modal-field">
+                <label>Typ</label>
+                <select id="newTaskType">
+                    <option value="aufgabe">Aufgabe</option>
+                    <option value="projekt">Projekt</option>
+                </select>
             </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    // ESC schliesst Modal
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
-
-    // Enter im Name-Feld erstellt Aufgabe
-    const nameInput = document.getElementById('newTaskName');
-    if (nameInput) {
-        nameInput.focus();
-        nameInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') createNewTask();
-        });
-    }
+            <div class="modal-field">
+                <label>Deadline</label>
+                <input type="date" id="newTaskDeadline">
+            </div>
+            <div class="modal-field">
+                <label>Prioritaet (1-100)</label>
+                <input type="number" id="newTaskPriority" value="50" min="1" max="100">
+            </div>`,
+        footer: '<button class="action-btn" onclick="closeModal()">Abbrechen</button>' +
+                '<button class="action-btn primary" onclick="createNewTask()">Erstellen</button>',
+        onOpen: () => {
+            // Enter im Name-Feld erstellt Aufgabe
+            const nameInput = document.getElementById('newTaskName');
+            if (nameInput) {
+                nameInput.focus();
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') createNewTask();
+                });
+            }
+        },
+    });
 }
 
 async function createNewTask() {
@@ -1573,8 +1550,7 @@ async function createNewTask() {
         if (!resp.ok) throw new Error('Fehler beim Erstellen');
 
         // Modal schliessen
-        const overlay = document.querySelector('.modal-overlay');
-        if (overlay) overlay.remove();
+        closeModal();
 
         showNotification('Aufgabe erstellt', 'success');
         await aufgabenTable.loadData();
@@ -1589,43 +1565,22 @@ async function createNewTask() {
 // ========================================
 
 async function openTeamDialog(projectId) {
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="modal-content modal-wide">
-            <div class="modal-header">Teammitglieder</div>
-            <div class="modal-body">
-                <div class="team-info-text">Sie sind der Ersteller und haben vollen Zugriff.</div>
-                <div class="team-add-row">
-                    <select id="teamAddUserSelect">
-                        <option value="">-- Benutzer auswaehlen --</option>
-                    </select>
-                    <button class="control-btn primary" onclick="addTeamMember(${projectId})">+ Mitglied</button>
-                </div>
-                <div id="teamMembersContainer">
-                    <div class="table-loading"><div class="spinner"></div></div>
-                </div>
+    createModal({
+        title: 'Teammitglieder',
+        cssClass: 'modal-wide',
+        body: `
+            <div class="team-info-text">Sie sind der Ersteller und haben vollen Zugriff.</div>
+            <div class="team-add-row">
+                <select id="teamAddUserSelect">
+                    <option value="">-- Benutzer auswaehlen --</option>
+                </select>
+                <button class="control-btn primary" onclick="addTeamMember(${projectId})">+ Mitglied</button>
             </div>
-            <div class="modal-footer">
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Schliessen</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
+            <div id="teamMembersContainer">
+                <div class="table-loading"><div class="spinner"></div></div>
+            </div>`,
+        footer: '<button class="action-btn" onclick="closeModal()">Schliessen</button>',
+    });
 
     await loadTeamMembers(projectId);
 }
@@ -2650,41 +2605,24 @@ async function openNcDirDialog(taskId, currentPath) {
         if (!confirmed) return;
     }
 
-    const existing = document.querySelector('.modal-overlay');
-    if (existing) existing.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="modal-content modal-wide">
-            <div class="modal-header">Dateiablage</div>
-            <div class="modal-body">
-                <div class="nc-browse-breadcrumb" id="ncBrowseBc"></div>
-                <div id="ncDirList">
-                    <div class="table-loading"><div class="spinner"></div></div>
-                </div>
-            </div>
-            <div class="modal-footer" id="ncDirFooter">
-                ${currentPath ? `<button class="action-btn danger" onclick="saveNcPath(${taskId}, '', this.closest('.modal-overlay'))">Zuordnung entfernen</button>` : ''}
-                <button class="action-btn" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const escHandler = (e) => {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', escHandler);
-        }
-    };
-    document.addEventListener('keydown', escHandler);
-
-    // Browse starten bei Root
-    ncBrowseDir(taskId, '', currentPath);
+    createModal({
+        title: 'Dateiablage',
+        cssClass: 'modal-wide',
+        body: `
+            <div class="nc-browse-breadcrumb" id="ncBrowseBc"></div>
+            <div id="ncDirList">
+                <div class="table-loading"><div class="spinner"></div></div>
+            </div>`,
+        footer: (currentPath ? `<button class="action-btn danger" onclick="saveNcPath(${taskId}, '')">Zuordnung entfernen</button>` : '') +
+                '<button class="action-btn" onclick="closeModal()">Abbrechen</button>',
+        onOpen: () => {
+            // Footer braucht ID fuer dynamische Buttons
+            const footer = document.querySelector('.modal-overlay .modal-footer');
+            if (footer) footer.id = 'ncDirFooter';
+            // Browse starten bei Root
+            ncBrowseDir(taskId, '', currentPath);
+        },
+    });
 }
 
 async function ncBrowseDir(taskId, browsePath, selectedPath) {
@@ -2716,7 +2654,7 @@ async function ncBrowseDir(taskId, browsePath, selectedPath) {
         const selectBtn = document.createElement('button');
         selectBtn.className = 'action-btn primary nc-select-btn';
         selectBtn.textContent = `"${browsePath.split('/').pop()}" waehlen`;
-        selectBtn.onclick = () => saveNcPath(taskId, browsePath, footer.closest('.modal-overlay'));
+        selectBtn.onclick = () => saveNcPath(taskId, browsePath);
         footer.insertBefore(selectBtn, footer.firstChild);
     } else if (footer) {
         footer.querySelectorAll('.nc-select-btn').forEach(b => b.remove());
@@ -2739,7 +2677,7 @@ async function ncBrowseDir(taskId, browsePath, selectedPath) {
             html += `<div class="nc-dir-item${isSelected ? ' nc-dir-selected' : ''}">
                 <span class="nc-dir-icon" onclick="event.stopPropagation(); ncBrowseDir(${taskId}, '${escapeAttr(d.path)}', '${escapeAttr(selectedPath)}')">&#128194;</span>
                 <span class="nc-dir-name" onclick="event.stopPropagation(); ncBrowseDir(${taskId}, '${escapeAttr(d.path)}', '${escapeAttr(selectedPath)}')">${escapeHtml(d.name)}</span>
-                <button class="nc-dir-select-btn" onclick="event.stopPropagation(); saveNcPath(${taskId}, '${escapeAttr(d.path)}', this.closest('.modal-overlay'))">${isSelected ? '&#10003; Gewaehlt' : 'Waehlen'}</button>
+                <button class="nc-dir-select-btn" onclick="event.stopPropagation(); saveNcPath(${taskId}, '${escapeAttr(d.path)}')">${isSelected ? '&#10003; Gewaehlt' : 'Waehlen'}</button>
             </div>`;
         });
         html += '</div>';
@@ -2749,7 +2687,7 @@ async function ncBrowseDir(taskId, browsePath, selectedPath) {
     }
 }
 
-async function saveNcPath(taskId, value, overlayEl) {
+async function saveNcPath(taskId, value) {
     try {
         const resp = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
@@ -2760,7 +2698,7 @@ async function saveNcPath(taskId, value, overlayEl) {
         showNotification(value ? `Dateiablage "${value}" zugeordnet` : 'Dateiablage entfernt', 'success');
 
         // Modal schliessen
-        if (overlayEl) overlayEl.remove();
+        closeModal();
 
         // Tabelle neu laden damit das Detail mit/ohne File Browser aktualisiert wird
         await aufgabenTable.loadData();
