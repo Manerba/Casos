@@ -496,6 +496,44 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * HTML-Sanitizer: Nur Tags/Attribute aus WYSIWYG-Editor-Allowlist durchlassen.
+ * Unerlaubte Tags werden unwrapped (Textinhalt bleibt), Attribute entfernt.
+ */
+function sanitizeHtml(html) {
+    if (!html) return '';
+    const ALLOWED_TAGS = new Set([
+        'p', 'br', 'div', 'pre', 'h1', 'h2', 'h3',
+        'b', 'strong', 'i', 'em', 'u',
+        'ol', 'ul', 'li',
+        'font',
+    ]);
+    const ALLOWED_ATTRS = {'font': new Set(['size'])};
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    function clean(parent) {
+        for (const node of Array.from(parent.childNodes)) {
+            if (node.nodeType === Node.TEXT_NODE) continue;
+            if (node.nodeType !== Node.ELEMENT_NODE) { node.remove(); continue; }
+            clean(node);
+            const tag = node.tagName.toLowerCase();
+            if (!ALLOWED_TAGS.has(tag)) {
+                while (node.firstChild) parent.insertBefore(node.firstChild, node);
+                node.remove();
+            } else {
+                const allowed = ALLOWED_ATTRS[tag];
+                for (const a of Array.from(node.attributes)) {
+                    if (!allowed || !allowed.has(a.name)) node.removeAttribute(a.name);
+                }
+            }
+        }
+    }
+
+    clean(doc.body);
+    return doc.body.innerHTML;
+}
+
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {

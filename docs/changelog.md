@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+54;Security;Stored XSS behoben: HTML-Sanitizer (Tag-Allowlist) fuer WYSIWYG-Beschreibungen und Notizen - sanitize bei Anzeige, Speichern und Editor-Init (14 Stellen)
 13.02.2026;0.0.1+53;Security;ONLYOFFICE Callback: SSRF unterbunden - JWT-Verifizierung (nur signierte Requests akzeptiert) + URL-Validierung (nur http/https, Cloud-Metadata-IPs blockiert)
 12.02.2026 04:00;0.0.1+52;Feature;Netzplan: Projektknoten (Node 0) als Vorgaenger waehlbar - im Netzplan per Linking und in der Teilaufgaben-Liste per Dropdown (nur wenn keine Vorgaenger vorhanden)
 12.02.2026 03:00;0.0.1+51;Bugfix;Inline-Editing: Teilaufgaben-Name und andere Felder werden nach Silent-Save sofort in der Tabellenzeile aktualisiert (kein Neuladen noetig)

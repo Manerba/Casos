@@ -493,7 +493,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     if (perm.isAssignee && !perm.isCreator) {
         html += `<div class="notes-section">
             <h5>Beschreibung von ${escapeHtml(row.created_by_name || 'Ersteller')}</h5>
-            <div class="description-readonly">${row.description || '<em>Keine Beschreibung</em>'}</div>
+            <div class="description-readonly">${sanitizeHtml(row.description) || '<em>Keine Beschreibung</em>'}</div>
         </div>`;
         html += `<div class="notes-section">
             <h5>Meine Notizen</h5>
@@ -502,7 +502,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     } else if (perm.isCreator && perm.isAssigned) {
         html += `<div class="notes-section">
             <h5>Beschreibung</h5>
-            <div class="description-readonly">${row.description || '<em>Keine Beschreibung</em>'}</div>
+            <div class="description-readonly">${sanitizeHtml(row.description) || '<em>Keine Beschreibung</em>'}</div>
         </div>`;
         html += `<div class="notes-section" id="assigneeNotes_${row.id}">
             <h5>Notizen von ${escapeHtml(row.assigned_to_name || 'Zugewiesenem')}</h5>
@@ -569,7 +569,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
             const contentEl = document.getElementById(`assigneeNotesContent_${row.id}`);
             if (contentEl) {
                 contentEl.innerHTML = assigneeNote && assigneeNote.content
-                    ? assigneeNote.content
+                    ? sanitizeHtml(assigneeNote.content)
                     : '<em>Keine Notizen vorhanden</em>';
             }
         } catch (e) {
@@ -686,7 +686,7 @@ async function saveTask(taskId, silent = false) {
     if (perm.isOwnTask || perm.isLegacy) {
         const editorContainer = document.getElementById(`wysiwygEditor_${taskId}`);
         const editorContent = editorContainer?.querySelector('.wysiwyg-content');
-        if (editorContent) body.description = editorContent.innerHTML;
+        if (editorContent) body.description = sanitizeHtml(editorContent.innerHTML);
     }
 
     try {
@@ -706,7 +706,7 @@ async function saveTask(taskId, silent = false) {
                 await fetch(`/api/tasks/${taskId}/notes`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: notesContent.innerHTML }),
+                    body: JSON.stringify({ content: sanitizeHtml(notesContent.innerHTML) }),
                 });
             }
         }
@@ -762,7 +762,7 @@ async function onSubtaskViewExpanded(row, detailElement) {
     // Beschreibung readonly
     html += `<div class="notes-section">
         <h5>Beschreibung von ${escapeHtml(row.created_by_name || 'Ersteller')}</h5>
-        <div class="description-readonly">${row.description || '<em>Keine Beschreibung</em>'}</div>
+        <div class="description-readonly">${sanitizeHtml(row.description) || '<em>Keine Beschreibung</em>'}</div>
     </div>`;
 
     // Eigene Notizen (WYSIWYG)
@@ -825,7 +825,7 @@ async function saveSubtaskView(row, silent = false) {
                 await fetch(`/api/tasks/${projectId}/subtasks/${stId}/notes`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: notesContent.innerHTML }),
+                    body: JSON.stringify({ content: sanitizeHtml(notesContent.innerHTML) }),
                 });
             }
         }
@@ -1039,7 +1039,7 @@ function renderSubTasks(taskId, subtasks) {
 
         // WYSIWYG oder Readonly-Beschreibung
         if (isSubCreator && isSubAssigned) {
-            html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
+            html += `<div class="description-readonly">${sanitizeHtml(st.description) || '<em>Keine Beschreibung</em>'}</div>`;
             html += `<div class="notes-section" id="stAssigneeNotes_${st.id}">
                 <h5>Notizen von ${escapeHtml(st.assigned_to_name || 'Zugewiesenem')}</h5>
                 <div class="description-readonly" id="stAssigneeNotesContent_${st.id}"><em>Laden...</em></div>
@@ -1047,7 +1047,7 @@ function renderSubTasks(taskId, subtasks) {
         } else if (canEdit) {
             html += `<div id="stWysiwyg_${st.id}"></div>`;
         } else {
-            html += `<div class="description-readonly">${st.description || '<em>Keine Beschreibung</em>'}</div>`;
+            html += `<div class="description-readonly">${sanitizeHtml(st.description) || '<em>Keine Beschreibung</em>'}</div>`;
         }
 
         html += `</div>
@@ -1112,7 +1112,7 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
                 const st = subtasks.find(s => s.id === subtaskId);
                 const assigneeNote = (notesData.items || []).find(n => n.user_id === st?.assigned_to);
                 notesContent.innerHTML = assigneeNote && assigneeNote.content
-                    ? assigneeNote.content
+                    ? sanitizeHtml(assigneeNote.content)
                     : '<em>Keine Notizen vorhanden</em>';
             } catch (e) {
                 notesContent.innerHTML = '<em>Fehler beim Laden</em>';
@@ -1164,7 +1164,7 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
     // WYSIWYG-Content nur senden wenn Editor existiert (nicht bei readonly-Beschreibung)
     const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
     const editorContent = editorContainer?.querySelector('.wysiwyg-content');
-    if (editorContent) body.description = editorContent.innerHTML;
+    if (editorContent) body.description = sanitizeHtml(editorContent.innerHTML);
 
     // Aktuelle predecessor_ids sammeln
     const chipsContainer = document.getElementById(`predChips_${subtaskId}`);
