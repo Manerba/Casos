@@ -364,42 +364,59 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
         if not existing:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 
+        # Berechtigung pruefen
+        is_creator = existing["created_by"] == user["id"]
+        is_legacy = existing["created_by"] is None
+        is_assignee = existing["assigned_to"] == user["id"]
+        has_team_edit = False
+        if not is_creator and not is_legacy:
+            membership = db.execute(
+                "SELECT can_edit FROM project_members WHERE project_id = ? AND user_id = ?",
+                (task_id, user["id"]),
+            ).fetchone()
+            has_team_edit = bool(membership and membership["can_edit"])
+
+        can_full_edit = is_creator or is_legacy or has_team_edit
+        if not can_full_edit and not is_assignee:
+            raise HTTPException(status_code=403, detail="Keine Berechtigung zum Bearbeiten")
+
         updates = []
         values = []
-        if task.name is not None:
-            updates.append("name = ?")
-            values.append(task.name)
-        if task.deadline is not None:
-            updates.append("deadline = ?")
-            values.append(_parse_date_input(task.deadline))
-        if task.priority is not None:
-            updates.append("priority = ?")
-            values.append(task.priority)
-        if task.task_type is not None:
-            updates.append("task_type = ?")
-            values.append(task.task_type)
+
+        # Zugewiesene duerfen nur Status aendern
+        if can_full_edit:
+            if task.name is not None:
+                updates.append("name = ?")
+                values.append(task.name)
+            if task.deadline is not None:
+                updates.append("deadline = ?")
+                values.append(_parse_date_input(task.deadline))
+            if task.priority is not None:
+                updates.append("priority = ?")
+                values.append(task.priority)
+            if task.task_type is not None:
+                updates.append("task_type = ?")
+                values.append(task.task_type)
+            if task.description is not None:
+                updates.append("description = ?")
+                values.append(task.description)
+            if task.assigned_to is not None:
+                if task.assigned_to == 0:
+                    updates.append("assigned_to = NULL")
+                else:
+                    updates.append("assigned_to = ?")
+                    values.append(task.assigned_to)
+            if task.nextcloud_path is not None:
+                if task.nextcloud_path == "":
+                    updates.append("nextcloud_path = NULL")
+                else:
+                    updates.append("nextcloud_path = ?")
+                    values.append(task.nextcloud_path)
+
+        # Status darf auch der Zugewiesene aendern
         if task.status is not None:
             updates.append("status = ?")
             values.append(task.status)
-        if task.description is not None:
-            updates.append("description = ?")
-            values.append(task.description)
-
-        # assigned_to: 0 = unassign, >0 = assign
-        if task.assigned_to is not None:
-            if task.assigned_to == 0:
-                updates.append("assigned_to = NULL")
-            else:
-                updates.append("assigned_to = ?")
-                values.append(task.assigned_to)
-
-        # nextcloud_path: leerer String = entfernen, sonst setzen
-        if task.nextcloud_path is not None:
-            if task.nextcloud_path == "":
-                updates.append("nextcloud_path = NULL")
-            else:
-                updates.append("nextcloud_path = ?")
-                values.append(task.nextcloud_path)
 
         if updates:
             values.append(task_id)
@@ -434,13 +451,19 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
 
 
 @router.delete("/api/tasks/{task_id}")
-async def delete_task(task_id: int):
+async def delete_task(task_id: int, user=Depends(get_current_user)):
     """Aufgabe loeschen (inkl. SubTasks durch CASCADE)."""
     db = get_db()
     try:
-        existing = db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        existing = db.execute("SELECT id, created_by FROM tasks WHERE id = ?", (task_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+
+        # Nur Ersteller, Legacy oder Admin duerfen loeschen
+        is_creator = existing["created_by"] == user["id"]
+        is_legacy = existing["created_by"] is None
+        if not is_creator and not is_legacy and not user.get("is_admin"):
+            raise HTTPException(status_code=403, detail="Keine Berechtigung zum Loeschen")
 
         db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
         db.commit()
