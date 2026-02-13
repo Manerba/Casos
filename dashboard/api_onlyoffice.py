@@ -13,7 +13,7 @@ import os
 import secrets
 import time
 from datetime import datetime, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Depends, Request, Query, Body
@@ -172,6 +172,58 @@ def _sign_jwt(payload: dict, secret: str) -> str:
     signature_b64 = _b64url(signature)
 
     return f"{signing_input}.{signature_b64}"
+
+
+def _verify_jwt(token: str, secret: str) -> dict | None:
+    """JWT-Signatur verifizieren, Payload zurueckgeben. None bei Fehler."""
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return None
+
+        header_b64, payload_b64, sig_b64 = parts
+        signing_input = f"{header_b64}.{payload_b64}"
+
+        expected_sig = hmac.new(
+            secret.encode(), signing_input.encode(), hashlib.sha256
+        ).digest()
+
+        # Base64url-Padding wiederherstellen
+        actual_sig = base64.urlsafe_b64decode(sig_b64 + "=" * (-len(sig_b64) % 4))
+
+        if not hmac.compare_digest(expected_sig, actual_sig):
+            return None
+
+        payload_json = base64.urlsafe_b64decode(payload_b64 + "=" * (-len(payload_b64) % 4))
+        return json.loads(payload_json)
+    except Exception:
+        return None
+
+
+def _validate_callback_url(url: str) -> bool:
+    """Download-URL gegen SSRF pruefen. Nur http(s), keine Metadata-Endpoints."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+
+    if parsed.scheme not in ("http", "https"):
+        return False
+
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        return False
+
+    # Cloud-Metadata-Endpoints blocken
+    blocked_hosts = {"169.254.169.254", "metadata.google.internal"}
+    if hostname in blocked_hosts:
+        return False
+
+    # Link-local IPv6 Metadata blocken
+    if hostname.startswith("fd00:") or hostname.startswith("fe80:"):
+        return False
+
+    return True
 
 
 def _check_user_can_edit(task_id: int, user: dict) -> bool:
@@ -558,18 +610,53 @@ async def onlyoffice_callback(request: Request):
     Callback von ONLYOFFICE nach Bearbeitungsende.
     Status 2 = Dokument bereit zum Speichern
     Status 6 = Dokument wird gespeichert (Zwischenspeicherung)
+
+    Sicherheit:
+    - JWT-Verifizierung: nur signierte Requests von ONLYOFFICE akzeptieren
+    - URL-Validierung: nur http(s), keine Metadata-Endpoints (SSRF-Schutz)
     """
+    # 1) Config + JWT-Secret laden
+    config = _get_onlyoffice_config()
+    if not config or not config.get("jwt_secret"):
+        logger.error("ONLYOFFICE Callback: Keine Konfiguration/JWT-Secret vorhanden")
+        return {"error": 1}
+
+    secret = config["jwt_secret"]
+
     try:
         body = await request.json()
     except Exception:
         return {"error": 1}
 
-    status = body.get("status", 0)
-    download_url = body.get("url", "")
+    # 2) JWT-Verifizierung: Token aus Body oder Authorization-Header
+    payload = None
+
+    # ONLYOFFICE sendet JWT im Body als {"token": "<jwt>"}
+    if "token" in body:
+        payload = _verify_jwt(body["token"], secret)
+
+    # Fallback: Authorization-Header
+    if payload is None:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            payload = _verify_jwt(auth_header[7:], secret)
+
+    if payload is None:
+        logger.warning("ONLYOFFICE Callback: JWT-Verifizierung fehlgeschlagen")
+        return {"error": 1}
+
+    # Ab hier nur noch verifiziertes Payload verwenden
+    status = payload.get("status", 0)
+    download_url = payload.get("url", "")
 
     # Status 2 oder 6: Dokument muss gespeichert werden
     if status in (2, 6) and download_url:
-        file_key = body.get("key", "")
+        # 3) URL-Validierung (Defense in Depth)
+        if not _validate_callback_url(download_url):
+            logger.warning(f"ONLYOFFICE Callback: Unerlaubte Download-URL blockiert: {download_url}")
+            return {"error": 1}
+
+        file_key = payload.get("key", "")
         # file_key enthaelt die file_id
         if not file_key:
             return {"error": 0}
