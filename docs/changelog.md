@@ -1,27 +1,27 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
-13.02.2026;0.0.1+72;Bugfix;datetime.utcnow() durch datetime.now(timezone.utc) ersetzt - 8 Stellen in auth.py, api_onlyoffice.py, ldap_sync.py, ldap_sync_cron.py (deprecated seit Python 3.12)
-13.02.2026;0.0.1+71;Security;Security-Header: CSP (script/style 'self' 'unsafe-inline'), X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy. Editor-Seite mit lockerer CSP fuer OnlyOffice
-13.02.2026;0.0.1+70;Security;DOM-Selector-Injection via rowId behoben: escapeAttr() fuer HTML-Attribute, CSS.escape() fuer querySelector in ExpandableTable
-13.02.2026;0.0.1+69;Refactoring;escapeAttr() zentralisiert in app_core.js - 4 Duplikate aus tab_aufgaben.js, tab_mail.js, tab_ldap.js, tab_benutzer.js entfernt
-13.02.2026;0.0.1+68;Security;CSRF-Protection: Middleware prueft X-Requested-With Header bei mutierenden API-Requests. Globaler fetch-Wrapper setzt Header automatisch. WOPI-Endpunkte ausgenommen
-13.02.2026;0.0.1+67;Feature;Konfigurierbare Server-Adresse: Admin-Tab "Allgemein" mit Server-Adresse-Feld, Protokoll aus TLS-Config abgeleitet, {app_url}-Platzhalter in allen Mail-Templates, hardcodierte IP in Einladungsmail ersetzt
-13.02.2026;0.0.1+67;Aenderung;DB-Schema: app_config Tabelle. Neue Dateien: api_app.py (Config-API), tab_allgemein.js (Admin-Tab). Default-Templates mit {app_url} am Ende
-13.02.2026;0.0.1+66;Security;Notes-Endpunkte: Fehlende Authentifizierung bei GET task_notes und subtask_notes ergaenzt (Depends get_current_user)
-13.02.2026;0.0.1+65;Security;Rate-Limiting am Login (Fritz!Box-Style): Nach 3 Fehlversuchen 10s Sperre, +5s pro weiterem Fehlversuch. Frontend zeigt Countdown mit gesperrten Eingabefeldern
-13.02.2026;0.0.1+64;Infra;Komplettes Logging auf /var/log/tareas.log umgestellt: Uvicorn-Access/Error + alle App-Module, log_config=None verhindert Uvicorn-Override
-13.02.2026;0.0.1+63;Security;User-Enumeration beim Login behoben: Einheitliche Fehlermeldung, Details ins Log (/var/log/tareas.log). Globales Logging eingerichtet (Syslog-Format, RotatingFileHandler)
-13.02.2026;0.0.1+62;Bugfix;Netzplan-Positionen: Nicht-Ersteller mit Edit-Rechten koennen jetzt speichern (falsche Tabelle task_members -> project_members)
-13.02.2026;0.0.1+61;Security;SQL Injection in onlyoffice-setup.sh behoben: Single-Quote-Escaping fuer sqlite3-Variablen
-13.02.2026;0.0.1+60;Security;ONLYOFFICE JWT Secret nicht mehr auf Admin-Seite sichtbar: API liefert kein Secret mehr aus, Formular leer bei Aenderung, Status zeigt nur ob konfiguriert
-13.02.2026;0.0.1+59;Security;XSS in msgbox() behoben: message-Parameter wird jetzt mit escapeHtml() sanitisiert
-13.02.2026;0.0.1+58;Security;Path Traversal bei Nextcloud-Dateioperationen behoben: Zentrale Pfadvalidierung (posixpath.normpath + doppelte URL-Dekodierung) fuer alle 7 Endpoints
-13.02.2026;0.0.1+57;Security;TLS-Zertifikatsvalidierung fuer Integrationen: Pro Integration (Nextcloud, ONLYOFFICE, SMTP, LDAP) konfigurierbar via Admin-UI, prueft gegen System-Trust-Store
-13.02.2026;0.0.1+56;Security;TLS-Support als optionales Feature: Admin-UI Tab, Zertifikats-Validierung, Uvicorn SSL-Startup, Cookie Secure-Flag bei aktivem TLS
-13.02.2026;0.0.1+55;Security;Task-API Autorisierung: Update nur fuer Ersteller/Team/Zugewiesene (Zugewiesene nur Status), Delete nur fuer Ersteller/Admin
-13.02.2026;0.0.1+54;Security;Stored XSS behoben: HTML-Sanitizer (Tag-Allowlist) fuer WYSIWYG-Beschreibungen und Notizen - sanitize bei Anzeige, Speichern und Editor-Init (14 Stellen)
-13.02.2026;0.0.1+53;Security;ONLYOFFICE Callback: SSRF unterbunden - JWT-Verifizierung (nur signierte Requests akzeptiert) + URL-Validierung (nur http/https, Cloud-Metadata-IPs blockiert)
+13.02.2026 23:39;0.0.1+72;Bugfix;datetime.utcnow() durch datetime.now(timezone.utc) ersetzt - 8 Stellen in auth.py, api_onlyoffice.py, ldap_sync.py, ldap_sync_cron.py (deprecated seit Python 3.12)
+13.02.2026 23:39;0.0.1+71;Security;Security-Header: CSP (script/style 'self' 'unsafe-inline'), X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy. Editor-Seite mit lockerer CSP fuer OnlyOffice
+13.02.2026 23:31;0.0.1+70;Security;DOM-Selector-Injection via rowId behoben: escapeAttr() fuer HTML-Attribute, CSS.escape() fuer querySelector in ExpandableTable
+13.02.2026 23:29;0.0.1+69;Refactoring;escapeAttr() zentralisiert in app_core.js - 4 Duplikate aus tab_aufgaben.js, tab_mail.js, tab_ldap.js, tab_benutzer.js entfernt
+13.02.2026 23:26;0.0.1+68;Security;CSRF-Protection: Middleware prueft X-Requested-With Header bei mutierenden API-Requests. Globaler fetch-Wrapper setzt Header automatisch. WOPI-Endpunkte ausgenommen
+13.02.2026 23:19;0.0.1+67;Feature;Konfigurierbare Server-Adresse: Admin-Tab "Allgemein" mit Server-Adresse-Feld, Protokoll aus TLS-Config abgeleitet, {app_url}-Platzhalter in allen Mail-Templates, hardcodierte IP in Einladungsmail ersetzt
+13.02.2026 23:19;0.0.1+67;Aenderung;DB-Schema: app_config Tabelle. Neue Dateien: api_app.py (Config-API), tab_allgemein.js (Admin-Tab). Default-Templates mit {app_url} am Ende
+13.02.2026 22:53;0.0.1+66;Security;Notes-Endpunkte: Fehlende Authentifizierung bei GET task_notes und subtask_notes ergaenzt (Depends get_current_user)
+13.02.2026 22:49;0.0.1+65;Security;Rate-Limiting am Login (Fritz!Box-Style): Nach 3 Fehlversuchen 10s Sperre, +5s pro weiterem Fehlversuch. Frontend zeigt Countdown mit gesperrten Eingabefeldern
+13.02.2026 22:44;0.0.1+64;Infra;Komplettes Logging auf /var/log/tareas.log umgestellt: Uvicorn-Access/Error + alle App-Module, log_config=None verhindert Uvicorn-Override
+13.02.2026 22:37;0.0.1+63;Security;User-Enumeration beim Login behoben: Einheitliche Fehlermeldung, Details ins Log (/var/log/tareas.log). Globales Logging eingerichtet (Syslog-Format, RotatingFileHandler)
+13.02.2026 18:43;0.0.1+62;Bugfix;Netzplan-Positionen: Nicht-Ersteller mit Edit-Rechten koennen jetzt speichern (falsche Tabelle task_members -> project_members)
+13.02.2026 15:49;0.0.1+61;Security;SQL Injection in onlyoffice-setup.sh behoben: Single-Quote-Escaping fuer sqlite3-Variablen
+13.02.2026 14:04;0.0.1+60;Security;ONLYOFFICE JWT Secret nicht mehr auf Admin-Seite sichtbar: API liefert kein Secret mehr aus, Formular leer bei Aenderung, Status zeigt nur ob konfiguriert
+13.02.2026 13:58;0.0.1+59;Security;XSS in msgbox() behoben: message-Parameter wird jetzt mit escapeHtml() sanitisiert
+13.02.2026 13:56;0.0.1+58;Security;Path Traversal bei Nextcloud-Dateioperationen behoben: Zentrale Pfadvalidierung (posixpath.normpath + doppelte URL-Dekodierung) fuer alle 7 Endpoints
+13.02.2026 13:48;0.0.1+57;Security;TLS-Zertifikatsvalidierung fuer Integrationen: Pro Integration (Nextcloud, ONLYOFFICE, SMTP, LDAP) konfigurierbar via Admin-UI, prueft gegen System-Trust-Store
+13.02.2026 13:26;0.0.1+56;Security;TLS-Support als optionales Feature: Admin-UI Tab, Zertifikats-Validierung, Uvicorn SSL-Startup, Cookie Secure-Flag bei aktivem TLS
+13.02.2026 13:05;0.0.1+55;Security;Task-API Autorisierung: Update nur fuer Ersteller/Team/Zugewiesene (Zugewiesene nur Status), Delete nur fuer Ersteller/Admin
+13.02.2026 12:57;0.0.1+54;Security;Stored XSS behoben: HTML-Sanitizer (Tag-Allowlist) fuer WYSIWYG-Beschreibungen und Notizen - sanitize bei Anzeige, Speichern und Editor-Init (14 Stellen)
+13.02.2026 10:06;0.0.1+53;Security;ONLYOFFICE Callback: SSRF unterbunden - JWT-Verifizierung (nur signierte Requests akzeptiert) + URL-Validierung (nur http/https, Cloud-Metadata-IPs blockiert)
 12.02.2026 04:00;0.0.1+52;Feature;Netzplan: Projektknoten (Node 0) als Vorgaenger waehlbar - im Netzplan per Linking und in der Teilaufgaben-Liste per Dropdown (nur wenn keine Vorgaenger vorhanden)
 12.02.2026 03:00;0.0.1+51;Bugfix;Inline-Editing: Teilaufgaben-Name und andere Felder werden nach Silent-Save sofort in der Tabellenzeile aktualisiert (kein Neuladen noetig)
 12.02.2026 02:15;0.0.1+50;Bugfix;Mail: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte Zertifikate
