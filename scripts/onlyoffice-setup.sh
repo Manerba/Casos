@@ -24,7 +24,10 @@ info()  { echo "[ONLYOFFICE] $1"; }
 save_config_to_db() {
     local server_url="http://${SERVER_IP}:${PORT}"
     if [ -f "$DB_PATH" ]; then
-        sqlite3 "$DB_PATH" "INSERT OR REPLACE INTO onlyoffice_config (id, server_url, jwt_secret) VALUES (1, '${server_url}', '${JWT_SECRET}');"
+        # SQL-Injection verhindern: Single-Quotes escapen (' -> '')
+        local safe_url="${server_url//\'/\'\'}"
+        local safe_secret="${JWT_SECRET//\'/\'\'}"
+        sqlite3 "$DB_PATH" "INSERT OR REPLACE INTO onlyoffice_config (id, server_url, jwt_secret) VALUES (1, '${safe_url}', '${safe_secret}');"
         info "Config in DB gespeichert: ${server_url}"
     fi
 }
