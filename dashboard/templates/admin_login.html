@@ -180,7 +180,7 @@
             try {
                 const resp = await fetch('/api/auth/login', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify({ username, password }),
                 });
 
@@ -194,7 +194,7 @@
                 // Pruefen ob Admin
                 if (!result.user || !result.user.is_admin) {
                     // Nicht-Admin: wieder ausloggen
-                    await fetch('/api/auth/logout', { method: 'POST' });
+                    await fetch('/api/auth/logout', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                     throw new Error('Kein Admin-Zugriff. Nur Administratoren koennen sich hier anmelden.');
                 }
 

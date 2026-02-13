@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.02.2026;0.0.1+68;Security;CSRF-Protection: Middleware prueft X-Requested-With Header bei mutierenden API-Requests. Globaler fetch-Wrapper setzt Header automatisch. WOPI-Endpunkte ausgenommen
 13.02.2026;0.0.1+67;Feature;Konfigurierbare Server-Adresse: Admin-Tab "Allgemein" mit Server-Adresse-Feld, Protokoll aus TLS-Config abgeleitet, {app_url}-Platzhalter in allen Mail-Templates, hardcodierte IP in Einladungsmail ersetzt
 13.02.2026;0.0.1+67;Aenderung;DB-Schema: app_config Tabelle. Neue Dateien: api_app.py (Config-API), tab_allgemein.js (Admin-Tab). Default-Templates mit {app_url} am Ende
 13.02.2026;0.0.1+66;Security;Notes-Endpunkte: Fehlende Authentifizierung bei GET task_notes und subtask_notes ergaenzt (Depends get_current_user)

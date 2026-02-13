@@ -42,7 +42,7 @@ for _uv_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
 
 from fastapi import FastAPI, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSONResponse
 import uvicorn
 
 from dashboard.database import init_db
@@ -92,6 +92,23 @@ templates_dir = Path(__file__).parent / "templates"
 project_root = Path(__file__).parent.parent
 
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.middleware("http")
+async def csrf_protection(request: Request, call_next):
+    """CSRF-Schutz: Mutierende API-Requests muessen X-Requested-With Header senden."""
+    if (
+        request.method in ("POST", "PUT", "DELETE", "PATCH")
+        and request.url.path.startswith("/api/")
+        and not request.url.path.startswith("/api/wopi/")
+        and not request.url.path.startswith("/api/onlyoffice/callback")
+    ):
+        if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "CSRF-Validierung fehlgeschlagen"},
+            )
+    return await call_next(request)
 
 
 @app.middleware("http")

@@ -8,9 +8,13 @@
 // ========================================
 
 const _origFetch = window.fetch;
-window.fetch = async function(...args) {
-    const resp = await _origFetch.apply(this, args);
-    if (resp.status === 401 && String(args[0]).includes('/api/')) {
+window.fetch = async function(url, options = {}) {
+    // CSRF-Header fuer alle mutierenden API-Requests
+    if (String(url).includes('/api/') && options.method && options.method !== 'GET') {
+        options.headers = { 'X-Requested-With': 'XMLHttpRequest', ...options.headers };
+    }
+    const resp = await _origFetch.call(this, url, options);
+    if (resp.status === 401 && String(url).includes('/api/')) {
         window.location.href = '/login';
     }
     return resp;
