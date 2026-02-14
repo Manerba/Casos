@@ -1838,20 +1838,75 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName) 
         levelGroups[lvl].push(st);
     });
 
+    // Successor-Map aufbauen: nodeId -> [IDs der abhaengigen Knoten]
+    const successorMap = {};
+    subtasks.forEach(st => {
+        (st.predecessor_ids || []).forEach(pid => {
+            if (!successorMap[pid]) successorMap[pid] = [];
+            successorMap[pid].push(st.id);
+        });
+    });
+
+    // Barycenter-Heuristik (Sugiyama): Knoten innerhalb jedes Levels
+    // nach dem Durchschnitt der Positionen ihrer Nachbarn sortieren
+    const levels = Object.keys(levelGroups).map(Number).sort((a, b) => a - b);
+    const orderIndex = {}; // nodeId -> index within its level
+
+    // Initiale Reihenfolge setzen
+    levels.forEach(lvl => {
+        levelGroups[lvl].forEach((st, idx) => { orderIndex[st.id] = idx; });
+    });
+
+    // 4 Sweeps (forward + backward) zur Kreuzungsminimierung
+    for (let sweep = 0; sweep < 4; sweep++) {
+        // Forward sweep: Level 0 -> max
+        for (let li = 1; li < levels.length; li++) {
+            const lvl = levels[li];
+            levelGroups[lvl].forEach(st => {
+                const preds = (st.predecessor_ids || []).filter(pid => subtasks.some(s => s.id === pid));
+                if (preds.length > 0) {
+                    const sum = preds.reduce((acc, pid) => acc + (orderIndex[pid] || 0), 0);
+                    orderIndex[st.id] = sum / preds.length;
+                }
+            });
+            levelGroups[lvl].sort((a, b) => (orderIndex[a.id] || 0) - (orderIndex[b.id] || 0));
+            levelGroups[lvl].forEach((st, idx) => { orderIndex[st.id] = idx; });
+        }
+
+        // Backward sweep: max -> Level 0
+        for (let li = levels.length - 2; li >= 0; li--) {
+            const lvl = levels[li];
+            levelGroups[lvl].forEach(st => {
+                const succs = (successorMap[st.id] || []).filter(sid => subtasks.some(s => s.id === sid));
+                if (succs.length > 0) {
+                    const sum = succs.reduce((acc, sid) => acc + (orderIndex[sid] || 0), 0);
+                    orderIndex[st.id] = sum / succs.length;
+                }
+            });
+            levelGroups[lvl].sort((a, b) => (orderIndex[a.id] || 0) - (orderIndex[b.id] || 0));
+            levelGroups[lvl].forEach((st, idx) => { orderIndex[st.id] = idx; });
+        }
+    }
+
+    // Positionen aus optimierter Reihenfolge berechnen
     const positionMap = {};
-    Object.keys(levelGroups).forEach(lvl => {
+    levels.forEach(lvl => {
         const group = levelGroups[lvl];
         const totalHeight = (group.length - 1) * nodeSpacing;
         group.forEach((st, idx) => {
             positionMap[st.id] = {
-                x: parseInt(lvl) * levelSeparation,
+                x: lvl * levelSeparation,
                 y: -totalHeight / 2 + idx * nodeSpacing,
             };
         });
     });
 
-    // Projektknoten-Position: eine Ebene links von Level 0
-    positionMap[0] = { x: -levelSeparation, y: 0 };
+    // Projektknoten-Position: eine Ebene links von Level 0, Y-zentriert auf Nachfolger
+    const projSuccs = (successorMap[0] || []).filter(sid => positionMap[sid]);
+    const projY = projSuccs.length > 0
+        ? projSuccs.reduce((sum, sid) => sum + positionMap[sid].y, 0) / projSuccs.length
+        : 0;
+    positionMap[0] = { x: -levelSeparation, y: projY };
 
     // Gespeicherte Positionen ueberschreiben (falls vorhanden)
     if (savedPositions) {

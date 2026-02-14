@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026 17:45;0.0.1+90;Feature;Netzplan: Barycenter-Heuristik (Sugiyama) fuer Kreuzungsminimierung bei Auto-Anordnung. 4 Sweep-Iterationen (forward+backward), Projektknoten Y-zentriert auf Nachfolger
 14.02.2026 13:36;0.0.1+89;Feature;i18n: 4 neue Sprachen hinzugefuegt - Franzoesisch (fr), Rumaenisch (ro), Ukrainisch (uk), Russisch (ru). Je 407 Keys uebersetzt, Sprachauswahl in i18n.js erweitert (7 Sprachen)
 14.02.2026 13:24;0.0.1+88;fix;Changelog: Uhrzeiten anhand gitea nachgetragen.
 14.02.2026 13:24;0.0.1+87;Bugfix;i18n: Fehlende Uebersetzung der Spaltenuebrschriften in der Aufgaben-Tabelle (Name, Typ, Status, Prioritaet, Von, Zugewiesen an, Erstellt, Deadline). i18n_key-Feld in Column-Klasse, t()-Aufruf in renderHeader(), 8 neue tasks.col.*-Keys in de/en/es.json
