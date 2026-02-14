@@ -1,11 +1,14 @@
 #!/bin/bash
 #
 # publish.sh - Tareas .deb-Paket bauen und auf Repo-Server veroeffentlichen
+#              + GitHub-Sync fuer Open-Source-Veroeffentlichung
 #
 # Verwendung:
-#   ./publish.sh          Paket bauen und veroeffentlichen
-#   ./publish.sh --setup  Repo-Server erstmalig einrichten
-#   ./publish.sh --build  Nur lokal bauen, nicht hochladen
+#   ./publish.sh              Paket bauen und veroeffentlichen
+#   ./publish.sh --setup      Repo-Server erstmalig einrichten
+#   ./publish.sh --build      Nur lokal bauen, nicht hochladen
+#   ./publish.sh --github-init  GitHub-Repo erstellen + Initial-Commit
+#   ./publish.sh --github       Inkrementeller Sync zu GitHub
 #
 
 set -e
@@ -18,6 +21,8 @@ REPO_DIR="$REPO_BASE/repo"
 REPO_URL="http://$REPO_SERVER/tareas/repo"
 GPG_KEY="C818D9020A2F43CEBCE2E7E0BA3D049F6600D868"
 BUILD_DIR="/tmp/tareas-build"
+GITHUB_REPO="Manerba/tareas"
+GITHUB_DIR="/tmp/tareas-github"
 
 # Farben
 RED='\033[0;31m'
@@ -218,6 +223,130 @@ REMOTE_INDEX
 }
 
 # --------------------------------------------------------------------------
+# Bereinigte Kopie erstellen (fuer .deb und GitHub)
+# --------------------------------------------------------------------------
+prepare_clean_copy() {
+    local TARGET_DIR="$1"
+
+    info "Erstelle bereinigte Kopie in $TARGET_DIR..."
+
+    rm -rf "$TARGET_DIR"
+    mkdir -p "$TARGET_DIR"
+
+    # Projektdateien kopieren (ohne Dev-Artefakte)
+    rsync -a \
+        --exclude='.git' \
+        --exclude='venv' \
+        --exclude='__pycache__' \
+        --exclude='data/' \
+        --exclude='.claude/' \
+        --exclude='build/' \
+        --exclude='*.pyc' \
+        --exclude='.env' \
+        "$SCRIPT_DIR/" "$TARGET_DIR/"
+
+    # Production-Service-Dateien ueber Dev-Versionen kopieren
+    if [ -d "$SCRIPT_DIR/packaging/services/" ]; then
+        cp "$SCRIPT_DIR/packaging/services/"* "$TARGET_DIR/scripts/"
+    fi
+
+    # Interne Dateien entfernen
+    rm -f  "$TARGET_DIR/publish.sh"
+    rm -f  "$TARGET_DIR/git-commit.sh"
+    rm -f  "$TARGET_DIR/docs/prompts.txt"
+    rm -rf "$TARGET_DIR/docs/TODO/"
+    rm -rf "$TARGET_DIR/packaging/"
+
+    # install.sh nur wenn vorhanden
+    rm -f "$TARGET_DIR/packaging/install.sh" 2>/dev/null
+
+    info "Bereinigte Kopie erstellt."
+}
+
+# --------------------------------------------------------------------------
+# GitHub: Erstmaliges Setup (Repo erstellen + Initial-Commit)
+# --------------------------------------------------------------------------
+github_init() {
+    read_version
+
+    info "Erstelle GitHub-Repository $GITHUB_REPO..."
+
+    # Repo auf GitHub erstellen (falls nicht vorhanden)
+    if ! gh repo view "$GITHUB_REPO" &>/dev/null; then
+        gh repo create "$GITHUB_REPO" \
+            --public \
+            --description "Self-hosted task and project management tool (FastAPI + Vanilla JS)" \
+            --license MIT
+        info "GitHub-Repository erstellt."
+    else
+        warn "Repository $GITHUB_REPO existiert bereits."
+    fi
+
+    # Bereinigte Kopie erstellen
+    prepare_clean_copy "$GITHUB_DIR"
+
+    # Git-Repo initialisieren und pushen
+    cd "$GITHUB_DIR"
+    git init
+    git remote add origin "git@github.com:${GITHUB_REPO}.git"
+    git add -A
+    git commit -m "v${VERSION}: Initial open-source release"
+    git branch -M main
+    git push -u origin main --force
+
+    info "=== GitHub Initial-Push erfolgreich ==="
+    info "Repository: https://github.com/$GITHUB_REPO"
+    info "Version: $VERSION"
+
+    # Aufraeumen
+    rm -rf "$GITHUB_DIR"
+}
+
+# --------------------------------------------------------------------------
+# GitHub: Inkrementeller Sync
+# --------------------------------------------------------------------------
+github_sync() {
+    read_version
+
+    info "Synchronisiere nach GitHub ($GITHUB_REPO)..."
+
+    # Bereinigte Kopie erstellen
+    prepare_clean_copy "$GITHUB_DIR"
+
+    # Bestehendes GitHub-Repo klonen (nur .git)
+    local TEMP_GIT="/tmp/tareas-github-git"
+    rm -rf "$TEMP_GIT"
+    git clone --bare "git@github.com:${GITHUB_REPO}.git" "$TEMP_GIT"
+
+    # .git in die bereinigte Kopie verschieben
+    mv "$TEMP_GIT" "$GITHUB_DIR/.git"
+
+    # Bare-Repo in normales umwandeln
+    cd "$GITHUB_DIR"
+    git config --local --bool core.bare false
+    git reset HEAD -- . >/dev/null 2>&1 || true
+
+    # Aenderungen pruefen
+    if git diff --quiet HEAD && [ -z "$(git ls-files --others --exclude-standard)" ]; then
+        info "Keine Aenderungen gegenueber GitHub."
+        rm -rf "$GITHUB_DIR"
+        return
+    fi
+
+    # Aenderungen committen und pushen
+    git add -A
+    git commit -m "v${VERSION}: Sync from internal repository"
+    git push origin main
+
+    info "=== GitHub Sync erfolgreich ==="
+    info "Repository: https://github.com/$GITHUB_REPO"
+    info "Version: $VERSION"
+
+    # Aufraeumen
+    rm -rf "$GITHUB_DIR"
+}
+
+# --------------------------------------------------------------------------
 # Hauptprogramm
 # --------------------------------------------------------------------------
 case "${1:-}" in
@@ -228,6 +357,12 @@ case "${1:-}" in
         read_version
         build_package
         info "Nur lokal gebaut (--build). Kein Upload."
+        ;;
+    --github-init)
+        github_init
+        ;;
+    --github)
+        github_sync
         ;;
     *)
         read_version

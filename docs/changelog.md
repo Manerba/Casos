@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+84;Release;Open-Source-Vorbereitung: Hardcodierte IPs entfernt (app.py, admin_app.py, tab_tls.js, tab_onlyoffice.js, tab_allgemein.js, security-issues-fixes.md, changelog.md), docs/prompts.txt geloescht, Packaging-Maintainer auf GitHub aktualisiert, CLAUDE.md bereinigt, .gitignore erweitert, LICENSE (MIT) und README.md erstellt, publish.sh um --github/--github-init erweitert (prepare_clean_copy fuer bereinigte Kopie)
 14.02.2026;0.0.1+83;Bugfix;ldap_sync_cron.py: TypeError offset-naive vs offset-aware datetime behoben (last_dt.replace(tzinfo=timezone.utc))
 14.02.2026;0.0.1+82;Docs;Security-Fixes abgeschlossen: Issue-Tracker in security-issues.md vollstaendig aktualisiert (17 Fix-Gruppen = 22 Issues auf Done), alle Funktionstests bestanden
 14.02.2026;0.0.1+81;Security;Phase 4: Systemd-Haertung (7 Service-Dateien: NoNewPrivileges, ProtectSystem, PrivateTmp etc.), Security-Logging (logging_config.py, RotatingFileHandler /var/log/tareas.log, 25 Events in api_auth/api_admin/api_tls/api_onlyoffice/api_nextcloud/api_mail/api_ldap/api_app)
@@ -95,7 +96,7 @@ Zeitstempel;Version;Kategorie;Beschreibung
 10.02.2026 20:00;0.0.1+21;Feature;APT-Packaging: .deb-Paket-Bau mit packaging/DEBIAN (control, postinst, prerm, postrm)
 10.02.2026 20:00;0.0.1+21;Feature;publish.sh: Build + Upload + Repo-Index-Aktualisierung + GPG-Signierung auf Repo-Server
 10.02.2026 20:00;0.0.1+21;Feature;install.sh: Bootstrap-Script fuer Einzeiler-Installation (curl | bash)
-10.02.2026 20:00;0.0.1+21;Feature;APT-Repository auf 188.245.43.207 eingerichtet (Apache-Alias, Verzeichnisstruktur, GPG-Key)
+10.02.2026 20:00;0.0.1+21;Feature;APT-Repository eingerichtet (Apache-Alias, Verzeichnisstruktur, GPG-Key)
 10.02.2026 20:00;0.0.1+21;Aenderung;Angepasste Service-Dateien fuer Paket (User tareas, /opt/tareas Pfade, venv)
 10.02.2026 17:15;0.0.1+20;Bugfix;LDAP: StartTLS auf Port 389 wenn SSL nicht aktiviert (behebt strongerAuthRequired bei Samba-DCs)
 10.02.2026 17:15;0.0.1+20;Bugfix;LDAP: TLS-Zertifikatsvalidierung deaktiviert (CERT_NONE) fuer selbst-signierte/abgelaufene Zertifikate

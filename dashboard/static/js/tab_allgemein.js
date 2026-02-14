@@ -33,7 +33,7 @@ function renderAllgemeinTab() {
                             <label>Server-Adresse</label>
                             <input type="text" id="appServerAddress"
                                    value="${escapeAttr(c.server_address || '')}"
-                                   placeholder="z.B. tareas.domain.tld oder 10.0.12.7:8504">
+                                   placeholder="z.B. tareas.domain.tld oder 192.168.1.100:8504">
                             <small style="color: var(--text-muted); margin-top: 4px; display: block;">
                                 Protokoll (http/https) wird automatisch aus den TLS-Einstellungen abgeleitet.
                                 Diese Adresse wird in E-Mails als Link zur App verwendet.

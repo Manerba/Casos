@@ -18,9 +18,9 @@ Aufgabenplanungs-Tool auf Basis von **FastAPI + Vanilla JS**. Basiert auf dem Da
 
 | Komponente | Details |
 |------------|---------|
-| Server | 10.0.12.7 (Ubuntu 24.04) |
-| Projektverzeichnis | `/sdb1/nextcloud/data/mir/files/Dev/Tareas` |
-| Dashboard | http://10.0.12.7:8504/ |
+| OS | Ubuntu 24.04 |
+| Dashboard | Port 8504 |
+| Admin | Port 8505 |
 | Service | `tareas.service` |
 
 ---
@@ -124,4 +124,3 @@ Das Script:
 ## Benutzer-Praeferenzen
 
 - Sprache: Deutsch bevorzugt
-- SSH-Zugang: root@10.0.12.7

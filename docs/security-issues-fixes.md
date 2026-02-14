@@ -86,7 +86,7 @@
 **Anweisung:** In `app.py`, Middleware `security_headers`:
 - Fuer `/editor`-Pfade die OnlyOffice-Server-URL aus der DB-Konfiguration (`onlyoffice_config.server_url`) laden
 - Daraus den Origin extrahieren (Schema + Host + Port)
-- In der CSP `https: http:` und `*` durch den konkreten OnlyOffice-Origin ersetzen (z.B. `script-src 'self' 'unsafe-inline' http://10.0.12.7:8080`)
+- In der CSP `https: http:` und `*` durch den konkreten OnlyOffice-Origin ersetzen (z.B. `script-src 'self' 'unsafe-inline' http://onlyoffice-host:8080`)
 - Fallback: Wenn keine OnlyOffice-Config vorhanden, restriktive Default-CSP verwenden (`'self'` only)
 - WICHTIG: Keine hardcoded IPs/Hosts - die URL muss aus der DB kommen, da Tareas auf verschiedenen Servern installiert werden kann
 - Performance: OnlyOffice-URL cachen (nicht bei jedem Request DB abfragen), Cache invalidieren wenn Config geaendert wird

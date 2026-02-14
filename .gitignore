@@ -26,5 +26,9 @@ data/secret.key
 # Build
 build/
 
+# Internal docs (credentials, design notes)
+docs/prompts.txt
+docs/TODO/
+
 # Claude Code
 .claude/

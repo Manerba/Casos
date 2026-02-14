@@ -153,7 +153,7 @@ def main():
     print("=" * 50)
     print("Tareas Admin - Benutzerverwaltung")
     print("=" * 50)
-    print(f"URL: {protocol}://10.0.12.7:8505")
+    print(f"URL: {protocol}://0.0.0.0:8505")
     if use_tls:
         print(f"TLS: {tls['cert_path']}")
     print("Strg+C zum Beenden")

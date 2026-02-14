@@ -179,7 +179,7 @@ function renderTlsGuideSection() {
                 <pre style="margin: 8px 0; padding: 8px; background: var(--bg-secondary); border-radius: 4px; overflow-x: auto; font-size: 12px;">openssl req -x509 -newkey rsa:4096 -nodes \\
   -keyout /etc/ssl/private/tareas-key.pem \\
   -out /etc/ssl/certs/tareas.pem \\
-  -days 365 -subj "/CN=10.0.12.7"</pre>
+  -days 365 -subj "/CN=example.com"</pre>
             </div>
             <div class="ldap-status-info" style="margin-top: 8px; opacity: 0.9;">
                 <strong>Let's Encrypt (oeffentliche Domain):</strong>

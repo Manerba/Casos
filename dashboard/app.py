@@ -326,7 +326,7 @@ def main():
     print("=" * 50)
     print("Tareas - Aufgabenplanung")
     print("=" * 50)
-    print(f"URL: {protocol}://10.0.12.7:8504")
+    print(f"URL: {protocol}://0.0.0.0:8504")
     if use_tls:
         print(f"TLS: {tls['cert_path']}")
     print("Strg+C zum Beenden")

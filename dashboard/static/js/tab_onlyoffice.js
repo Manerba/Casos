@@ -50,7 +50,7 @@ function renderOoConfigSection(hasConfig) {
                     <div class="ldap-form-field">
                         <label>Server-URL</label>
                         <input type="text" id="ooServerUrl" value="${escapeAttr(c.server_url || '')}"
-                               placeholder="http://10.0.12.7:8090">
+                               placeholder="http://localhost:8090">
                     </div>
                 </div>
                 <div class="ldap-form-row">
