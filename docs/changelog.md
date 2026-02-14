@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+85;Feature;i18n Mehrsprachigkeit (DE/EN/ES): i18n.js Core-System mit t()-Funktion, data-i18n Auto-Patch, Sprachauswahl im Settings-Dropdown, 399 Translation-Keys in 3 JSON-Dateien (de/en/es.json), alle 17 JS-Dateien und 5 HTML-Templates auf t()-Aufrufe umgestellt
 14.02.2026;0.0.1+84;Release;Open-Source-Vorbereitung: Hardcodierte IPs entfernt (app.py, admin_app.py, tab_tls.js, tab_onlyoffice.js, tab_allgemein.js, security-issues-fixes.md, changelog.md), docs/prompts.txt geloescht, Packaging-Maintainer auf GitHub aktualisiert, CLAUDE.md bereinigt, .gitignore erweitert, LICENSE (MIT) und README.md erstellt, publish.sh um --github/--github-init erweitert (prepare_clean_copy fuer bereinigte Kopie)
 14.02.2026;0.0.1+83;Bugfix;ldap_sync_cron.py: TypeError offset-naive vs offset-aware datetime behoben (last_dt.replace(tzinfo=timezone.utc))
 14.02.2026;0.0.1+82;Docs;Security-Fixes abgeschlossen: Issue-Tracker in security-issues.md vollstaendig aktualisiert (17 Fix-Gruppen = 22 Issues auf Done), alle Funktionstests bestanden

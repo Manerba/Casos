@@ -288,6 +288,8 @@ github_init() {
     # Git-Repo initialisieren und pushen
     cd "$GITHUB_DIR"
     git init
+    git config user.name "Manerba"
+    git config user.email "manerba@users.noreply.github.com"
     git remote add origin "git@github.com:${GITHUB_REPO}.git"
     git add -A
     git commit -m "v${VERSION}: Initial open-source release"
@@ -324,6 +326,8 @@ github_sync() {
     # Bare-Repo in normales umwandeln
     cd "$GITHUB_DIR"
     git config --local --bool core.bare false
+    git config user.name "Manerba"
+    git config user.email "manerba@users.noreply.github.com"
     git reset HEAD -- . >/dev/null 2>&1 || true
 
     # Aenderungen pruefen
