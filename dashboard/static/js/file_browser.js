@@ -38,10 +38,10 @@ class FileBrowser {
                         <button class="fb-view-toggle" id="fb-toggle-${this.taskId}" title="Ansicht wechseln">
                             ${this.viewMode === 'tree' ? this._iconGrid() : this._iconTree()}
                         </button>
-                        <button class="fb-action-btn" onclick="window._fb${this.taskId}.onUploadClick()" title="Hochladen">
+                        <button class="fb-action-btn" id="fb-upload-${this.taskId}" title="Hochladen">
                             ${this._iconUpload()} Hochladen
                         </button>
-                        <button class="fb-action-btn" onclick="window._fb${this.taskId}.onMkdirClick()" title="Neuer Ordner">
+                        <button class="fb-action-btn" id="fb-mkdir-${this.taskId}" title="Neuer Ordner">
                             ${this._iconNewFolder()} Ordner
                         </button>
                     </div>
@@ -61,11 +61,81 @@ class FileBrowser {
         const toggle = document.getElementById(`fb-toggle-${this.taskId}`);
         toggle?.addEventListener('click', () => this.toggleView());
 
+        const uploadBtn = document.getElementById(`fb-upload-${this.taskId}`);
+        uploadBtn?.addEventListener('click', () => this.onUploadClick());
+
+        const mkdirBtn = document.getElementById(`fb-mkdir-${this.taskId}`);
+        mkdirBtn?.addEventListener('click', () => this.onMkdirClick());
+
         const fileInput = document.getElementById(`fb-file-input-${this.taskId}`);
         fileInput?.addEventListener('change', (e) => this.handleFileSelect(e));
 
-        // Drag & Drop
+        // Event-Delegation: Breadcrumb
+        const bcContainer = document.getElementById(`fb-breadcrumb-${this.taskId}`);
+        bcContainer?.addEventListener('click', (e) => {
+            const link = e.target.closest('[data-path]');
+            if (link) this.navigateTo(link.dataset.path);
+        });
+
+        // Event-Delegation: Content-Bereich (Grid + Tree)
         const content = document.getElementById(`fb-content-${this.taskId}`);
+
+        // Grid: Doppelklick
+        content?.addEventListener('dblclick', (e) => {
+            const gridItem = e.target.closest('.fb-grid-item[data-name]');
+            if (gridItem) {
+                const name = gridItem.dataset.name;
+                const type = gridItem.dataset.type;
+                if (type === 'directory') {
+                    this.navigateTo(this.currentPath ? this.currentPath + '/' + name : name);
+                } else {
+                    this.onItemDblClick(name, type);
+                }
+                return;
+            }
+            const treeRow = e.target.closest('.fb-tree-row[data-name]');
+            if (treeRow) {
+                this.onItemDblClick(treeRow.dataset.name, treeRow.dataset.type, treeRow.dataset.parent);
+                return;
+            }
+        });
+
+        // Grid + Tree: Kontextmenu
+        content?.addEventListener('contextmenu', (e) => {
+            const gridItem = e.target.closest('.fb-grid-item[data-name]');
+            if (gridItem) {
+                e.preventDefault();
+                this.onContextMenu(e, gridItem.dataset.name, gridItem.dataset.type, gridItem.dataset.nclink || '');
+                return;
+            }
+            const treeRow = e.target.closest('.fb-tree-row[data-name]');
+            if (treeRow) {
+                e.preventDefault();
+                this.onContextMenu(e, treeRow.dataset.itempath, treeRow.dataset.type, treeRow.dataset.nclink || '');
+                return;
+            }
+        });
+
+        // Tree: Expand-Toggle (Click)
+        content?.addEventListener('click', (e) => {
+            const expandBtn = e.target.closest('.fb-tree-expand[data-toggle-path]');
+            if (expandBtn) {
+                e.stopPropagation();
+                this.toggleTreeDir(expandBtn.dataset.togglePath);
+                return;
+            }
+            // Grid: Edit-Button (OnlyOffice)
+            const editBtn = e.target.closest('.fb-grid-edit[data-edit-path]');
+            if (editBtn) {
+                e.stopPropagation();
+                if (typeof openOnlyOfficeEditor === 'function') {
+                    openOnlyOfficeEditor(this.taskId, editBtn.dataset.editPath);
+                }
+                return;
+            }
+        });
+
+        // Drag & Drop
         if (content) {
             content.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -86,9 +156,6 @@ class FileBrowser {
                 }
             });
         }
-
-        // Globale Referenz fuer onclick-Handler
-        window[`_fb${this.taskId}`] = this;
 
         // Context-Menu global schliessen
         document.addEventListener('click', () => this._closeContextMenu());
@@ -140,14 +207,14 @@ class FileBrowser {
         if (!bc) return;
 
         const parts = this.currentPath ? this.currentPath.split('/').filter(Boolean) : [];
-        let html = `<span class="fb-bc-item fb-bc-root" onclick="window._fb${this.taskId}.navigateTo('')">${this._iconFolder()} Dateien</span>`;
+        let html = `<span class="fb-bc-item fb-bc-root" data-path="">${this._iconFolder()} Dateien</span>`;
 
         let accumulated = '';
         parts.forEach((part, i) => {
             accumulated += (accumulated ? '/' : '') + part;
             const p = accumulated;
             html += `<span class="fb-bc-sep">/</span>`;
-            html += `<span class="fb-bc-item" onclick="window._fb${this.taskId}.navigateTo('${escapeAttr(p)}')">${escapeHtml(part)}</span>`;
+            html += `<span class="fb-bc-item" data-path="${escapeAttr(p)}">${escapeHtml(part)}</span>`;
         });
 
         bc.innerHTML = html;
@@ -176,12 +243,13 @@ class FileBrowser {
             const sizeStr = item.type === 'directory' ? '' : this._formatSize(item.size);
             const isEditable = item.type === 'file' && typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(item.name);
             const editIcon = isEditable
-                ? `<div class="fb-grid-edit" onclick="event.stopPropagation(); openOnlyOfficeEditor(${this.taskId}, '${escapeAttr(this.currentPath ? this.currentPath + '/' + item.name : item.name)}')" title="Im Editor oeffnen">${this._iconEdit()}</div>`
+                ? `<div class="fb-grid-edit" data-edit-path="${escapeAttr(this.currentPath ? this.currentPath + '/' + item.name : item.name)}" title="Im Editor oeffnen">${this._iconEdit()}</div>`
                 : '';
             html += `
                 <div class="fb-grid-item ${item.type === 'directory' ? 'fb-grid-dir' : 'fb-grid-file'}"
-                     ondblclick="window._fb${this.taskId}.onItemDblClick('${escapeAttr(item.name)}', '${item.type}')"
-                     oncontextmenu="window._fb${this.taskId}.onContextMenu(event, '${escapeAttr(item.name)}', '${item.type}', '${escapeAttr(item.nextcloud_link || '')}')"
+                     data-name="${escapeAttr(item.name)}"
+                     data-type="${escapeAttr(item.type)}"
+                     data-nclink="${escapeAttr(item.nextcloud_link || '')}"
                      title="${escapeAttr(item.name)}${sizeStr ? ' (' + sizeStr + ')' : ''}">
                     ${editIcon}
                     <div class="fb-grid-icon">${icon}</div>
@@ -222,13 +290,16 @@ class FileBrowser {
             const sizeStr = item.type === 'directory' ? '' : this._formatSize(item.size);
             const icon = this._getFileIcon(item);
             const expandIcon = item.type === 'directory'
-                ? `<span class="fb-tree-expand ${isExpanded ? 'expanded' : ''}" onclick="event.stopPropagation(); window._fb${this.taskId}.toggleTreeDir('${escapeAttr(itemPath)}')">${isExpanded ? '&#9660;' : '&#9654;'}</span>`
+                ? `<span class="fb-tree-expand ${isExpanded ? 'expanded' : ''}" data-toggle-path="${escapeAttr(itemPath)}">${isExpanded ? '&#9660;' : '&#9654;'}</span>`
                 : '<span class="fb-tree-expand-spacer"></span>';
 
             html += `
                 <div class="fb-tree-row" style="padding-left:${indent}px"
-                     ondblclick="window._fb${this.taskId}.onItemDblClick('${escapeAttr(item.name)}', '${item.type}', '${escapeAttr(parentPath)}')"
-                     oncontextmenu="window._fb${this.taskId}.onContextMenu(event, '${escapeAttr(itemPath)}', '${item.type}', '${escapeAttr(item.nextcloud_link || '')}')">
+                     data-name="${escapeAttr(item.name)}"
+                     data-type="${escapeAttr(item.type)}"
+                     data-parent="${escapeAttr(parentPath)}"
+                     data-itempath="${escapeAttr(itemPath)}"
+                     data-nclink="${escapeAttr(item.nextcloud_link || '')}">
                     ${expandIcon}
                     <span class="fb-tree-icon">${icon}</span>
                     <span class="fb-tree-name">${escapeHtml(item.name)}</span>
@@ -322,21 +393,21 @@ class FileBrowser {
         let html = '<div class="fb-ctx-menu">';
         if (type === 'file') {
             if (typeof isOnlyOfficeEditable === 'function' && isOnlyOfficeEditable(name)) {
-                html += `<div class="fb-ctx-item" onclick="openOnlyOfficeEditor(${this.taskId}, '${escapeAttr(fullPath)}')">Im Editor oeffnen</div>`;
+                html += `<div class="fb-ctx-item" data-action="edit" data-path="${escapeAttr(fullPath)}">Im Editor oeffnen</div>`;
             }
             if (this._isImageFile(name)) {
-                html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.openFileInline('${escapeAttr(fullPath)}')">Anzeigen</div>`;
+                html += `<div class="fb-ctx-item" data-action="view" data-path="${escapeAttr(fullPath)}">Anzeigen</div>`;
             }
-            html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.downloadFile('${escapeAttr(fullPath)}')">Herunterladen</div>`;
+            html += `<div class="fb-ctx-item" data-action="download" data-path="${escapeAttr(fullPath)}">Herunterladen</div>`;
             if (nextcloudLink) {
-                html += `<div class="fb-ctx-item" onclick="window.open('${escapeAttr(nextcloudLink)}', '_blank')">In Nextcloud oeffnen</div>`;
+                html += `<div class="fb-ctx-item" data-action="nextcloud" data-url="${escapeAttr(nextcloudLink)}">In Nextcloud oeffnen</div>`;
             }
         } else {
-            html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.loadDirectory('${escapeAttr(fullPath)}')">Oeffnen</div>`;
+            html += `<div class="fb-ctx-item" data-action="open" data-path="${escapeAttr(fullPath)}">Oeffnen</div>`;
         }
         html += `<div class="fb-ctx-sep"></div>`;
-        html += `<div class="fb-ctx-item" onclick="window._fb${this.taskId}.renameItem('${escapeAttr(fullPath)}', '${escapeAttr(name)}')">Umbenennen</div>`;
-        html += `<div class="fb-ctx-item fb-ctx-danger" onclick="window._fb${this.taskId}.deleteItem('${escapeAttr(fullPath)}', '${type}')">Loeschen</div>`;
+        html += `<div class="fb-ctx-item" data-action="rename" data-path="${escapeAttr(fullPath)}" data-name="${escapeAttr(name)}">Umbenennen</div>`;
+        html += `<div class="fb-ctx-item fb-ctx-danger" data-action="delete" data-path="${escapeAttr(fullPath)}" data-type="${escapeAttr(type)}">Loeschen</div>`;
         html += '</div>';
 
         const menu = document.createElement('div');
@@ -346,6 +417,37 @@ class FileBrowser {
         menu.style.left = event.clientX + 'px';
         menu.style.top = event.clientY + 'px';
         menu.style.zIndex = '9999';
+
+        // Event-Delegation fuer Context-Menu-Items
+        menu.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-action]');
+            if (!item) return;
+            const action = item.dataset.action;
+            const path = item.dataset.path;
+            switch (action) {
+                case 'edit':
+                    if (typeof openOnlyOfficeEditor === 'function') openOnlyOfficeEditor(this.taskId, path);
+                    break;
+                case 'view':
+                    this.openFileInline(path);
+                    break;
+                case 'download':
+                    this.downloadFile(path);
+                    break;
+                case 'nextcloud':
+                    window.open(item.dataset.url, '_blank');
+                    break;
+                case 'open':
+                    this.loadDirectory(path);
+                    break;
+                case 'rename':
+                    this.renameItem(path, item.dataset.name);
+                    break;
+                case 'delete':
+                    this.deleteItem(path, item.dataset.type);
+                    break;
+            }
+        });
 
         document.body.appendChild(menu);
         this._contextMenu = menu;
@@ -649,6 +751,5 @@ class FileBrowser {
 
     destroy() {
         this._closeContextMenu();
-        delete window[`_fb${this.taskId}`];
     }
 }

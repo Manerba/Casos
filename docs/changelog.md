@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+79;Security;Phase 3.1: file_browser.js - Alle inline onclick/ondblclick/oncontextmenu Handler durch data-Attribute + Event-Delegation ersetzt, globale window._fb-Referenz entfernt
 14.02.2026;0.0.1+78;Security;Phase 2: SQL-Identifier Whitelist (db_utils/config_utils), generische Error-Details (api_nextcloud/api_onlyoffice/api_ldap), Rate-Limit verallgemeinert + Passwort-Aenderung (api_auth), Upload-Groessenlimit 500MB (api_nextcloud), Secret-Key Dateiberechtigungen 0600 (auth.py)
 14.02.2026;0.0.1+77;Security;Phase 1: escapeAttr in onclick-Handlern (expandable_table/tab_aufgaben), sanitizeHtml-Pflicht im WYSIWYG-Editor, Auth-Depends auf /api/users/list + /api/areas, localStorage-Whitelist, Logout-Cookie client-seitig loeschen, parseInt fuer IDs in renderActions
 14.02.2026;0.0.1+76;Refactoring;Sprint 2-4: config_utils.py (get_masked_config, resolve_masked_password), user_utils.py (get_display_name), JS-Helpers (loadConfigFromAPI/saveConfigToAPI/deleteConfigFromAPI, createModal/closeModal, initTabGeneric). 15 Dateien refactored, ~170 Zeilen netto reduziert

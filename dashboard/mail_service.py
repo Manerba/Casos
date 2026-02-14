@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from dashboard.database import get_db
+from dashboard.crypto_utils import decrypt
 from dashboard.user_utils import get_display_name
 from dashboard.tls_utils import get_tls_config, get_tls_verify_config
 
@@ -38,7 +39,11 @@ def get_smtp_config() -> dict | None:
         row = db.execute("SELECT * FROM mail_config WHERE id = 1").fetchone()
         if not row:
             return None
-        return dict(row)
+        config = dict(row)
+        # Passwort entschluesseln (at-rest Verschluesselung)
+        if config.get("password"):
+            config["password"] = decrypt(config["password"])
+        return config
     finally:
         db.close()
 

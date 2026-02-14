@@ -10,6 +10,7 @@ from xml.etree import ElementTree as ET
 import httpx
 
 from dashboard.database import get_db
+from dashboard.crypto_utils import decrypt
 from dashboard.tls_utils import get_tls_verify_config
 
 # WebDAV XML-Namespaces
@@ -42,7 +43,7 @@ def _get_config() -> dict | None:
         return {
             "server_url": row["server_url"].rstrip("/"),
             "username": row["username"],
-            "password": row["password"],
+            "password": decrypt(row["password"]),
             "base_path": row["base_path"].strip("/"),
             "verify": verify_cfg["verify_nextcloud"],
         }

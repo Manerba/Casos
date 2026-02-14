@@ -1,6 +1,7 @@
 """Zentrale Hilfsfunktionen fuer Config-Operationen."""
 from fastapi import HTTPException
 from dashboard.db_utils import db_query, validate_identifier, ALLOWED_TABLES, ALLOWED_COLUMNS
+from dashboard.crypto_utils import encrypt, decrypt
 
 
 def get_masked_config(table: str, mask_fields: list[str] | None = None) -> dict | None:
@@ -26,6 +27,8 @@ def get_masked_config(table: str, mask_fields: list[str] | None = None) -> dict 
         if mask_fields:
             for field in mask_fields:
                 if config.get(field):
+                    # Wert entschluesseln bevor er maskiert wird
+                    config[field] = decrypt(config[field])
                     config[field] = "********"
         return config
 
@@ -49,8 +52,10 @@ def resolve_masked_password(db, table: str, field: str, new_value: str) -> str:
     validate_identifier(field, ALLOWED_COLUMNS, "column")
 
     if new_value != "********":
-        return new_value
+        # Neues Passwort: verschluesseln vor dem Speichern
+        return encrypt(new_value)
 
+    # Maskiert: alten (bereits verschluesselten) Wert aus DB beibehalten
     row = db.execute(f"SELECT {field} FROM {table} WHERE id = 1").fetchone()
     if row and row[field]:
         return row[field]

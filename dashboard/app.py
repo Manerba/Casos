@@ -46,6 +46,7 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSON
 import uvicorn
 
 from dashboard.database import init_db
+from dashboard.csp_utils import get_onlyoffice_origin
 from dashboard.api_tasks import router as tasks_router
 from dashboard.api_auth import router as auth_router
 from dashboard.api_teams import router as teams_router
@@ -116,19 +117,31 @@ async def security_headers(request: Request, call_next):
     """Security-Header: CSP, X-Frame-Options, X-Content-Type-Options."""
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     if request.url.path.startswith("/editor"):
-        # OnlyOffice laedt externe Scripts/Iframes vom Document Server
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https: http:; "
-            "style-src 'self' 'unsafe-inline' https: http:; "
-            "img-src 'self' data: blob: https: http:; "
-            "connect-src *; "
-            "frame-src *;"
-        )
+        # OnlyOffice Editor: CSP dynamisch aus DB-Konfiguration bauen
+        origin = get_onlyoffice_origin()
+        if origin:
+            response.headers["Content-Security-Policy"] = (
+                f"default-src 'self'; "
+                f"script-src 'self' 'unsafe-inline' {origin}; "
+                f"style-src 'self' 'unsafe-inline' {origin}; "
+                f"connect-src 'self' {origin}; "
+                f"frame-src {origin}; "
+                f"img-src 'self' data: {origin}; "
+                f"font-src 'self' {origin} data:;"
+            )
+        else:
+            # Kein OnlyOffice konfiguriert: restriktive CSP
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self'; "
+                "style-src 'self' 'unsafe-inline';"
+            )
+        # Editor braucht iframe vom Document Server -> SAMEORIGIN statt DENY
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
     else:
+        response.headers["X-Frame-Options"] = "DENY"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "

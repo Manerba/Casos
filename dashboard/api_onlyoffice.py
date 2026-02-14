@@ -21,10 +21,12 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction, upsert_singleton_config
+from dashboard.crypto_utils import encrypt, decrypt
 from dashboard.user_utils import get_display_name
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
 from dashboard.tls_utils import get_tls_verify_config
+from dashboard.csp_utils import invalidate_onlyoffice_cache
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,7 @@ def _get_onlyoffice_config() -> dict | None:
         verify_cfg = get_tls_verify_config()
         return {
             "server_url": row["server_url"].rstrip("/"),
-            "jwt_secret": row["jwt_secret"],
+            "jwt_secret": decrypt(row["jwt_secret"]),
             "verify": verify_cfg["verify_onlyoffice"],
         }
 
@@ -287,9 +289,13 @@ async def save_config(data: OnlyOfficeConfigRequest, user=Depends(get_admin_user
         with db_query() as db:
             existing = db.execute("SELECT jwt_secret FROM onlyoffice_config WHERE id = 1").fetchone()
             if existing:
+                # Bereits verschluesselten Wert beibehalten
                 jwt_secret = existing["jwt_secret"]
             else:
                 raise HTTPException(status_code=400, detail="Kein gespeichertes Secret vorhanden")
+    else:
+        # Neues Secret: verschluesseln vor dem Speichern
+        jwt_secret = encrypt(jwt_secret)
 
     # Config speichern (UPSERT)
     with db_transaction() as db:
@@ -297,7 +303,11 @@ async def save_config(data: OnlyOfficeConfigRequest, user=Depends(get_admin_user
             "server_url": server_url,
             "jwt_secret": jwt_secret,
         })
-        return {"message": "ONLYOFFICE-Konfiguration gespeichert"}
+
+    # CSP-Cache invalidieren (Origin koennte sich geaendert haben)
+    invalidate_onlyoffice_cache()
+
+    return {"message": "ONLYOFFICE-Konfiguration gespeichert"}
 
 
 @admin_router.delete("/config")
@@ -305,7 +315,11 @@ async def delete_config(user=Depends(get_admin_user)):
     """ONLYOFFICE-Konfiguration loeschen."""
     with db_transaction() as db:
         db.execute("DELETE FROM onlyoffice_config WHERE id = 1")
-        return {"message": "ONLYOFFICE-Konfiguration geloescht"}
+
+    # CSP-Cache invalidieren (Origin wurde entfernt)
+    invalidate_onlyoffice_cache()
+
+    return {"message": "ONLYOFFICE-Konfiguration geloescht"}
 
 
 @admin_router.get("/test")

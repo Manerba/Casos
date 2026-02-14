@@ -6,6 +6,7 @@ Synchronisiert AD-Gruppenmitglieder mit der lokalen users-Tabelle.
 from datetime import datetime, timezone
 
 from dashboard.database import get_db
+from dashboard.crypto_utils import decrypt
 from dashboard.ldap_utils import get_group_members
 from dashboard.tls_utils import get_tls_verify_config
 
@@ -35,7 +36,7 @@ def sync_ldap_users():
             "port": config_row["port"],
             "use_ssl": config_row["use_ssl"],
             "bind_dn": config_row["bind_dn"],
-            "bind_password": config_row["bind_password"],
+            "bind_password": decrypt(config_row["bind_password"]),
             "search_base": config_row["search_base"],
             "group_dn": config_row["group_dn"],
             "verify_cert": verify_cfg["verify_ldap"],
