@@ -2,7 +2,7 @@
  * Tareas - i18n (Internationalisierung)
  * Leichtgewichtiges Custom-i18n ohne externes Framework.
  *
- * Sprachen: DE (Standard), EN, ES
+ * Sprachen: DE (Standard), EN, ES, FR, RO, UK, RU
  * Persistenz: localStorage (Key: 'tareas-lang')
  * Sprachwechsel: Page Reload
  *
@@ -23,6 +23,10 @@
         { code: 'de', label: 'Deutsch' },
         { code: 'en', label: 'English' },
         { code: 'es', label: 'Español' },
+        { code: 'fr', label: 'Français' },
+        { code: 'ro', label: 'Română' },
+        { code: 'uk', label: 'Українська' },
+        { code: 'ru', label: 'Русский' },
     ];
 
     // Aktuelle Sprache ermitteln
