@@ -37,7 +37,7 @@ def main():
         last_sync = config["last_sync_at"]
 
         if last_sync:
-            last_dt = datetime.strptime(last_sync, "%Y-%m-%d %H:%M:%S")
+            last_dt = datetime.strptime(last_sync, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
             elapsed = (datetime.now(timezone.utc) - last_dt).total_seconds() / 60
             if elapsed < interval:
                 print(f"Letzter Sync vor {elapsed:.0f} Min. (Intervall: {interval} Min.), ueberspringe.")

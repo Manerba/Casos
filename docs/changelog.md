@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+83;Bugfix;ldap_sync_cron.py: TypeError offset-naive vs offset-aware datetime behoben (last_dt.replace(tzinfo=timezone.utc))
 14.02.2026;0.0.1+82;Docs;Security-Fixes abgeschlossen: Issue-Tracker in security-issues.md vollstaendig aktualisiert (17 Fix-Gruppen = 22 Issues auf Done), alle Funktionstests bestanden
 14.02.2026;0.0.1+81;Security;Phase 4: Systemd-Haertung (7 Service-Dateien: NoNewPrivileges, ProtectSystem, PrivateTmp etc.), Security-Logging (logging_config.py, RotatingFileHandler /var/log/tareas.log, 25 Events in api_auth/api_admin/api_tls/api_onlyoffice/api_nextcloud/api_mail/api_ldap/api_app)
 14.02.2026;0.0.1+80;Security;Phase 3.3: Fernet-Verschluesselung fuer Credentials at-rest. crypto_utils.py (encrypt/decrypt/migrate), config_utils.py (verschluesselt speichern, entschluesselt lesen), decrypt() in webdav/mail_service/ldap_sync/api_auth/api_ldap/api_onlyoffice, Migration beim Startup
