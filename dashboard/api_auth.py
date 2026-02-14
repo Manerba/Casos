@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.crypto_utils import decrypt
 from dashboard.auth import (
     verify_password,
     hash_password,
@@ -140,7 +141,7 @@ async def login(data: LoginRequest, request: Request):
             "port": config_row["port"],
             "use_ssl": config_row["use_ssl"],
             "bind_dn": config_row["bind_dn"],
-            "bind_password": config_row["bind_password"],
+            "bind_password": decrypt(config_row["bind_password"]),
             "search_base": config_row["search_base"],
             "verify_cert": verify_cfg["verify_ldap"],
         }

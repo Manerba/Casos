@@ -15,6 +15,7 @@ from typing import Optional
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.config_utils import get_masked_config, resolve_masked_password
+from dashboard.crypto_utils import decrypt
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
 
@@ -116,12 +117,12 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
     with db_query() as db:
         actual_password = resolve_masked_password(db, "nextcloud_config", "password", data.password)
 
-    # Verbindungstest (in Thread-Pool)
+    # Verbindungstest (in Thread-Pool) - Klartext-Passwort fuer Test
     success, error = await asyncio.to_thread(
         webdav.test_connection,
         data.server_url.strip(),
         data.username.strip(),
-        actual_password,
+        decrypt(actual_password),
         data.base_path.strip(),
     )
 

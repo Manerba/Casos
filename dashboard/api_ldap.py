@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.config_utils import get_masked_config, resolve_masked_password
+from dashboard.crypto_utils import decrypt
 from dashboard.auth import get_admin_user
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
@@ -68,12 +69,12 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
     with db_query() as db:
         actual_password = resolve_masked_password(db, "ldap_config", "bind_password", data.bind_password)
 
-    # Verbindungstest (in Thread-Pool, blockiert sonst den Event-Loop)
+    # Verbindungstest (in Thread-Pool, blockiert sonst den Event-Loop) - Klartext fuer Test
     verify_cfg = get_tls_verify_config()
     success, error = await asyncio.to_thread(
         test_connection,
         data.server.strip(), data.port, data.use_ssl,
-        data.bind_dn.strip(), actual_password, data.search_base.strip(),
+        data.bind_dn.strip(), decrypt(actual_password), data.search_base.strip(),
         verify_cfg["verify_ldap"],
     )
 
@@ -128,7 +129,7 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
             "port": row["port"],
             "use_ssl": row["use_ssl"],
             "bind_dn": row["bind_dn"],
-            "bind_password": row["bind_password"],
+            "bind_password": decrypt(row["bind_password"]),
             "search_base": row["search_base"],
             "verify_cert": verify_cfg["verify_ldap"],
         }

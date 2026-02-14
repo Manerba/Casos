@@ -46,6 +46,7 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, JSON
 import uvicorn
 
 from dashboard.database import init_db
+from dashboard.crypto_utils import migrate_plaintext_credentials
 from dashboard.csp_utils import get_onlyoffice_origin
 from dashboard.api_tasks import router as tasks_router
 from dashboard.api_auth import router as auth_router
@@ -61,6 +62,7 @@ from dashboard.tls_utils import get_tls_config
 async def lifespan(app: FastAPI):
     """Startup/Shutdown Events."""
     init_db()
+    migrate_plaintext_credentials()
     yield
 
 

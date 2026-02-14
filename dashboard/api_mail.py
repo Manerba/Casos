@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.config_utils import get_masked_config, resolve_masked_password
+from dashboard.crypto_utils import decrypt
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard.user_utils import get_display_name
 from dashboard.mail_service import (
@@ -76,23 +77,23 @@ async def save_mail_config(data: MailConfigSave, user=Depends(get_admin_user)):
     with db_query() as db:
         password = resolve_masked_password(db, "mail_config", "password", data.password)
 
-    config = {
+    # Verbindungstest mit Klartext-Passwort
+    test_config = {
         "smtp_server": data.smtp_server,
         "smtp_port": data.smtp_port,
         "encryption": data.encryption,
         "auth_enabled": 1 if data.auth_enabled else 0,
         "username": data.username,
-        "password": password,
+        "password": decrypt(password),
         "from_address": data.from_address,
         "from_name": data.from_name,
     }
 
-    # Verbindungstest
-    error = test_smtp_connection(config)
+    error = test_smtp_connection(test_config)
     if error:
         raise HTTPException(status_code=400, detail=f"SMTP-Verbindung fehlgeschlagen: {error}")
 
-    # UPSERT
+    # UPSERT (verschluesseltes Passwort in DB speichern)
     with db_transaction() as db:
         db.execute(
             """INSERT INTO mail_config (id, smtp_server, smtp_port, encryption, auth_enabled,

@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+80;Security;Phase 3.3: Fernet-Verschluesselung fuer Credentials at-rest. crypto_utils.py (encrypt/decrypt/migrate), config_utils.py (verschluesselt speichern, entschluesselt lesen), decrypt() in webdav/mail_service/ldap_sync/api_auth/api_ldap/api_onlyoffice, Migration beim Startup
 14.02.2026;0.0.1+79;Security;Phase 3.1: file_browser.js - Alle inline onclick/ondblclick/oncontextmenu Handler durch data-Attribute + Event-Delegation ersetzt, globale window._fb-Referenz entfernt
 14.02.2026;0.0.1+78;Security;Phase 2: SQL-Identifier Whitelist (db_utils/config_utils), generische Error-Details (api_nextcloud/api_onlyoffice/api_ldap), Rate-Limit verallgemeinert + Passwort-Aenderung (api_auth), Upload-Groessenlimit 500MB (api_nextcloud), Secret-Key Dateiberechtigungen 0600 (auth.py)
 14.02.2026;0.0.1+77;Security;Phase 1: escapeAttr in onclick-Handlern (expandable_table/tab_aufgaben), sanitizeHtml-Pflicht im WYSIWYG-Editor, Auth-Depends auf /api/users/list + /api/areas, localStorage-Whitelist, Logout-Cookie client-seitig loeschen, parseInt fuer IDs in renderActions
