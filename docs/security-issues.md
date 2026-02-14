@@ -23,41 +23,41 @@
 
 | Nr | Kritikalitaet | Bereich | Problem | Datei | Fix |
 |----|---------------|---------|---------|-------|-----|
-| 1 | Critical | Auth | Fehlende Auth auf /api/users/list | api_tasks.py:1006 | Fix #1-3: Explizit Depends hinzufuegen |
-| 2 | Critical | Auth | Fehlende Auth auf GET /api/areas | api_tasks.py:1109 | Fix #1-3: Explizit Depends hinzufuegen |
-| 3 | Critical | Auth | Fehlende Auth auf POST /api/areas | api_tasks.py:1117 | Fix #1-3: Explizit Depends hinzufuegen |
-| 4 | Critical | XSS | Unescapte col.field in onclick | expandable_table.js:564 | Fix #4-5: escapeAttr() hinzufuegen |
-| 5 | Critical | XSS | Unescapte Kategorie in onclick | tab_aufgaben.js:194 | Fix #4-5: escapeAttr() hinzufuegen |
-| 6 | High | SQLi | Table-Name Injection via f-String | config_utils.py:17,46 | Fix #6-8: Whitelist-Validierung |
-| 7 | High | SQLi | Column-Name Injection via f-String | config_utils.py:46 | Fix #6-8: Whitelist-Validierung |
-| 8 | High | SQLi | Dynamische UPDATE-Queries via f-String | db_utils.py:38-46 | Fix #6-8: Whitelist-Validierung |
-| 9 | High | XSS | WYSIWYG Fallback ohne sanitizeHtml | wysiwyg_editor.js:33,102 | Fix #9: Fallback entfernen |
-| 10 | High | XSS | Inkonsistentes Escaping renderActions | expandable_table.js:760 | Fix #10: parseInt + escapeAttr |
-| 11 | High | XSS | File-Browser globale Refs + Inline-Handler | file_browser.js:41,91 | Fix #11: addEventListener Refactoring |
+| 1 | Critical | Auth | Fehlende Auth auf /api/users/list | api_tasks.py:1006 | Done: Auth-Depends hinzugefuegt (0.0.1+77) |
+| 2 | Critical | Auth | Fehlende Auth auf GET /api/areas | api_tasks.py:1109 | Done: Auth-Depends hinzugefuegt (0.0.1+77) |
+| 3 | Critical | Auth | Fehlende Auth auf POST /api/areas | api_tasks.py:1117 | Done: Auth-Depends hinzugefuegt (0.0.1+77) |
+| 4 | Critical | XSS | Unescapte col.field in onclick | expandable_table.js:564 | Done: escapeAttr() hinzugefuegt (0.0.1+77) |
+| 5 | Critical | XSS | Unescapte Kategorie in onclick | tab_aufgaben.js:194 | Done: escapeAttr() hinzugefuegt (0.0.1+77) |
+| 6 | High | SQLi | Table-Name Injection via f-String | config_utils.py:17,46 | Done: SQL-Whitelist (0.0.1+78) |
+| 7 | High | SQLi | Column-Name Injection via f-String | config_utils.py:46 | Done: SQL-Whitelist (0.0.1+78) |
+| 8 | High | SQLi | Dynamische UPDATE-Queries via f-String | db_utils.py:38-46 | Done: SQL-Whitelist (0.0.1+78) |
+| 9 | High | XSS | WYSIWYG Fallback ohne sanitizeHtml | wysiwyg_editor.js:33,102 | Done: sanitizeHtml Pflicht (0.0.1+77) |
+| 10 | High | XSS | Inkonsistentes Escaping renderActions | expandable_table.js:760 | Done: parseInt + escapeAttr (0.0.1+77) |
+| 11 | High | XSS | File-Browser globale Refs + Inline-Handler | file_browser.js:41,91 | Done: addEventListener Refactoring (0.0.1+79) |
 | 12 | High | Auth | IDOR in WOPI-Endpunkten | api_onlyoffice.py:342 | False Positive |
 | 13 | High | Auth | Session-Timeout 1 Jahr | auth.py:17 | Akzeptiert (internes Tool) |
-| 14 | High | Auth | Ueberpermissive CSP fuer Editor | app.py:121-140 | Fix #14: Dynamische CSP |
+| 14 | High | Auth | Ueberpermissive CSP fuer Editor | app.py:121-140 | Done: Dynamische CSP (0.0.1+79) |
 | 15 | High | Auth | Kein HTTPS-Enforcement / HSTS | app.py, auth.py:139 | Akzeptiert (by design) |
-| 16 | High | File | Fehlende Upload-Groessenlimits | api_nextcloud.py:299 | Fix #16: Groessenlimit |
-| 17 | High | Infra | Secret-Key Datei world-readable | auth.py:25-31 | Fix #17: 0600 Permissions |
-| 18 | Medium | SQLi | LDAP-Passwort in Klartext in DB | ldap_sync.py:38 | Fix #18+29: Fernet-Verschluesselung |
-| 19 | Medium | XSS | Unvalidierte localStorage-Werte | app_core.js:220 | Fix #19: 1-Zeilen-Whitelist |
-| 20 | Medium | XSS | Ungefilterte Server-Errors an User | app_core.js:202,623 | Fix #20+33: Generische Fehler |
+| 16 | High | File | Fehlende Upload-Groessenlimits | api_nextcloud.py:299 | Done: Upload-Limit 500MB (0.0.1+78) |
+| 17 | High | Infra | Secret-Key Datei world-readable | auth.py:25-31 | Done: 0600 Permissions (0.0.1+78) |
+| 18 | Medium | SQLi | LDAP-Passwort in Klartext in DB | ldap_sync.py:38 | Done: Fernet-Verschluesselung (0.0.1+80) |
+| 19 | Medium | XSS | Unvalidierte localStorage-Werte | app_core.js:220 | Done: localStorage Whitelist (0.0.1+77) |
+| 20 | Medium | XSS | Ungefilterte Server-Errors an User | app_core.js:202,623 | Done: Generische Fehler (0.0.1+78) |
 | 21 | Medium | XSS | Inkonsistentes Escaping tab_benutzer | tab_benutzer.js:164 | False Positive |
 | 22 | Medium | Auth | Schwache Passwort-Anforderungen (min 4) | api_admin.py:75 | Akzeptiert (internes Tool) |
-| 23 | Medium | Auth | Kein Rate-Limiting Passwort-Aenderung | api_auth.py:203 | Fix #23: Rate-Limit verallgemeinern |
+| 23 | Medium | Auth | Kein Rate-Limiting Passwort-Aenderung | api_auth.py:203 | Done: Rate-Limit verallgemeinert (0.0.1+78) |
 | 24 | Medium | Auth | Rate-Limit Timing-Leak | api_auth.py:102 | Akzeptiert (HTTP-Standard) |
 | 25 | Medium | Auth | Path-Traversal: doppeltes unquote | api_nextcloud.py:53 | False Positive |
 | 26 | Medium | File | Fehlende Dateityp-Validierung Upload | api_nextcloud.py:299 | Akzeptiert (WebDAV) |
-| 27 | Medium | Infra | Dependencies nicht gepinnt | requirements.txt | Fix #27: Minimum-Versionen |
-| 28 | Medium | Infra | Fehlende Systemd-Haertung | tareas.service | Fix #28: Haertungs-Direktiven |
-| 29 | Medium | Infra | Credentials in Klartext in DB | diverse api_*.py | Fix #18+29: Fernet-Verschluesselung |
+| 27 | Medium | Infra | Dependencies nicht gepinnt | requirements.txt | Done: Minimum-Versionen (0.0.1+79) |
+| 28 | Medium | Infra | Fehlende Systemd-Haertung | tareas.service | Done: Systemd-Haertung (0.0.1+81) |
+| 29 | Medium | Infra | Credentials in Klartext in DB | diverse api_*.py | Done: Fernet-Verschluesselung (0.0.1+80) |
 | 30 | Medium | DoS | Keine Pagination auf Task-Endpunkten | api_tasks.py:228 | Akzeptiert (Frontend-Pag.) |
 | 31 | Low | DoS | Topo-Sortierung ohne Iterations-Limit | api_tasks.py:150 | Akzeptiert |
-| 32 | Low | Log | Unzureichendes Security-Logging | diverse | Fix #32: /var/log/tareas.log |
-| 33 | Low | Log | Detail-Fehler an Client exponiert | diverse api_*.py | Fix #20+33: Generische Fehler |
+| 32 | Low | Log | Unzureichendes Security-Logging | diverse | Done: Security-Logging (0.0.1+81) |
+| 33 | Low | Log | Detail-Fehler an Client exponiert | diverse api_*.py | Done: Generische Fehler (0.0.1+78) |
 | 34 | Info | XSS | console.error in Produktion | diverse JS | Akzeptiert |
-| 35 | Info | Auth | Kein Logout ueber alle Tabs | app_core.js:143 | Fix #35: Cookie client-seitig loeschen |
+| 35 | Info | Auth | Kein Logout ueber alle Tabs | app_core.js:143 | Done: Cookie loeschen (0.0.1+77) |
 | 36 | Info | Auth | X-Frame-Options vs CSP Konflikt | app.py:119 | Durch Fix #14 adressiert |
 
 ---
