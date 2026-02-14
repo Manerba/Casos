@@ -98,6 +98,15 @@
   "tasks.statusLabel": "Estado:",
   "tasks.unassigned": "-- Sin asignar --",
 
+  "tasks.col.name": "Nombre",
+  "tasks.col.type": "Tipo",
+  "tasks.col.status": "Estado",
+  "tasks.col.priority": "Prioridad",
+  "tasks.col.from": "De",
+  "tasks.col.assignedTo": "Asignado a",
+  "tasks.col.created": "Creado",
+  "tasks.col.deadline": "Fecha limite",
+
   "category.team": "Equipo",
   "category.zugewiesene": "Asignadas",
   "category.vergebene": "Delegadas",

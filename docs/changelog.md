@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+87;Bugfix;i18n: Fehlende Uebersetzung der Spaltenuebrschriften in der Aufgaben-Tabelle (Name, Typ, Status, Prioritaet, Von, Zugewiesen an, Erstellt, Deadline). i18n_key-Feld in Column-Klasse, t()-Aufruf in renderHeader(), 8 neue tasks.col.*-Keys in de/en/es.json
 14.02.2026;0.0.1+86;Enhancement;i18n: Sprachauswahl als aufklappbares Submenu statt Cycle-Toggle (zeigt alle verfuegbaren Sprachen mit Haken bei aktiver Sprache)
 14.02.2026;0.0.1+85;Feature;i18n Mehrsprachigkeit (DE/EN/ES): i18n.js Core-System mit t()-Funktion, data-i18n Auto-Patch, Sprachauswahl im Settings-Dropdown, 399 Translation-Keys in 3 JSON-Dateien (de/en/es.json), alle 17 JS-Dateien und 5 HTML-Templates auf t()-Aufrufe umgestellt
 14.02.2026;0.0.1+84;Release;Open-Source-Vorbereitung: Hardcodierte IPs entfernt (app.py, admin_app.py, tab_tls.js, tab_onlyoffice.js, tab_allgemein.js, security-issues-fixes.md, changelog.md), docs/prompts.txt geloescht, Packaging-Maintainer auf GitHub aktualisiert, CLAUDE.md bereinigt, .gitignore erweitert, LICENSE (MIT) und README.md erstellt, publish.sh um --github/--github-init erweitert (prepare_clean_copy fuer bereinigte Kopie)

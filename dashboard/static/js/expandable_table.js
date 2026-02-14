@@ -569,9 +569,12 @@ class ExpandableTable {
             // Info-Tooltip als data-Attribut
             const infoAttr = hasInfo ? `data-info="${escapeAttr(col.info)}"` : '';
 
+            // i18n: Spaltenüberschrift übersetzen wenn Key vorhanden
+            const label = (col.i18nKey && typeof t === 'function') ? t(col.i18nKey) : col.label;
+
             html += `
                 <span class="header-cell ${sortableClass} ${infoClass}" ${clickHandler} ${infoAttr}>
-                    ${this.escapeHtml(col.label)}${hasInfo ? '<span class="info-indicator">ⓘ</span>' : ''} ${col.sortable ? sortIcon : ''}
+                    ${this.escapeHtml(label)}${hasInfo ? '<span class="info-indicator">ⓘ</span>' : ''} ${col.sortable ? sortIcon : ''}
                 </span>
             `;
         });

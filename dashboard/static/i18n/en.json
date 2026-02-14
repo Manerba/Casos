@@ -98,6 +98,15 @@
   "tasks.statusLabel": "Status:",
   "tasks.unassigned": "-- Unassigned --",
 
+  "tasks.col.name": "Name",
+  "tasks.col.type": "Type",
+  "tasks.col.status": "Status",
+  "tasks.col.priority": "Priority",
+  "tasks.col.from": "From",
+  "tasks.col.assignedTo": "Assigned to",
+  "tasks.col.created": "Created",
+  "tasks.col.deadline": "Deadline",
+
   "category.team": "Team",
   "category.zugewiesene": "Assigned",
   "category.vergebene": "Delegated",
