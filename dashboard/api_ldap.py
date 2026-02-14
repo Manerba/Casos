@@ -17,8 +17,10 @@ from dashboard.auth import get_admin_user
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
 from dashboard.tls_utils import get_tls_verify_config
+from dashboard.logging_config import get_security_logger
 
 logger = logging.getLogger(__name__)
+security_log = get_security_logger()
 
 router = APIRouter(prefix="/api/admin/ldap", tags=["ldap"])
 
@@ -103,6 +105,7 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
                  data.search_base.strip(), data.sync_interval_minutes),
             )
 
+        security_log.info("CONFIG_CHANGED section=ldap by=%s", user["username"])
         return {"message": "LDAP-Konfiguration gespeichert"}
 
 
@@ -112,6 +115,7 @@ async def delete_ldap_config(user=Depends(get_admin_user)):
     with db_transaction() as db:
         db.execute("DELETE FROM ldap_config WHERE id = 1")
         db.execute("UPDATE users SET is_active = 0 WHERE auth_source = 'ldap'")
+        security_log.info("CONFIG_CHANGED section=ldap_deleted by=%s", user["username"])
         return {"message": "LDAP-Konfiguration geloescht, LDAP-Benutzer deaktiviert"}
 
 

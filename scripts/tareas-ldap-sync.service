@@ -8,3 +8,13 @@ WorkingDirectory=/sdb1/nextcloud/data/mir/files/Dev/Tareas
 ExecStart=/usr/bin/python3 scripts/ldap_sync_cron.py
 StandardOutput=journal
 StandardError=journal
+
+# Security Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=true
+ReadWritePaths=/sdb1/nextcloud/data/mir/files/Dev/Tareas/data /var/log
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectKernelTunables=yes
+ProtectControlGroups=yes

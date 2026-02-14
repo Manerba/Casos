@@ -10,6 +10,9 @@ from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import hash_password, get_admin_user
+from dashboard.logging_config import get_security_logger
+
+security_log = get_security_logger()
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -88,6 +91,7 @@ async def create_user(data: UserCreate, user=Depends(get_admin_user)):
                VALUES (?, ?, ?, ?, ?, ?)""",
             (data.username.strip(), hashed, data.vorname, data.nachname, data.email, data.is_admin),
         )
+        security_log.info("USER_CREATED user=%s by=%s", data.username.strip(), user["username"])
         return {"id": cursor.lastrowid, "message": "Benutzer erstellt"}
 
 
@@ -144,4 +148,5 @@ async def delete_user(user_id: int, user=Depends(get_admin_user)):
         # Sessions mitloeschen (CASCADE sollte das tun, aber sicherheitshalber)
         db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
         db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        security_log.info("USER_DELETED user_id=%s by=%s", user_id, user["username"])
         return {"message": "Benutzer geloescht"}

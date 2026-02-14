@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.crypto_utils import decrypt
+from dashboard.logging_config import get_security_logger
 from dashboard.auth import (
     verify_password,
     hash_password,
@@ -25,6 +26,7 @@ from dashboard.auth import (
 )
 
 logger = logging.getLogger(__name__)
+security_log = get_security_logger()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -102,6 +104,7 @@ async def login(data: LoginRequest, request: Request):
     remaining = _check_rate_limit(rate_key)
     if remaining is not None:
         logger.warning("Rate-Limit: IP %s muss noch %ds warten", client_ip, remaining)
+        security_log.warning("RATE_LIMITED key=%s", rate_key)
         raise HTTPException(
             status_code=429,
             detail=f"Zu viele Fehlversuche. Bitte {remaining}s warten.",
@@ -116,6 +119,7 @@ async def login(data: LoginRequest, request: Request):
     if not row:
         _record_fail(rate_key)
         logger.warning("Login fehlgeschlagen: Benutzer '%s' nicht gefunden (IP: %s)", data.username, client_ip)
+        security_log.warning("LOGIN_FAILED user=%s ip=%s", data.username, client_ip)
         raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
     auth_source = row["auth_source"] if "auth_source" in row.keys() else "local"
@@ -125,6 +129,7 @@ async def login(data: LoginRequest, request: Request):
         # LDAP-Benutzer: Pruefen ob aktiv
         if not is_active:
             logger.warning("Login fehlgeschlagen: LDAP-Benutzer '%s' deaktiviert", data.username)
+            security_log.warning("LOGIN_FAILED user=%s ip=%s", data.username, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
         # LDAP-Config laden und Authentifizierung
@@ -157,16 +162,19 @@ async def login(data: LoginRequest, request: Request):
         if not success:
             _record_fail(rate_key)
             logger.warning("Login fehlgeschlagen: LDAP-Auth fuer '%s': %s (IP: %s)", data.username, error, client_ip)
+            security_log.warning("LOGIN_FAILED user=%s ip=%s", data.username, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
     else:
         # Lokaler Benutzer: Passwort-Hash pruefen
         if not verify_password(data.password, row["password_hash"]):
             _record_fail(rate_key)
             logger.warning("Login fehlgeschlagen: Falsches Passwort fuer '%s' (IP: %s)", data.username, client_ip)
+            security_log.warning("LOGIN_FAILED user=%s ip=%s", data.username, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
     # Erfolgreicher Login: Fehlzaehler zuruecksetzen
     _reset_fails(rate_key)
+    security_log.info("LOGIN_SUCCESS user=%s ip=%s", data.username, client_ip)
     token = create_session(row["id"])
 
     user_data = {
@@ -185,6 +193,7 @@ async def login(data: LoginRequest, request: Request):
 @router.post("/logout")
 async def logout(request: Request, user=Depends(get_current_user)):
     """Abmelden: Session und Cookie loeschen."""
+    security_log.info("LOGOUT user=%s", user["username"])
     signed = request.cookies.get(COOKIE_NAME)
     if signed:
         token = unsign_token(signed)
@@ -211,6 +220,7 @@ async def change_password(data: PasswordChangeRequest, user=Depends(get_current_
     remaining = _check_rate_limit(rate_key)
     if remaining is not None:
         logger.warning("Rate-Limit: Passwort-Aenderung fuer User %s gesperrt (%ds)", user["id"], remaining)
+        security_log.warning("RATE_LIMITED key=%s", rate_key)
         raise HTTPException(
             status_code=429,
             detail=f"Zu viele Fehlversuche. Bitte {remaining}s warten.",
@@ -224,6 +234,7 @@ async def change_password(data: PasswordChangeRequest, user=Depends(get_current_
 
         if not row or not verify_password(data.old_password, row["password_hash"]):
             _record_fail(rate_key)
+            security_log.warning("PASSWORD_CHANGE_FAILED user=%s", user["username"])
             raise HTTPException(status_code=400, detail="Altes Passwort ist falsch")
 
         new_hash = hash_password(data.new_password)
@@ -233,4 +244,5 @@ async def change_password(data: PasswordChangeRequest, user=Depends(get_current_
         )
 
     _reset_fails(rate_key)
+    security_log.info("PASSWORD_CHANGED user=%s", user["username"])
     return {"message": "Passwort geaendert"}

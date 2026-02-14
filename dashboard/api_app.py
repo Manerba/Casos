@@ -7,6 +7,9 @@ from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_admin_user
+from dashboard.logging_config import get_security_logger
+
+security_log = get_security_logger()
 
 app_config_router = APIRouter()
 
@@ -45,4 +48,5 @@ async def save_app_config(data: AppConfigSave, user=Depends(get_admin_user)):
                    server_address = excluded.server_address""",
             (address,),
         )
+        security_log.info("CONFIG_CHANGED section=app by=%s", user["username"])
         return {"message": "App-Konfiguration gespeichert"}

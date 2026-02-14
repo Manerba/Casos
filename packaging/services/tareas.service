@@ -11,5 +11,15 @@ ExecStart=/opt/tareas/venv/bin/python dashboard/app.py
 Restart=always
 RestartSec=5
 
+# Security Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=true
+ReadWritePaths=/opt/tareas/data /var/log
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+
 [Install]
 WantedBy=multi-user.target

@@ -18,8 +18,10 @@ from dashboard.config_utils import get_masked_config, resolve_masked_password
 from dashboard.crypto_utils import decrypt
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
+from dashboard.logging_config import get_security_logger
 
 logger = logging.getLogger(__name__)
+security_log = get_security_logger()
 
 
 # ============================================================
@@ -148,6 +150,7 @@ async def save_nextcloud_config(data: NextcloudConfigRequest, user=Depends(get_a
                  actual_password, data.base_path.strip()),
             )
 
+        security_log.info("CONFIG_CHANGED section=nextcloud by=%s", user["username"])
         return {"message": "Nextcloud-Konfiguration gespeichert"}
 
 
@@ -158,6 +161,7 @@ async def delete_nextcloud_config(user=Depends(get_admin_user)):
         db.execute("DELETE FROM nextcloud_config WHERE id = 1")
         # nextcloud_path in allen tasks zuruecksetzen
         db.execute("UPDATE tasks SET nextcloud_path = NULL WHERE nextcloud_path IS NOT NULL")
+        security_log.info("CONFIG_CHANGED section=nextcloud_deleted by=%s", user["username"])
         return {"message": "Nextcloud-Konfiguration geloescht"}
 
 

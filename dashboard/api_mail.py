@@ -20,6 +20,9 @@ from dashboard.mail_service import (
     ensure_default_prefs,
     get_app_url,
 )
+from dashboard.logging_config import get_security_logger
+
+security_log = get_security_logger()
 
 mail_admin_router = APIRouter()
 mail_user_router = APIRouter()
@@ -112,6 +115,7 @@ async def save_mail_config(data: MailConfigSave, user=Depends(get_admin_user)):
              1 if data.auth_enabled else 0, data.username, password,
              data.from_address, data.from_name),
         )
+        security_log.info("CONFIG_CHANGED section=mail by=%s", user["username"])
         return {"message": "Mail-Konfiguration gespeichert (Verbindung OK)"}
 
 
@@ -120,6 +124,7 @@ async def delete_mail_config(user=Depends(get_admin_user)):
     """Mail-Config loeschen."""
     with db_transaction() as db:
         db.execute("DELETE FROM mail_config WHERE id = 1")
+        security_log.info("CONFIG_CHANGED section=mail_deleted by=%s", user["username"])
         return {"message": "Mail-Konfiguration geloescht"}
 
 

@@ -10,5 +10,15 @@ ExecStart=/sdb1/nextcloud/data/mir/files/Dev/Tareas/venv/bin/python dashboard/ap
 Restart=always
 RestartSec=5
 
+# Security Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=true
+ReadWritePaths=/sdb1/nextcloud/data/mir/files/Dev/Tareas/data /var/log
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+
 [Install]
 WantedBy=multi-user.target

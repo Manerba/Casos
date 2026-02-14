@@ -9,6 +9,9 @@ from pydantic import BaseModel
 from dashboard.db_utils import db_query, db_transaction, upsert_singleton_config
 from dashboard.auth import get_admin_user
 from dashboard.tls_utils import validate_cert_files, get_tls_verify_config
+from dashboard.logging_config import get_security_logger
+
+security_log = get_security_logger()
 
 router = APIRouter(prefix="/api/admin/tls", tags=["tls"])
 
@@ -76,6 +79,7 @@ async def save_tls_config(req: TlsConfigRequest, user=Depends(get_admin_user)):
             "key_path": key_path,
             "enabled": req.enabled,
         })
+        security_log.info("CONFIG_CHANGED section=tls by=%s", user["username"])
         return {"status": "ok", "message": "TLS-Konfiguration gespeichert"}
 
 
@@ -99,6 +103,7 @@ async def delete_tls_config(user=Depends(get_admin_user)):
     """TLS-Konfiguration loeschen (zurueck zu HTTP)."""
     with db_transaction() as db:
         db.execute("DELETE FROM tls_config WHERE id = 1")
+        security_log.info("CONFIG_CHANGED section=tls_deleted by=%s", user["username"])
         return {"status": "ok", "message": "TLS-Konfiguration geloescht"}
 
 
@@ -118,4 +123,5 @@ async def save_verify_config(req: TlsVerifyConfigRequest, user=Depends(get_admin
             "verify_smtp": req.verify_smtp,
             "verify_ldap": req.verify_ldap,
         })
+        security_log.info("CONFIG_CHANGED section=tls_verify by=%s", user["username"])
         return {"status": "ok", "message": "Zertifikatsvalidierung gespeichert"}

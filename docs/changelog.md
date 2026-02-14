@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026;0.0.1+81;Security;Phase 4: Systemd-Haertung (7 Service-Dateien: NoNewPrivileges, ProtectSystem, PrivateTmp etc.), Security-Logging (logging_config.py, RotatingFileHandler /var/log/tareas.log, 25 Events in api_auth/api_admin/api_tls/api_onlyoffice/api_nextcloud/api_mail/api_ldap/api_app)
 14.02.2026;0.0.1+80;Security;Phase 3.3: Fernet-Verschluesselung fuer Credentials at-rest. crypto_utils.py (encrypt/decrypt/migrate), config_utils.py (verschluesselt speichern, entschluesselt lesen), decrypt() in webdav/mail_service/ldap_sync/api_auth/api_ldap/api_onlyoffice, Migration beim Startup
 14.02.2026;0.0.1+79;Security;Phase 3.1: file_browser.js - Alle inline onclick/ondblclick/oncontextmenu Handler durch data-Attribute + Event-Delegation ersetzt, globale window._fb-Referenz entfernt
 14.02.2026;0.0.1+78;Security;Phase 2: SQL-Identifier Whitelist (db_utils/config_utils), generische Error-Details (api_nextcloud/api_onlyoffice/api_ldap), Rate-Limit verallgemeinert + Passwort-Aenderung (api_auth), Upload-Groessenlimit 500MB (api_nextcloud), Secret-Key Dateiberechtigungen 0600 (auth.py)
