@@ -34,7 +34,7 @@ LOGIN_FAILED_MSG = "Anmeldung fehlgeschlagen"
 # Nach 3 Fehlversuchen: 10s Sperre, danach +5s pro Fehlversuch
 # ============================================================
 
-_login_fails: dict[str, dict] = {}  # {ip: {"count": int, "last_fail": float}}
+_rate_limits: dict[str, dict] = {}  # {key: {"count": int, "last_fail": float}}
 _RATE_LIMIT_THRESHOLD = 3
 _RATE_LIMIT_BASE_DELAY = 10   # Sekunden nach 3. Fehlversuch
 _RATE_LIMIT_INCREMENT = 5     # Sekunden pro weiterem Fehlversuch
@@ -47,9 +47,9 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _check_rate_limit(ip: str) -> int | None:
+def _check_rate_limit(key: str) -> int | None:
     """Gibt verbleibende Wartezeit in Sekunden zurueck, oder None."""
-    entry = _login_fails.get(ip)
+    entry = _rate_limits.get(key)
     if not entry or entry["count"] < _RATE_LIMIT_THRESHOLD:
         return None
     extra = entry["count"] - _RATE_LIMIT_THRESHOLD
@@ -60,17 +60,17 @@ def _check_rate_limit(ip: str) -> int | None:
     return None
 
 
-def _record_fail(ip: str):
-    entry = _login_fails.get(ip)
+def _record_fail(key: str):
+    entry = _rate_limits.get(key)
     if entry:
         entry["count"] += 1
         entry["last_fail"] = time.monotonic()
     else:
-        _login_fails[ip] = {"count": 1, "last_fail": time.monotonic()}
+        _rate_limits[key] = {"count": 1, "last_fail": time.monotonic()}
 
 
-def _reset_fails(ip: str):
-    _login_fails.pop(ip, None)
+def _reset_fails(key: str):
+    _rate_limits.pop(key, None)
 
 
 # ============================================================
@@ -95,9 +95,10 @@ class PasswordChangeRequest(BaseModel):
 async def login(data: LoginRequest, request: Request):
     """Benutzer anmelden, Session erstellen, Cookie setzen."""
     client_ip = _get_client_ip(request)
+    rate_key = f"login:{client_ip}"
 
     # Rate-Limit pruefen
-    remaining = _check_rate_limit(client_ip)
+    remaining = _check_rate_limit(rate_key)
     if remaining is not None:
         logger.warning("Rate-Limit: IP %s muss noch %ds warten", client_ip, remaining)
         raise HTTPException(
@@ -112,7 +113,7 @@ async def login(data: LoginRequest, request: Request):
         ).fetchone()
 
     if not row:
-        _record_fail(client_ip)
+        _record_fail(rate_key)
         logger.warning("Login fehlgeschlagen: Benutzer '%s' nicht gefunden (IP: %s)", data.username, client_ip)
         raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
@@ -153,18 +154,18 @@ async def login(data: LoginRequest, request: Request):
             raise HTTPException(status_code=503, detail="LDAP-Server nicht erreichbar")
 
         if not success:
-            _record_fail(client_ip)
+            _record_fail(rate_key)
             logger.warning("Login fehlgeschlagen: LDAP-Auth fuer '%s': %s (IP: %s)", data.username, error, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
     else:
         # Lokaler Benutzer: Passwort-Hash pruefen
         if not verify_password(data.password, row["password_hash"]):
-            _record_fail(client_ip)
+            _record_fail(rate_key)
             logger.warning("Login fehlgeschlagen: Falsches Passwort fuer '%s' (IP: %s)", data.username, client_ip)
             raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
     # Erfolgreicher Login: Fehlzaehler zuruecksetzen
-    _reset_fails(client_ip)
+    _reset_fails(rate_key)
     token = create_session(row["id"])
 
     user_data = {
@@ -203,12 +204,25 @@ async def me(user=Depends(get_current_user)):
 @router.put("/password")
 async def change_password(data: PasswordChangeRequest, user=Depends(get_current_user)):
     """Passwort aendern."""
+    rate_key = f"pwchange:{user['id']}"
+
+    # Rate-Limit pruefen
+    remaining = _check_rate_limit(rate_key)
+    if remaining is not None:
+        logger.warning("Rate-Limit: Passwort-Aenderung fuer User %s gesperrt (%ds)", user["id"], remaining)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Zu viele Fehlversuche. Bitte {remaining}s warten.",
+            headers={"Retry-After": str(remaining)},
+        )
+
     with db_transaction() as db:
         row = db.execute(
             "SELECT password_hash FROM users WHERE id = ?", (user["id"],)
         ).fetchone()
 
         if not row or not verify_password(data.old_password, row["password_hash"]):
+            _record_fail(rate_key)
             raise HTTPException(status_code=400, detail="Altes Passwort ist falsch")
 
         new_hash = hash_password(data.new_password)
@@ -217,4 +231,5 @@ async def change_password(data: PasswordChangeRequest, user=Depends(get_current_
             (new_hash, user["id"]),
         )
 
+    _reset_fails(rate_key)
     return {"message": "Passwort geaendert"}

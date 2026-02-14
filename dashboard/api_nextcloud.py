@@ -4,6 +4,7 @@ Admin-Konfiguration und Dateioperationen via WebDAV.
 """
 
 import asyncio
+import logging
 import posixpath
 from urllib.parse import unquote
 
@@ -16,6 +17,15 @@ from dashboard.db_utils import db_query, db_transaction
 from dashboard.config_utils import get_masked_config, resolve_masked_password
 from dashboard.auth import get_admin_user, get_current_user
 from dashboard import webdav
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================
+# Konstanten
+# ============================================================
+
+MAX_UPLOAD_SIZE = 500 * 1024 * 1024  # 500 MB
 
 
 # ============================================================
@@ -171,9 +181,11 @@ async def get_nextcloud_directories(
             "current_path": path,
         }
     except RuntimeError as e:
+        logger.exception("Fehler beim Auflisten der Nextcloud-Verzeichnisse")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Fehler beim Auflisten der Nextcloud-Verzeichnisse")
+        raise HTTPException(status_code=500, detail="Verzeichnisse konnten nicht geladen werden")
 
 
 @files_router.get("/api/nextcloud/status")
@@ -259,6 +271,7 @@ async def list_task_files(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Verzeichnis nicht gefunden: {path}")
     except RuntimeError as e:
+        logger.exception("Fehler beim Auflisten der Dateien")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -279,6 +292,7 @@ async def download_task_file(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Datei nicht gefunden: {path}")
     except RuntimeError as e:
+        logger.exception("Fehler beim Herunterladen der Datei")
         raise HTTPException(status_code=500, detail=str(e))
 
     # Dateiname aus Pfad extrahieren
@@ -313,11 +327,14 @@ async def upload_task_file(
     target = f"{target}/{filename}"
 
     content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Datei zu gross (max. 500 MB)")
     content_type = file.content_type or "application/octet-stream"
 
     try:
         await asyncio.to_thread(webdav.upload_file, target, content, content_type)
     except RuntimeError as e:
+        logger.exception("Fehler beim Hochladen der Datei")
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": f"Datei '{file.filename}' hochgeladen", "filename": file.filename}
@@ -345,6 +362,7 @@ async def create_task_directory(
     except FileExistsError:
         raise HTTPException(status_code=409, detail=f"Ordner existiert bereits: {body.name}")
     except RuntimeError as e:
+        logger.exception("Fehler beim Erstellen des Ordners")
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": f"Ordner '{body.name}' erstellt"}
@@ -366,6 +384,7 @@ async def delete_task_file(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Nicht gefunden: {path}")
     except RuntimeError as e:
+        logger.exception("Fehler beim Loeschen")
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Geloescht"}
@@ -389,6 +408,7 @@ async def move_task_file(
     except FileExistsError:
         raise HTTPException(status_code=409, detail=f"Ziel existiert bereits: {body.destination}")
     except RuntimeError as e:
+        logger.exception("Fehler beim Verschieben")
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"message": "Verschoben"}

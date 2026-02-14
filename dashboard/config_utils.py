@@ -1,6 +1,6 @@
 """Zentrale Hilfsfunktionen fuer Config-Operationen."""
 from fastapi import HTTPException
-from dashboard.db_utils import db_query
+from dashboard.db_utils import db_query, validate_identifier, ALLOWED_TABLES, ALLOWED_COLUMNS
 
 
 def get_masked_config(table: str, mask_fields: list[str] | None = None) -> dict | None:
@@ -13,6 +13,11 @@ def get_masked_config(table: str, mask_fields: list[str] | None = None) -> dict 
     Returns:
         Config-Dict mit maskierten Feldern oder None
     """
+    validate_identifier(table, ALLOWED_TABLES, "table")
+    if mask_fields:
+        for field in mask_fields:
+            validate_identifier(field, ALLOWED_COLUMNS, "column")
+
     with db_query() as db:
         row = db.execute(f"SELECT * FROM {table} WHERE id = 1").fetchone()
         if not row:
@@ -40,6 +45,9 @@ def resolve_masked_password(db, table: str, field: str, new_value: str) -> str:
     Raises:
         HTTPException(400) wenn maskiert aber kein gespeichertes PW existiert
     """
+    validate_identifier(table, ALLOWED_TABLES, "table")
+    validate_identifier(field, ALLOWED_COLUMNS, "column")
+
     if new_value != "********":
         return new_value
 

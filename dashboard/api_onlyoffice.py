@@ -326,13 +326,15 @@ async def test_connection(user=Depends(get_admin_user)):
                     detail=f"Healthcheck fehlgeschlagen: Status {resp.status_code}, Antwort: {resp.text[:200]}",
                 )
     except httpx.ConnectError as e:
-        raise HTTPException(status_code=400, detail=f"Verbindungsfehler: {e}")
+        logger.exception("Verbindungsfehler bei ONLYOFFICE-Healthcheck")
+        raise HTTPException(status_code=400, detail="Verbindung zum ONLYOFFICE-Server fehlgeschlagen")
     except httpx.TimeoutException:
         raise HTTPException(status_code=400, detail="Zeitueberschreitung bei der Verbindung")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fehler: {e}")
+        logger.exception("Fehler bei ONLYOFFICE-Healthcheck")
+        raise HTTPException(status_code=500, detail="Verbindungstest fehlgeschlagen")
 
 
 # ============================================================
@@ -371,7 +373,8 @@ async def wopi_check_file_info(file_id: str, access_token: str = Query(...)):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Fehler beim Laden der Datei-Metadaten (WOPI CheckFileInfo)")
+        raise HTTPException(status_code=500, detail="Datei-Metadaten konnten nicht geladen werden")
 
     user_friendly_name = get_display_name(token_data)
 
@@ -416,7 +419,8 @@ async def wopi_get_file(file_id: str, access_token: str = Query(...)):
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Datei nicht gefunden")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Fehler beim Laden des Dateiinhalts (WOPI GetFile)")
+        raise HTTPException(status_code=500, detail="Datei konnte nicht geladen werden")
 
     return Response(content=content, media_type="application/octet-stream")
 
@@ -451,7 +455,8 @@ async def wopi_put_file(file_id: str, request: Request, access_token: str = Quer
     try:
         await asyncio.to_thread(webdav.upload_file, full_path, content)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Fehler beim Speichern der Datei (WOPI PutFile)")
+        raise HTTPException(status_code=500, detail="Datei konnte nicht gespeichert werden")
 
     return Response(status_code=200)
 

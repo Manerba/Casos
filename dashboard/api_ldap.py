@@ -4,6 +4,7 @@ LDAP-Konfiguration, Gruppen, Synchronisierung.
 """
 
 import asyncio
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -15,6 +16,8 @@ from dashboard.auth import get_admin_user
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
 from dashboard.tls_utils import get_tls_verify_config
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin/ldap", tags=["ldap"])
 
@@ -134,7 +137,8 @@ async def get_ldap_groups(user=Depends(get_admin_user)):
         groups = await asyncio.to_thread(list_groups, config)
         return {"groups": groups}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Fehler beim Laden der LDAP-Gruppen")
+        raise HTTPException(status_code=500, detail="LDAP-Gruppen konnten nicht geladen werden")
 
 
 @router.post("/group")

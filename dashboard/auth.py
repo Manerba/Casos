@@ -3,6 +3,7 @@ Tareas - Authentifizierung
 Hashing, Sessions, Cookie-Signing, FastAPI-Dependencies.
 """
 
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -25,10 +26,19 @@ SECRET_KEY_PATH = Path(__file__).parent.parent / "data" / "secret.key"
 def get_secret_key() -> str:
     """Liest oder erstellt den Secret Key fuer Cookie-Signing."""
     if SECRET_KEY_PATH.exists():
+        # Berechtigungen korrigieren falls noetig
+        os.chmod(str(SECRET_KEY_PATH), 0o600)
         return SECRET_KEY_PATH.read_text().strip()
+    # Verzeichnis mit restriktiven Rechten erstellen
     SECRET_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(str(SECRET_KEY_PATH.parent), 0o700)
+    # Key-Datei mit 0600 erstellen (nur Owner lesen/schreiben)
     key = secrets.token_hex(32)
-    SECRET_KEY_PATH.write_text(key)
+    fd = os.open(str(SECRET_KEY_PATH), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    try:
+        os.write(fd, key.encode())
+    finally:
+        os.close(fd)
     return key
 
 
