@@ -191,7 +191,7 @@ function buildCategoryButtons() {
         if (!counts[cat]) return;
         const isActive = activeSet.has(cat);
         const label = _categoryLabels[cat] || cat;
-        html += `<button class="control-btn category-btn${isActive ? ' active' : ''}" data-category="${cat}" onclick="toggleCategoryFilter('${cat}')">${label} (${counts[cat]})</button>`;
+        html += `<button class="control-btn category-btn${isActive ? ' active' : ''}" data-category="${escapeAttr(cat)}" onclick="toggleCategoryFilter('${escapeAttr(cat)}')">${label} (${counts[cat]})</button>`;
     });
 
     container.innerHTML = html;

@@ -30,7 +30,7 @@ class WysiwygEditor {
         this.content = document.createElement('div');
         this.content.className = 'wysiwyg-content';
         this.content.contentEditable = 'true';
-        this.content.innerHTML = (typeof sanitizeHtml === 'function' ? sanitizeHtml(initialHTML) : initialHTML) || '<p><br></p>';
+        this.content.innerHTML = sanitizeHtml(initialHTML) || '<p><br></p>';
         this.container.appendChild(this.content);
 
         // Event-Listener fuer Toolbar-Buttons
@@ -99,7 +99,7 @@ class WysiwygEditor {
 
     setContent(html) {
         if (this.content) {
-            this.content.innerHTML = (typeof sanitizeHtml === 'function' ? sanitizeHtml(html) : html) || '<p><br></p>';
+            this.content.innerHTML = sanitizeHtml(html) || '<p><br></p>';
         }
     }
 }

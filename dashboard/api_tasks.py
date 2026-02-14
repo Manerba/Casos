@@ -1004,7 +1004,7 @@ async def save_netzplan_positions(task_id: int, payload: NetzplanPositionsSave, 
 # ============================================================
 
 @router.get("/api/users/list")
-async def get_users_list():
+async def get_users_list(user=Depends(get_current_user)):
     """Alle Benutzer als Liste (fuer Zuweisungs-Dropdown)."""
     with db_query() as db:
         rows = db.execute(
@@ -1107,7 +1107,7 @@ async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, u
 # ============================================================
 
 @router.get("/api/areas")
-async def get_areas():
+async def get_areas(user=Depends(get_current_user)):
     """Alle Bereiche abrufen."""
     with db_query() as db:
         rows = db.execute("SELECT * FROM areas ORDER BY name").fetchall()
@@ -1115,7 +1115,7 @@ async def get_areas():
 
 
 @router.post("/api/areas")
-async def create_area(area: AreaCreate):
+async def create_area(area: AreaCreate, user=Depends(get_current_user)):
     """Neuen Bereich anlegen."""
     try:
         with db_transaction() as db:

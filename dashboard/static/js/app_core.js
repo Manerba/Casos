@@ -146,6 +146,7 @@ async function logout() {
     } catch (e) {
         // Ignorieren
     }
+    document.cookie = 'tareas_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     window.location.href = '/login';
 }
 
@@ -217,7 +218,8 @@ function openPasswordChangeModal() {
 // ========================================
 
 function initTheme() {
-    const savedTheme = localStorage.getItem('dashboard-theme') || 'light';
+    const raw = localStorage.getItem('dashboard-theme');
+    const savedTheme = ['light', 'dark'].includes(raw) ? raw : 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     updateThemeButton(savedTheme);
 }

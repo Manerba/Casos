@@ -236,7 +236,7 @@ class ExpandableTable {
             return '';
         }
 
-        const tableId = this.config.id;
+        const tableId = escapeAttr(this.config.id);
         const current = this.pagination.currentPage;
         const total = this.pagination.totalPages;
         const pageNumbers = this.getPageNumbers();
@@ -561,13 +561,13 @@ class ExpandableTable {
 
         this.config.columns.forEach(col => {
             const sortIcon = this.getSortIcon(col.field);
-            const clickHandler = col.sortable ? `onclick="tables['${this.config.id}'].sortBy('${col.field}')"` : '';
+            const clickHandler = col.sortable ? `onclick="tables['${escapeAttr(this.config.id)}'].sortBy('${escapeAttr(col.field)}')"` : '';
             const sortableClass = col.sortable ? 'sortable' : '';
             const hasInfo = col.info && col.info.length > 0;
             const infoClass = hasInfo ? 'has-info' : '';
 
             // Info-Tooltip als data-Attribut
-            const infoAttr = hasInfo ? `data-info="${this.escapeHtml(col.info)}"` : '';
+            const infoAttr = hasInfo ? `data-info="${escapeAttr(col.info)}"` : '';
 
             html += `
                 <span class="header-cell ${sortableClass} ${infoClass}" ${clickHandler} ${infoAttr}>
@@ -755,7 +755,7 @@ class ExpandableTable {
     }
 
     renderActions(value, col, row) {
-        const id = row.id;
+        const id = parseInt(row.id);
         return `
             <span class="action-btn edit-btn" onclick="event.stopPropagation(); openCommentEditor(${id})" title="Kommentar bearbeiten">✏️</span>
             <span class="action-btn delete-btn" onclick="event.stopPropagation(); deleteWatchlistItem(${id})" title="In Papierkorb">🗑️</span>
@@ -768,7 +768,7 @@ class ExpandableTable {
         return `
             <label class="toggle-switch" onclick="event.stopPropagation()">
                 <input type="checkbox" ${checked}
-                       onchange="toggleVariantActive('${this.escapeHtml(codename)}', this)">
+                       onchange="toggleVariantActive('${escapeAttr(codename)}', this)">
                 <span class="toggle-slider"></span>
             </label>
         `;
