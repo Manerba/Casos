@@ -88,10 +88,11 @@ function initEventListeners() {
         mailPrefsBtn.addEventListener('click', openMailPreferencesModal);
     }
 
-    // Language Toggle
+    // Language Submenu
     const langToggle = document.getElementById('langToggle');
     if (langToggle) {
-        langToggle.addEventListener('click', cycleLang);
+        langToggle.addEventListener('click', toggleLangMenu);
+        buildLangMenu();
     }
 
     // Tabs
@@ -261,12 +262,32 @@ function updateThemeButton(theme) {
 // Language Handling
 // ========================================
 
-function cycleLang() {
+function toggleLangMenu() {
+    const sub = document.getElementById('langSubMenu');
+    const icon = document.getElementById('langExpandIcon');
+    if (!sub) return;
+    const isOpen = sub.style.display !== 'none';
+    sub.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.classList.toggle('open', !isOpen);
+}
+
+function buildLangMenu() {
+    const sub = document.getElementById('langSubMenu');
+    if (!sub) return;
     const langs = getAvailableLangs();
     const current = getLang();
-    const idx = langs.findIndex(l => l.code === current);
-    const next = langs[(idx + 1) % langs.length];
-    setLang(next.code);
+    sub.innerHTML = langs.map(l => {
+        const active = l.code === current ? ' active' : '';
+        const check = l.code === current ? '\u2713' : '';
+        return `<div class="settings-sub-item${active}" data-lang="${l.code}">
+            <span class="lang-check">${check}</span>
+            <span>${l.label}</span>
+        </div>`;
+    }).join('');
+    sub.addEventListener('click', (e) => {
+        const item = e.target.closest('[data-lang]');
+        if (item) setLang(item.dataset.lang);
+    });
 }
 
 function initLangStatus() {
