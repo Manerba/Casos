@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.02.2026 19:05;0.0.1+92;Enhancement;Demo-Daten: Subtasks von 26 auf 15 konsolidiert mit sauberen Abhaengigkeiten (5 Levels), ausfuehrliche Projekt- und Aufgabenbeschreibungen fuer GitHub-Screenshots
 14.02.2026 18:30;0.0.1+91;Enhancement;Netzplan: Auto-Button durch Dropdown-Submenu mit 3 Layout-Optionen ersetzt (Barycenter/Kompakt/Oben ausgerichtet), Mindestabstand zwischen Knoten von 70 auf 90 erhoeht
 14.02.2026 17:45;0.0.1+90;Feature;Netzplan: Barycenter-Heuristik (Sugiyama) fuer Kreuzungsminimierung bei Auto-Anordnung. 4 Sweep-Iterationen (forward+backward), Projektknoten Y-zentriert auf Nachfolger
 14.02.2026 13:36;0.0.1+89;Feature;i18n: 4 neue Sprachen hinzugefuegt - Franzoesisch (fr), Rumaenisch (ro), Ukrainisch (uk), Russisch (ru). Je 407 Keys uebersetzt, Sprachauswahl in i18n.js erweitert (7 Sprachen)
