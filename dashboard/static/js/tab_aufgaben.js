@@ -1803,7 +1803,7 @@ function _computeValidNetzplanTargets(sourceId, subtasks) {
     return valid;
 }
 
-function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName) {
+function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, layoutType = 'barycenter') {
     const nodesArr = [];
     const edgesArr = [];
 
@@ -1830,7 +1830,7 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName) 
 
     // Positionen berechnen: X nach Level, Y gleichmaessig verteilt pro Level
     const levelSeparation = 220;
-    const nodeSpacing = 70;
+    const nodeSpacing = 90;
     const levelGroups = {};
     subtasks.forEach(st => {
         const lvl = levelMap[st.id];
@@ -1890,18 +1890,46 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName) 
 
     // Positionen aus optimierter Reihenfolge berechnen
     const positionMap = {};
-    levels.forEach(lvl => {
-        const group = levelGroups[lvl];
-        const totalHeight = (group.length - 1) * nodeSpacing;
-        group.forEach((st, idx) => {
-            positionMap[st.id] = {
-                x: lvl * levelSeparation,
-                y: -totalHeight / 2 + idx * nodeSpacing,
-            };
-        });
-    });
 
-    // Projektknoten-Position: eine Ebene links von Level 0, Y-zentriert auf Nachfolger
+    if (layoutType === 'compact') {
+        // Kompakt: Gleiche Barycenter-Reihenfolge, aber geringerer Abstand
+        const compactSpacing = 55;
+        levels.forEach(lvl => {
+            const group = levelGroups[lvl];
+            const totalHeight = (group.length - 1) * compactSpacing;
+            group.forEach((st, idx) => {
+                positionMap[st.id] = {
+                    x: lvl * 180,
+                    y: -totalHeight / 2 + idx * compactSpacing,
+                };
+            });
+        });
+    } else if (layoutType === 'topAligned') {
+        // Oben ausgerichtet: Alle Knoten starten bei y=0 (oben)
+        levels.forEach(lvl => {
+            const group = levelGroups[lvl];
+            group.forEach((st, idx) => {
+                positionMap[st.id] = {
+                    x: lvl * levelSeparation,
+                    y: idx * nodeSpacing,
+                };
+            });
+        });
+    } else {
+        // Barycenter (Standard): Zentriert
+        levels.forEach(lvl => {
+            const group = levelGroups[lvl];
+            const totalHeight = (group.length - 1) * nodeSpacing;
+            group.forEach((st, idx) => {
+                positionMap[st.id] = {
+                    x: lvl * levelSeparation,
+                    y: -totalHeight / 2 + idx * nodeSpacing,
+                };
+            });
+        });
+    }
+
+    // Projektknoten-Position: eine Ebene links, Y-zentriert auf Nachfolger
     const projSuccs = (successorMap[0] || []).filter(sid => positionMap[sid]);
     const projY = projSuccs.length > 0
         ? projSuccs.reduce((sum, sid) => sum + positionMap[sid].y, 0) / projSuccs.length
@@ -2089,7 +2117,14 @@ function openNetzplan(taskId) {
             <div class="netzplan-toolbar">
                 <button class="netzplan-toolbar-btn" id="netzplanUndoBtn" disabled title="${t('netzplan.undo')}">&#x21B6;</button>
                 <button class="netzplan-toolbar-btn" id="netzplanRedoBtn" disabled title="${t('netzplan.redo')}">&#x21B7;</button>
-                <button class="netzplan-toolbar-btn" id="netzplanAutoLayoutBtn" title="${t('netzplan.autoLayout')}">&#x2725; Auto</button>
+                <div class="netzplan-toolbar-dropdown" id="netzplanAutoLayoutDropdown">
+                    <button class="netzplan-toolbar-btn" title="${t('netzplan.autoLayout')}">&#x2725; Auto &#x25BE;</button>
+                    <div class="netzplan-toolbar-dropdown-menu">
+                        <button data-layout="barycenter">Barycenter (Standard)</button>
+                        <button data-layout="compact">Kompakt</button>
+                        <button data-layout="topAligned">Oben ausgerichtet</button>
+                    </div>
+                </div>
                 <button class="netzplan-toolbar-btn" id="netzplanFitBtn">${t('netzplan.fit')}</button>
             </div>
             <button class="netzplan-close-btn" title="${t('common.close')}">&times;</button>
@@ -2168,24 +2203,41 @@ function openNetzplan(taskId) {
         _dragOldPos = null;
     });
 
-    // Auto-Layout-Button
-    document.getElementById('netzplanAutoLayoutBtn').addEventListener('click', () => {
-        if (!netzplanNetwork) return;
-        const beforePositions = _getAllPositions();
-        const newColors = getNetzplanColors();
-        const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, null, projectName);
-        data.nodes.clear();
-        data.nodes.add(newNodes);
-        data.edges.clear();
-        data.edges.add(newEdges);
-        netzplanNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
-        const afterPositions = _getAllPositions();
-        _pushNetzplanHistory({
-            type: 'auto-layout',
-            beforePositions: beforePositions,
-            afterPositions: afterPositions,
+    // Auto-Layout-Dropdown
+    const autoLayoutDropdown = document.getElementById('netzplanAutoLayoutDropdown');
+    const autoLayoutToggle = autoLayoutDropdown.querySelector('.netzplan-toolbar-btn');
+    autoLayoutToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        autoLayoutDropdown.classList.toggle('open');
+    });
+    // Close on outside click
+    document.addEventListener('click', () => {
+        autoLayoutDropdown.classList.remove('open');
+    });
+
+    // Layout-Optionen
+    autoLayoutDropdown.querySelectorAll('[data-layout]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            autoLayoutDropdown.classList.remove('open');
+            const layoutType = btn.dataset.layout;
+            if (!netzplanNetwork) return;
+            const beforePositions = _getAllPositions();
+            const newColors = getNetzplanColors();
+            const { nodesArr: newNodes, edgesArr: newEdges } = _buildNetzplanGraphData(subtasks, newColors, null, projectName, layoutType);
+            data.nodes.clear();
+            data.nodes.add(newNodes);
+            data.edges.clear();
+            data.edges.add(newEdges);
+            netzplanNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+            const afterPositions = _getAllPositions();
+            _pushNetzplanHistory({
+                type: 'auto-layout',
+                beforePositions: beforePositions,
+                afterPositions: afterPositions,
+            });
+            _savePositionsToDb(afterPositions);
         });
-        _savePositionsToDb(afterPositions);
     });
 
     // ---- Linking-Modus Funktionen (Closures) ----
