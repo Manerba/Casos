@@ -440,7 +440,8 @@ function getTaskPermissions(row) {
     const isCreator = row.created_by === userId;
     const isAssignee = row.assigned_to === userId;
     const isAssigned = !!row.assigned_to;
-    const isOwnTask = isCreator && !isAssigned;
+    const isDesktop = document.body.classList.contains('desktop-mode');
+    const isOwnTask = isCreator && (!isAssigned || (isDesktop && isAssignee));
     // Altdaten ohne created_by: alles editierbar
     const isLegacy = !row.created_by;
     const isTeamMember = !!row.is_team_member;
