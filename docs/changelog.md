@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+15.02.2026 15:30;0.0.1+95;Feature;Desktop-App: Komplettes Projekt-Skelett (22 Dateien) unter clients/desktop/ - Standalone/Client-Modus, pywebview-Fenster, System Tray, Benachrichtigungen, Settings-Dialog, Dateiablage, Welcome-Dialog, i18n (DE/EN), PyInstaller/Inno-Setup Build-Config
 14.02.2026 19:20;0.0.1+93;Docs;README: 3 Screenshots eingefuegt (Projekt-Ansicht, Subtask-Liste, Netzplan)
 14.02.2026 19:05;0.0.1+92;Enhancement;Demo-Daten: Subtasks von 26 auf 15 konsolidiert mit sauberen Abhaengigkeiten (5 Levels), ausfuehrliche Projekt- und Aufgabenbeschreibungen fuer GitHub-Screenshots
 14.02.2026 18:30;0.0.1+91;Enhancement;Netzplan: Auto-Button durch Dropdown-Submenu mit 3 Layout-Optionen ersetzt (Barycenter/Kompakt/Oben ausgerichtet), Mindestabstand zwischen Knoten von 70 auf 90 erhoeht
