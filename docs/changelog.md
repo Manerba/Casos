@@ -1,6 +1,17 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+04.06.2026 05:02;0.0.1+97;Feature;MCP-Server: FastMCP an /mcp/ in app.py gemounted, Streamable-HTTP-Transport, Bearer-Token-Auth via Middleware. 19 Tools fuer Projekte, Subtasks, Notes, Dependencies, Suche, Users, Areas, Selbstzuweisung, whoami
+04.06.2026 05:02;0.0.1+97;Feature;Audit-Log: neue Tabelle audit_log + dashboard/audit_log.py Helper. log_change-Aufrufe an allen Schreib-Endpunkten (tasks, sub_tasks, notes, dependencies, mcp_tokens, mcp_config). Reads werden bewusst nicht geloggt
+04.06.2026 05:02;0.0.1+97;Feature;User-Provider 'mcp' (neben local/ldap): jeder MCP-Token bekommt eigenen User in users-Tabelle. Token als SHA-256-Hash gespeichert, Plain-Token nur beim Anlegen einmal sichtbar
+04.06.2026 05:02;0.0.1+97;Feature;Admin-UI: neuer Tab 'MCP' (admin.html, tab_mcp.js, api_admin_mcp.py) mit Server-Status, Tool-Liste, Token-Verwaltung, Audit-Log-Viewer mit Filtern (Actor/Entity/Action/Pagination), globalem Kill-Switch
+04.06.2026 05:02;0.0.1+97;Feature;Admin-Sicht erweitert: GET /api/tasks und GET /api/tasks/{id}/subtasks liefern Admins alle Eintraege (Read-Bypass, Edit bleibt beim Creator). Neue Frontend-Kategorie 'mcp' fuer Projekte mit creator.auth_source='mcp', neuer Filter-Button im Aufgaben-Tab, i18n-Key category.mcp in 7 Sprachen
+04.06.2026 05:02;0.0.1+97;Aenderung;Admin darf alle Tasks und SubTasks loeschen (delete_subtask-Endpunkt + UI-Buttons in tab_aufgaben.js: getTaskPermissions liefert isAdmin, renderDeleteAction und Subtask-Action-Spalte zeigen Buttons fuer Admin)
+04.06.2026 05:02;0.0.1+97;Aenderung;MCP-User-Assignees haben volle Edit-Rechte auf zugewiesene Tasks (Permission-Bypass fuer auth_source='mcp' in update_task), menschliche Assignees bleiben auf Status beschraenkt
+04.06.2026 05:02;0.0.1+97;Aenderung;requirements.txt: fastmcp>=3.0 ergaenzt
+04.06.2026 05:02;0.0.1+97;Bugfix;Aufgaben-Detail: Beschreibung editierbar fuer Creator-Assignee, wenn isOwnTask (Logik-Korrektur in tab_aufgaben.js: !perm.isOwnTask im Creator+Assigned-Branch)
+04.06.2026 05:02;0.0.1+97;Docs;CLAUDE.md: Zwei-Umgebungen-Konvention dokumentiert (Hauptprojekt Bash/Linux mir/Tareas vs. Desktop-App PowerShell/Windows mir/Tareas-Desktop)
+04.06.2026 05:02;0.0.1+97;Docs;docs/spec-desktop-app.md: Sprint-1/2-Markierungen, Installer-Architektur (zweistufig via Inno-Setup + --install), JWT statt generischem Token
 15.02.2026 15:30;0.0.1+95;Feature;Desktop-App: Komplettes Projekt-Skelett (22 Dateien) unter clients/desktop/ - Standalone/Client-Modus, pywebview-Fenster, System Tray, Benachrichtigungen, Settings-Dialog, Dateiablage, Welcome-Dialog, i18n (DE/EN), PyInstaller/Inno-Setup Build-Config
 14.02.2026 19:20;0.0.1+93;Docs;README: 3 Screenshots eingefuegt (Projekt-Ansicht, Subtask-Liste, Netzplan)
 14.02.2026 19:05;0.0.1+92;Enhancement;Demo-Daten: Subtasks von 26 auf 15 konsolidiert mit sauberen Abhaengigkeiten (5 Levels), ausfuehrliche Projekt- und Aufgabenbeschreibungen fuer GitHub-Screenshots

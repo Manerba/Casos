@@ -75,19 +75,19 @@ clients/desktop/
 
 ## Betriebsmodi
 
-### Standalone (Lokale Datenbank)
+### Standalone (Lokale Datenbank) - Sprint 1 (implementiert)
 
 - Eigene SQLite-Datenbank im Benutzerprofil
 - Lokaler FastAPI-Server laeuft als Thread innerhalb der App
 - Dateiablage-Feature verfuegbar (lokale/SMB-Pfade)
 - Keine Benutzer-Authentifizierung (Einzelbenutzer)
 
-### Client (Verbindung zu Tareas-Server)
+### Client (Verbindung zu Tareas-Server) - Sprint 2
 
 - Kein lokaler Server, API-Calls gehen an konfigurierten Remote-Server
-- Benutzer-Authentifizierung erforderlich (Token-basiert)
+- Benutzer-Authentifizierung erforderlich (JWT-Token)
 - Server-URL nachtraeglich aenderbar ueber Settings-Dialog
-- Dateiablage-Feature nicht verfuegbar (Server-seitige Dateien)
+- Dateiablage: Server-seitig wie in der Web-Version (nur mit aktiver Server-Verbindung verfuegbar)
 
 ### Modus-Festlegung
 
@@ -98,16 +98,31 @@ clients/desktop/
 
 ## Installation
 
-### Installer (Inno Setup)
+### Installer-Architektur
 
-Installationsschritte:
+Die Installation erfolgt zweistufig:
+
+1. **Inno Setup** packt den Inhalt von `dist/Tareas/` als Installationsdatei und entpackt die Dateien nach `%LocalAppData%\Tareas\app\`
+2. **Inno Setup ruft `Tareas.exe --install` auf** - die App selbst uebernimmt die Konfiguration
+
+Vorteil: Die Konfigurations-UI nutzt das eigene Frontend (konsistentes Design) statt Inno Setup Pascal-Pages.
+
+### Setup-Wizard (`--install` Modus)
+
+Wenn `Tareas.exe` mit `--install` gestartet wird, zeigt die App einen Setup-Wizard:
 
 1. Sprachauswahl (Deutsch / Englisch)
-2. Betriebsmodus-Auswahl:
-   - Lokal (eigene Datenbank)
-   - Client (Verbindung zu Server) + Server-URL Eingabefeld
-3. Option: Bei Windows-Start automatisch starten (Hintergrund)
-4. Installationsverzeichnis (Standard: `%LocalAppData%\Tareas\app\`)
+2. Desktop-Verknuepfung anlegen? (ja/nein)
+3. Bei Windows-Start automatisch starten? (ja/nein)
+4. (Sprint 2) Betriebsmodus: Standalone / Client
+5. (Sprint 2) Server-URL (nur bei Client-Modus)
+
+Der Wizard schreibt alle Entscheidungen in `settings.json` und registriert die App bei Windows:
+- Startmenue-Eintrag (damit Tareas in der Taskleisten-Suche erscheint)
+- Desktop-Verknuepfung (falls gewaehlt)
+- Autostart Registry-Key (falls gewaehlt)
+
+Nach Abschluss startet die App normal.
 
 ### Installationspfad
 
@@ -175,14 +190,20 @@ Verhalten:
 - SMB-Pfade (`\\server\freigabe\ordner`) funktionieren transparent wie lokale Pfade
 - Konfiguration der Pfade ueber Settings-Dialog in der App
 
-### Benachrichtigungen (winotify)
+### Hintergrund-Modus und Benachrichtigungen
 
+**Option "Im Hintergrund aktiv"** (Settings-Dialog, Default: aus):
+- Wenn aktiviert: Fenster schliessen (X) minimiert in den System Tray, Beenden nur ueber Tray-Menue
+- Wenn deaktiviert: Fenster schliessen (X) beendet die App
+- Voraussetzung fuer Benachrichtigungen (App muss laufen um pruefen zu koennen)
+
+**Benachrichtigungen (winotify):**
 - Native Windows Toast-Notifications, erscheinen im Windows Action Center
 - Erinnerung an faellige Aufgaben
 - Vorlaufzeit konfigurierbar ueber Settings-Dialog (z.B. 1 Stunde, 1 Tag etc.)
 - Pruef-Intervall: 1 Minute (fest, nicht konfigurierbar)
 - Notification-Sound: Windows-Standard
-- Voraussetzung: Option "Im Hintergrund aktiv" muss aktiviert sein
+- Nur aktiv wenn "Im Hintergrund aktiv" eingeschaltet ist
 
 ### Willkommens-Dialog
 
@@ -256,10 +277,93 @@ Das Repository enthaelt die komplette Build-Pipeline:
 
 ---
 
+---
+
+## Sprint 2: Client-Modus
+
+### Uebersicht
+
+Im Client-Modus verbindet sich die Desktop-App mit einem Tareas-Server. Es laeuft kein lokaler
+FastAPI-Server. Alle API-Calls gehen an den konfigurierten Remote-Server. Das Frontend ist
+identisch zur Web-Version, inklusive server-seitiger Dateiablage.
+
+### Authentifizierung (JWT)
+
+- Login-Dialog beim Start der App (Benutzername + Passwort)
+- Server antwortet mit JWT-Token (Access-Token + Refresh-Token)
+- Access-Token wird fuer alle API-Calls im Authorization-Header mitgesendet
+- Refresh-Token erneuert den Access-Token automatisch vor Ablauf
+- Token-Speicherung: verschluesselt in `settings.json` oder im Windows Credential Manager
+- Bei ungueltigem/abgelaufenem Token: automatischer Redirect zum Login-Dialog
+- "Angemeldet bleiben"-Checkbox: Refresh-Token wird persistiert (sonst nur im RAM)
+
+### Offline-Cache
+
+Bei Verbindungsverlust zum Server arbeitet die App mit einem lokalen Cache weiter.
+
+**Cache-Speicher:**
+- Lokale SQLite-Datenbank als Cache (`%LocalAppData%\Tareas\cache\offline.db`)
+- Spiegelt die zuletzt vom Server geladenen Daten
+- Wird bei jeder erfolgreichen Server-Antwort aktualisiert
+
+**Offline-Verhalten:**
+- App erkennt Verbindungsverlust automatisch (API-Timeout / Netzwerkfehler)
+- Statusleiste zeigt "Offline" an (gut sichtbar, z.B. gelber Balken)
+- Lese-Zugriff: Daten aus dem lokalen Cache
+- Schreib-Zugriff: Aenderungen werden lokal in einer Aenderungs-Queue gespeichert
+- Aenderungs-Queue: Jede Aktion wird mit Zeitstempel und Aenderungstyp (Create/Update/Delete) protokolliert
+
+**Sync bei Reconnect:**
+- App prueft regelmaessig (alle 30 Sekunden) ob der Server wieder erreichbar ist
+- Bei Reconnect: Aenderungs-Queue wird chronologisch an den Server gesendet
+- Statusleiste zeigt "Synchronisiere..." an
+
+### Konfliktloesung
+
+Ein Konflikt entsteht, wenn dieselbe Aufgabe offline lokal UND auf dem Server (durch einen anderen User) geaendert wurde.
+
+**Erkennung:**
+- Jede Aufgabe hat ein `updated_at`-Feld
+- Beim Sync vergleicht die App den `updated_at`-Wert der lokalen Aenderung mit dem aktuellen Server-Wert
+- Wenn `server.updated_at > lokale_aenderung.base_updated_at`: Konflikt
+
+**Aufloesung (Feld-Ebene):**
+- Konflikte werden pro Feld erkannt, nicht pro Aufgabe
+- Wenn nur unterschiedliche Felder geaendert wurden: automatisch zusammenfuehren (kein Konflikt)
+- Wenn dasselbe Feld geaendert wurde: Konflikt-Dialog
+
+**Konflikt-Dialog:**
+- Zeigt die betroffene Aufgabe und das konfliktbehaftete Feld
+- Drei Spalten: "Meine Aenderung" | "Server-Version" | "Ergebnis"
+- Optionen pro Feld: "Meine behalten" / "Server uebernehmen"
+- Button "Alle: Meine behalten" / "Alle: Server uebernehmen" fuer Schnellauswahl
+- Ungeloeste Konflikte blockieren den Sync fuer die betroffene Aufgabe, andere Aufgaben werden normal synchronisiert
+
+### Features im Client-Modus
+
+| Feature | Verfuegbar | Anmerkung |
+|---------|-----------|-----------|
+| Aufgabenverwaltung | Ja | Identisch zur Web-Version |
+| Dateiablage | Ja | Server-seitig, nur mit Verbindung |
+| Benachrichtigungen | Ja | Prueft gegen Server-API (oder Cache wenn offline) |
+| Hintergrund-Modus | Ja | Tray + Notifications wie im Standalone-Modus |
+| Benutzerverwaltung | Nein | Ueber Web-Admin-UI des Servers |
+| Offline-Bearbeitung | Ja | Mit Cache und Konfliktloesung |
+
+### Setup-Wizard Erweiterung (Sprint 2)
+
+Der `--install` Wizard wird um folgende Schritte erweitert:
+
+4. Betriebsmodus: Standalone / Client
+5. (Nur Client) Server-URL eingeben
+6. (Nur Client) Login (Benutzername + Passwort) zur Validierung der Verbindung
+
+---
+
 ## Abgrenzung
 
 Folgende Features des Hauptprojekts sind in der Desktop-App NICHT enthalten:
 - Admin-UI
 - Enterprise-Features
 - Mehrbenutzerfaehigkeit (im Standalone-Modus)
-- Nextcloud-Integration (ersetzt durch Dateiablage-Feature)
+- Nextcloud-Integration (im Standalone-Modus ersetzt durch lokale Dateiablage)
