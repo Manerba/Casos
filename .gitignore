@@ -35,3 +35,6 @@ clients/
 
 # Claude Code
 .claude/
+
+# Codex workspace metadata
+.codex/

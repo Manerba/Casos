@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+04.06.2026 17:29;0.0.1+100;Aenderung;GitHub-Publish-Dryrun abgesichert: Public-Clean-Copy behaelt .gitignore, schliesst AGENTS.md und .codex aus und verwendet fuer den Mail-Scheduler eine Production-Service-Datei ohne lokale Dev-Pfade
+04.06.2026 17:29;0.0.1+100;Docs;LDAP-Admin-Placeholder neutralisiert, damit keine konkrete private Infrastruktur-IP im oeffentlichen Repo erscheint
 04.06.2026 13:29;0.0.1+99;Aenderung;UI-Farbschemas korrigiert: Hell und Dunkel sind jetzt Schema 1/2, Graphit/Cyan, Slate/Emerald und Ink/Indigo sind drei zusaetzliche feste Schemas. Separater Dark-Mode-Schalter entfernt, data-theme wird aus dem gewaehlten Schema abgeleitet
 04.06.2026 13:29;0.0.1+99;Enhancement;Kontrast der Farbschemas deutlich erhoeht: Haupttexte, Header, Buttons, Badges, Highlights, Login, Datei-Browser, OnlyOffice und Editor verwenden themefaehige Text-/Soft-Farben mit geprueften AA-Kontrasten
 04.06.2026 13:29;0.0.1+99;Docs;README um MCP-Server, AI-Agent-Collaboration, MCP-Konfiguration, Token-/Audit-Sicherheit und Architekturhinweise ergaenzt. Erster Abschnitt erwaehnt Optimierung fuer Zusammenarbeit mit KI-Agenten

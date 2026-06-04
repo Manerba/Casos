@@ -239,7 +239,6 @@ prepare_clean_copy() {
     rsync -a \
         --exclude-from="$SCRIPT_DIR/.gitignore" \
         --exclude='.git/' \
-        --exclude='.gitignore' \
         --exclude='.gitattributes' \
         --exclude='data/' \
         "$SCRIPT_DIR/" "$TARGET_DIR/"
@@ -253,6 +252,7 @@ prepare_clean_copy() {
     # oeffentliche Repo)
     rm -f  "$TARGET_DIR/publish.sh"
     rm -f  "$TARGET_DIR/git-commit.sh"
+    rm -f  "$TARGET_DIR/AGENTS.md"
     rm -f  "$TARGET_DIR/docs/prompts.txt"
     rm -rf "$TARGET_DIR/docs/TODO/"
     rm -rf "$TARGET_DIR/packaging/"
