@@ -50,6 +50,8 @@
   "settings.restart": "Restart Dashboard",
   "settings.language": "Sprache",
   "settings.colorScheme": "Farbschema",
+  "settings.scheme.light": "Hell",
+  "settings.scheme.dark": "Dunkel",
   "settings.scheme.graphit": "Graphit / Cyan",
   "settings.scheme.slate": "Slate / Emerald",
   "settings.scheme.ink": "Ink / Indigo",

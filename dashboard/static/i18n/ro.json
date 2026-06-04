@@ -50,6 +50,8 @@
   "settings.restart": "Repornire Dashboard",
   "settings.language": "Limba",
   "settings.colorScheme": "Schema de culori",
+  "settings.scheme.light": "Luminos",
+  "settings.scheme.dark": "Intunecat",
   "settings.scheme.graphit": "Grafit / Cyan",
   "settings.scheme.slate": "Ardezie / Smarald",
   "settings.scheme.ink": "Cerneala / Indigo",

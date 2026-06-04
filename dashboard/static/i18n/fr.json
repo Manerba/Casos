@@ -50,6 +50,8 @@
   "settings.restart": "Redemarrer le Dashboard",
   "settings.language": "Langue",
   "settings.colorScheme": "Palette de couleurs",
+  "settings.scheme.light": "Clair",
+  "settings.scheme.dark": "Sombre",
   "settings.scheme.graphit": "Graphite / Cyan",
   "settings.scheme.slate": "Ardoise / Emeraude",
   "settings.scheme.ink": "Encre / Indigo",

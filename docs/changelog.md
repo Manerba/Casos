@@ -1,6 +1,9 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+04.06.2026 13:29;0.0.1+99;Aenderung;UI-Farbschemas korrigiert: Hell und Dunkel sind jetzt Schema 1/2, Graphit/Cyan, Slate/Emerald und Ink/Indigo sind drei zusaetzliche feste Schemas. Separater Dark-Mode-Schalter entfernt, data-theme wird aus dem gewaehlten Schema abgeleitet
+04.06.2026 13:29;0.0.1+99;Enhancement;Kontrast der Farbschemas deutlich erhoeht: Haupttexte, Header, Buttons, Badges, Highlights, Login, Datei-Browser, OnlyOffice und Editor verwenden themefaehige Text-/Soft-Farben mit geprueften AA-Kontrasten
+04.06.2026 13:29;0.0.1+99;Docs;README um MCP-Server, AI-Agent-Collaboration, MCP-Konfiguration, Token-/Audit-Sicherheit und Architekturhinweise ergaenzt. Erster Abschnitt erwaehnt Optimierung fuer Zusammenarbeit mit KI-Agenten
 04.06.2026 12:50;0.0.1+98;Feature;UI-Farbschemas: drei kontrastreiche Paletten Graphit/Cyan, Slate/Emerald und Ink/Indigo mit je Light- und Dark-Variante. Neues ausklappbares Farbschema-Menue im Settings-Dropdown von Haupt- und Admin-App, Persistenz via localStorage
 04.06.2026 12:50;0.0.1+98;Bugfix;Admin-UI MCP/API-Tokens: Modal-Styles global in style.css verfuegbar gemacht, damit Token-Erstellung und Einmal-Anzeige als Overlay statt im View-Bereich erscheinen. Token-Anzeige nutzt breite Modal-Variante
 04.06.2026 12:50;0.0.1+98;Docs;AGENTS.md aus CLAUDE.md und Claude-Memory aufgebaut und gegen aktuellen Repo-Stand geprueft: Architektur, Services, Import-Pattern, DB, API-Router, MCP, Frontend, Security, Commit- und Zwei-Umgebungen-Konvention

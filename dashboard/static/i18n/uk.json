@@ -50,6 +50,8 @@
   "settings.restart": "Перезапустити панель",
   "settings.language": "Мова",
   "settings.colorScheme": "Колірна схема",
+  "settings.scheme.light": "Світла",
+  "settings.scheme.dark": "Темна",
   "settings.scheme.graphit": "Графіт / ціан",
   "settings.scheme.slate": "Сланець / смарагд",
   "settings.scheme.ink": "Чорнило / індиго",

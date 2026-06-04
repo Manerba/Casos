@@ -33,25 +33,39 @@ let settingsDropdownOpen = false;
 // Farbschema-Konfiguration
 const COLOR_SCHEMES = [
     {
+        code: 'light',
+        theme: 'light',
+        i18nKey: 'settings.scheme.light',
+        fallbackLabel: 'Hell',
+        swatches: ['#ffffff', '#172033', '#1d4ed8'],
+    },
+    {
+        code: 'dark',
+        theme: 'dark',
+        i18nKey: 'settings.scheme.dark',
+        fallbackLabel: 'Dunkel',
+        swatches: ['#0b1220', '#020617', '#22d3ee'],
+    },
+    {
         code: 'graphit',
+        theme: 'light',
         i18nKey: 'settings.scheme.graphit',
         fallbackLabel: 'Graphit / Cyan',
-        statusLabel: 'Graphit',
-        swatches: ['#111827', '#0891b2', '#d97706'],
+        swatches: ['#111827', '#0e7490', '#92400e'],
     },
     {
         code: 'slate',
+        theme: 'light',
         i18nKey: 'settings.scheme.slate',
         fallbackLabel: 'Slate / Emerald',
-        statusLabel: 'Slate',
-        swatches: ['#243040', '#059669', '#e11d48'],
+        swatches: ['#1f2933', '#047857', '#be123c'],
     },
     {
         code: 'ink',
+        theme: 'dark',
         i18nKey: 'settings.scheme.ink',
         fallbackLabel: 'Ink / Indigo',
-        statusLabel: 'Ink',
-        swatches: ['#18122b', '#4f46e5', '#65a30d'],
+        swatches: ['#111014', '#c4b5fd', '#bef264'],
     },
 ];
 
@@ -81,12 +95,6 @@ function initEventListeners() {
             e.stopPropagation();
             toggleSettingsDropdown();
         });
-    }
-
-    // Theme Toggle
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
     }
 
     // Restart-Button
@@ -253,54 +261,22 @@ function openPasswordChangeModal() {
 }
 
 // ========================================
-// Theme Handling
+// Theme / Color Scheme Handling
 // ========================================
 
 function initTheme() {
-    const raw = localStorage.getItem('dashboard-theme');
-    const savedTheme = ['light', 'dark'].includes(raw) ? raw : 'light';
-    const savedScheme = normalizeColorScheme(localStorage.getItem('dashboard-color-scheme'));
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    document.documentElement.setAttribute('data-color-scheme', savedScheme);
-    updateThemeButton(savedTheme);
+    let savedScheme = normalizeColorScheme(localStorage.getItem('dashboard-color-scheme'));
+    if (!localStorage.getItem('dashboard-color-scheme')) {
+        // Migration vom alten separaten Dark-Mode-Schalter.
+        savedScheme = localStorage.getItem('dashboard-theme') === 'dark' ? 'dark' : 'light';
+    }
+    applyColorScheme(savedScheme);
     updateColorSchemeButton(savedScheme);
     initLangStatus();
 }
 
-function toggleTheme() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('dashboard-theme', newTheme);
-    updateThemeButton(newTheme);
-
-    // Custom Event fuer Komponenten
-    document.dispatchEvent(new CustomEvent('themeChanged', {
-        detail: { theme: newTheme, colorScheme: getColorScheme() },
-    }));
-}
-
-function updateThemeButton(theme) {
-    const themeToggle = document.getElementById('themeToggle');
-    const themeStatus = document.getElementById('themeStatus');
-    if (themeToggle) {
-        const icon = themeToggle.querySelector('.settings-icon');
-        if (icon) {
-            icon.textContent = theme === 'dark' ? '\u2600\uFE0F' : '\u263E';
-        }
-    }
-    if (themeStatus) {
-        themeStatus.textContent = theme === 'dark' ? t('common.on') : t('common.off');
-    }
-}
-
-// ========================================
-// Color Scheme Handling
-// ========================================
-
 function normalizeColorScheme(code) {
-    return COLOR_SCHEMES.some(s => s.code === code) ? code : 'graphit';
+    return COLOR_SCHEMES.some(s => s.code === code) ? code : 'light';
 }
 
 function getColorScheme() {
@@ -310,6 +286,17 @@ function getColorScheme() {
 function getColorSchemeConfig(code = getColorScheme()) {
     const normalized = normalizeColorScheme(code);
     return COLOR_SCHEMES.find(s => s.code === normalized) || COLOR_SCHEMES[0];
+}
+
+function getColorSchemeLabel(scheme) {
+    const label = t(scheme.i18nKey);
+    return label === scheme.i18nKey ? scheme.fallbackLabel : label;
+}
+
+function applyColorScheme(code) {
+    const cfg = getColorSchemeConfig(code);
+    document.documentElement.setAttribute('data-color-scheme', cfg.code);
+    document.documentElement.setAttribute('data-theme', cfg.theme);
 }
 
 function toggleColorSchemeMenu() {
@@ -334,7 +321,7 @@ function buildColorSchemeMenu() {
     sub.innerHTML = COLOR_SCHEMES.map(s => {
         const active = s.code === current ? ' active' : '';
         const check = s.code === current ? '\u2713' : '';
-        const label = t(s.i18nKey) || s.fallbackLabel;
+        const label = getColorSchemeLabel(s);
         const swatches = s.swatches
             .map(color => `<span style="background:${escapeAttr(color)}"></span>`)
             .join('');
@@ -356,17 +343,17 @@ function buildColorSchemeMenu() {
 
 function setColorScheme(code) {
     const scheme = normalizeColorScheme(code);
-    document.documentElement.setAttribute('data-color-scheme', scheme);
+    const cfg = getColorSchemeConfig(scheme);
+    applyColorScheme(scheme);
     localStorage.setItem('dashboard-color-scheme', scheme);
     updateColorSchemeButton(scheme);
     buildColorSchemeMenu();
 
-    const theme = document.documentElement.getAttribute('data-theme') || 'light';
     document.dispatchEvent(new CustomEvent('colorSchemeChanged', {
-        detail: { colorScheme: scheme, theme },
+        detail: { colorScheme: scheme, theme: cfg.theme },
     }));
     document.dispatchEvent(new CustomEvent('themeChanged', {
-        detail: { theme, colorScheme: scheme },
+        detail: { theme: cfg.theme, colorScheme: scheme },
     }));
 }
 
@@ -374,7 +361,7 @@ function updateColorSchemeButton(code) {
     const cfg = getColorSchemeConfig(code);
     const schemeStatus = document.getElementById('schemeStatus');
     if (schemeStatus) {
-        schemeStatus.textContent = cfg.statusLabel;
+        schemeStatus.textContent = getColorSchemeLabel(cfg);
     }
 }
 
