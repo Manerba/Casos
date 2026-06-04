@@ -233,16 +233,15 @@ prepare_clean_copy() {
     rm -rf "$TARGET_DIR"
     mkdir -p "$TARGET_DIR"
 
-    # Projektdateien kopieren (ohne Dev-Artefakte)
+    # Exclusions deckungsgleich mit .gitignore plus publish-spezifische Ausschluesse.
+    # WICHTIG: wenn ein neuer Eintrag in .gitignore landet, hier ergaenzen
+    # (oder den --exclude-from-Block unten dafuer nutzen).
     rsync -a \
-        --exclude='.git' \
-        --exclude='venv' \
-        --exclude='__pycache__' \
+        --exclude-from="$SCRIPT_DIR/.gitignore" \
+        --exclude='.git/' \
+        --exclude='.gitignore' \
+        --exclude='.gitattributes' \
         --exclude='data/' \
-        --exclude='.claude/' \
-        --exclude='build/' \
-        --exclude='*.pyc' \
-        --exclude='.env' \
         "$SCRIPT_DIR/" "$TARGET_DIR/"
 
     # Production-Service-Dateien ueber Dev-Versionen kopieren
@@ -250,15 +249,13 @@ prepare_clean_copy() {
         cp "$SCRIPT_DIR/packaging/services/"* "$TARGET_DIR/scripts/"
     fi
 
-    # Interne Dateien entfernen
+    # Interne Dateien/Skripte entfernen (publish.sh + Helpers gehoeren nicht ins
+    # oeffentliche Repo)
     rm -f  "$TARGET_DIR/publish.sh"
     rm -f  "$TARGET_DIR/git-commit.sh"
     rm -f  "$TARGET_DIR/docs/prompts.txt"
     rm -rf "$TARGET_DIR/docs/TODO/"
     rm -rf "$TARGET_DIR/packaging/"
-
-    # install.sh nur wenn vorhanden
-    rm -f "$TARGET_DIR/packaging/install.sh" 2>/dev/null
 
     info "Bereinigte Kopie erstellt."
 }

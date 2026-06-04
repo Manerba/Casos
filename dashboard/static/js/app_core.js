@@ -30,6 +30,31 @@ let currentUser = null;
 // Settings Dropdown State
 let settingsDropdownOpen = false;
 
+// Farbschema-Konfiguration
+const COLOR_SCHEMES = [
+    {
+        code: 'graphit',
+        i18nKey: 'settings.scheme.graphit',
+        fallbackLabel: 'Graphit / Cyan',
+        statusLabel: 'Graphit',
+        swatches: ['#111827', '#0891b2', '#d97706'],
+    },
+    {
+        code: 'slate',
+        i18nKey: 'settings.scheme.slate',
+        fallbackLabel: 'Slate / Emerald',
+        statusLabel: 'Slate',
+        swatches: ['#243040', '#059669', '#e11d48'],
+    },
+    {
+        code: 'ink',
+        i18nKey: 'settings.scheme.ink',
+        fallbackLabel: 'Ink / Indigo',
+        statusLabel: 'Ink',
+        swatches: ['#18122b', '#4f46e5', '#65a30d'],
+    },
+];
+
 // DOM-Cache fuer Tab-Inhalte (DocumentFragment-basiert)
 const tabDOMCache = {};
 
@@ -93,6 +118,13 @@ function initEventListeners() {
     if (langToggle) {
         langToggle.addEventListener('click', toggleLangMenu);
         buildLangMenu();
+    }
+
+    // Farbschema Submenu
+    const schemeToggle = document.getElementById('schemeToggle');
+    if (schemeToggle) {
+        schemeToggle.addEventListener('click', toggleColorSchemeMenu);
+        buildColorSchemeMenu();
     }
 
     // Tabs
@@ -227,8 +259,11 @@ function openPasswordChangeModal() {
 function initTheme() {
     const raw = localStorage.getItem('dashboard-theme');
     const savedTheme = ['light', 'dark'].includes(raw) ? raw : 'light';
+    const savedScheme = normalizeColorScheme(localStorage.getItem('dashboard-color-scheme'));
     document.documentElement.setAttribute('data-theme', savedTheme);
+    document.documentElement.setAttribute('data-color-scheme', savedScheme);
     updateThemeButton(savedTheme);
+    updateColorSchemeButton(savedScheme);
     initLangStatus();
 }
 
@@ -241,7 +276,9 @@ function toggleTheme() {
     updateThemeButton(newTheme);
 
     // Custom Event fuer Komponenten
-    document.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: newTheme } }));
+    document.dispatchEvent(new CustomEvent('themeChanged', {
+        detail: { theme: newTheme, colorScheme: getColorScheme() },
+    }));
 }
 
 function updateThemeButton(theme) {
@@ -259,6 +296,89 @@ function updateThemeButton(theme) {
 }
 
 // ========================================
+// Color Scheme Handling
+// ========================================
+
+function normalizeColorScheme(code) {
+    return COLOR_SCHEMES.some(s => s.code === code) ? code : 'graphit';
+}
+
+function getColorScheme() {
+    return normalizeColorScheme(document.documentElement.getAttribute('data-color-scheme'));
+}
+
+function getColorSchemeConfig(code = getColorScheme()) {
+    const normalized = normalizeColorScheme(code);
+    return COLOR_SCHEMES.find(s => s.code === normalized) || COLOR_SCHEMES[0];
+}
+
+function toggleColorSchemeMenu() {
+    const sub = document.getElementById('schemeSubMenu');
+    const icon = document.getElementById('schemeExpandIcon');
+    if (!sub) return;
+
+    const langSub = document.getElementById('langSubMenu');
+    const langIcon = document.getElementById('langExpandIcon');
+    if (langSub) langSub.style.display = 'none';
+    if (langIcon) langIcon.classList.remove('open');
+
+    const isOpen = sub.style.display !== 'none';
+    sub.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.classList.toggle('open', !isOpen);
+}
+
+function buildColorSchemeMenu() {
+    const sub = document.getElementById('schemeSubMenu');
+    if (!sub) return;
+    const current = getColorScheme();
+    sub.innerHTML = COLOR_SCHEMES.map(s => {
+        const active = s.code === current ? ' active' : '';
+        const check = s.code === current ? '\u2713' : '';
+        const label = t(s.i18nKey) || s.fallbackLabel;
+        const swatches = s.swatches
+            .map(color => `<span style="background:${escapeAttr(color)}"></span>`)
+            .join('');
+        return `<div class="settings-sub-item${active}" data-scheme="${escapeAttr(s.code)}">
+            <span class="lang-check">${check}</span>
+            <span class="scheme-swatch">${swatches}</span>
+            <span>${escapeHtml(label)}</span>
+        </div>`;
+    }).join('');
+
+    if (!sub.dataset.bound) {
+        sub.addEventListener('click', (e) => {
+            const item = e.target.closest('[data-scheme]');
+            if (item) setColorScheme(item.dataset.scheme);
+        });
+        sub.dataset.bound = '1';
+    }
+}
+
+function setColorScheme(code) {
+    const scheme = normalizeColorScheme(code);
+    document.documentElement.setAttribute('data-color-scheme', scheme);
+    localStorage.setItem('dashboard-color-scheme', scheme);
+    updateColorSchemeButton(scheme);
+    buildColorSchemeMenu();
+
+    const theme = document.documentElement.getAttribute('data-theme') || 'light';
+    document.dispatchEvent(new CustomEvent('colorSchemeChanged', {
+        detail: { colorScheme: scheme, theme },
+    }));
+    document.dispatchEvent(new CustomEvent('themeChanged', {
+        detail: { theme, colorScheme: scheme },
+    }));
+}
+
+function updateColorSchemeButton(code) {
+    const cfg = getColorSchemeConfig(code);
+    const schemeStatus = document.getElementById('schemeStatus');
+    if (schemeStatus) {
+        schemeStatus.textContent = cfg.statusLabel;
+    }
+}
+
+// ========================================
 // Language Handling
 // ========================================
 
@@ -266,6 +386,12 @@ function toggleLangMenu() {
     const sub = document.getElementById('langSubMenu');
     const icon = document.getElementById('langExpandIcon');
     if (!sub) return;
+
+    const schemeSub = document.getElementById('schemeSubMenu');
+    const schemeIcon = document.getElementById('schemeExpandIcon');
+    if (schemeSub) schemeSub.style.display = 'none';
+    if (schemeIcon) schemeIcon.classList.remove('open');
+
     const isOpen = sub.style.display !== 'none';
     sub.style.display = isOpen ? 'none' : 'block';
     if (icon) icon.classList.toggle('open', !isOpen);

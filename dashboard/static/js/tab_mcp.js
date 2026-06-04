@@ -364,7 +364,7 @@ function showTokenOnce(data) {
         footer: `
             <button class="action-btn" onclick="copyTokenToClipboard()">Token kopieren</button>
             <button class="action-btn primary" onclick="closeModal()">Schliessen</button>`,
-        maxWidth: '720px',
+        cssClass: 'modal-wide',
     });
 }
 

@@ -1,6 +1,10 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+04.06.2026 12:50;0.0.1+98;Feature;UI-Farbschemas: drei kontrastreiche Paletten Graphit/Cyan, Slate/Emerald und Ink/Indigo mit je Light- und Dark-Variante. Neues ausklappbares Farbschema-Menue im Settings-Dropdown von Haupt- und Admin-App, Persistenz via localStorage
+04.06.2026 12:50;0.0.1+98;Bugfix;Admin-UI MCP/API-Tokens: Modal-Styles global in style.css verfuegbar gemacht, damit Token-Erstellung und Einmal-Anzeige als Overlay statt im View-Bereich erscheinen. Token-Anzeige nutzt breite Modal-Variante
+04.06.2026 12:50;0.0.1+98;Docs;AGENTS.md aus CLAUDE.md und Claude-Memory aufgebaut und gegen aktuellen Repo-Stand geprueft: Architektur, Services, Import-Pattern, DB, API-Router, MCP, Frontend, Security, Commit- und Zwei-Umgebungen-Konvention
+04.06.2026 12:50;0.0.1+98;Aenderung;publish.sh: Clean-Copy-Excludes an .gitignore angeglichen und interne Publish-/Packaging-Artefakte gezielter entfernt
 04.06.2026 05:02;0.0.1+97;Feature;MCP-Server: FastMCP an /mcp/ in app.py gemounted, Streamable-HTTP-Transport, Bearer-Token-Auth via Middleware. 19 Tools fuer Projekte, Subtasks, Notes, Dependencies, Suche, Users, Areas, Selbstzuweisung, whoami
 04.06.2026 05:02;0.0.1+97;Feature;Audit-Log: neue Tabelle audit_log + dashboard/audit_log.py Helper. log_change-Aufrufe an allen Schreib-Endpunkten (tasks, sub_tasks, notes, dependencies, mcp_tokens, mcp_config). Reads werden bewusst nicht geloggt
 04.06.2026 05:02;0.0.1+97;Feature;User-Provider 'mcp' (neben local/ldap): jeder MCP-Token bekommt eigenen User in users-Tabelle. Token als SHA-256-Hash gespeichert, Plain-Token nur beim Anlegen einmal sichtbar
