@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+04.06.2026 19:28;0.0.1+101;Enhancement;Netzplan Auto-Anordnung verbessert: lange Knotennamen werden automatisch umgebrochen, Knotenabstaende werden aus Label-Groessen berechnet und eine neue Auto-Ansicht "Von oben nach unten" ordnet Abhaengigkeitsebenen vertikal an
 04.06.2026 17:29;0.0.1+100;Aenderung;GitHub-Publish-Dryrun abgesichert: Public-Clean-Copy behaelt .gitignore, schliesst AGENTS.md und .codex aus und verwendet fuer den Mail-Scheduler eine Production-Service-Datei ohne lokale Dev-Pfade
 04.06.2026 17:29;0.0.1+100;Docs;LDAP-Admin-Placeholder neutralisiert, damit keine konkrete private Infrastruktur-IP im oeffentlichen Repo erscheint
 04.06.2026 13:29;0.0.1+99;Aenderung;UI-Farbschemas korrigiert: Hell und Dunkel sind jetzt Schema 1/2, Graphit/Cyan, Slate/Emerald und Ink/Indigo sind drei zusaetzliche feste Schemas. Separater Dark-Mode-Schalter entfernt, data-theme wird aus dem gewaehlten Schema abgeleitet

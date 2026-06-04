@@ -1735,6 +1735,27 @@ let netzplanNetwork = null;
 let _netzplanLinkState = null;
 let _netzplanRebuilding = false;
 
+const NETZPLAN_NODE_METRICS = {
+    taskMaxLineChars: 24,
+    projectMaxLineChars: 28,
+    taskCharWidth: 7.2,
+    projectCharWidth: 7.8,
+    taskLineHeight: 17,
+    projectLineHeight: 18,
+    marginX: 24,
+    marginY: 16,
+    minTaskWidth: 110,
+    maxTaskWidth: 210,
+    minProjectWidth: 120,
+    maxProjectWidth: 240,
+    levelGap: 90,
+    compactLevelGap: 76,
+    verticalGap: 34,
+    compactVerticalGap: 22,
+    horizontalGap: 44,
+    topDownLevelGap: 96,
+};
+
 function getNetzplanColors() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     return {
@@ -1751,6 +1772,125 @@ function getNodeColor(statusPercent, colors) {
     if (statusPercent >= 100) return colors.nodeErledigt;
     if (statusPercent > 0) return colors.nodeArbeit;
     return colors.nodeOffen;
+}
+
+function _splitNetzplanLongWord(word, maxLineChars) {
+    const chunks = [];
+    let remaining = String(word || '');
+    while (remaining.length > maxLineChars) {
+        chunks.push(remaining.slice(0, maxLineChars));
+        remaining = remaining.slice(maxLineChars);
+    }
+    if (remaining) chunks.push(remaining);
+    return chunks;
+}
+
+function _wrapNetzplanLabel(text, maxLineChars = NETZPLAN_NODE_METRICS.taskMaxLineChars) {
+    const words = String(text || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .flatMap(word => word.length > maxLineChars ? _splitNetzplanLongWord(word, maxLineChars) : [word]);
+
+    if (words.length === 0) return '';
+
+    const lines = [];
+    let current = '';
+    words.forEach(word => {
+        if (!current) {
+            current = word;
+            return;
+        }
+        if ((current.length + 1 + word.length) <= maxLineChars) {
+            current += ` ${word}`;
+        } else {
+            lines.push(current);
+            current = word;
+        }
+    });
+    if (current) lines.push(current);
+    return lines.join('\n');
+}
+
+function _measureNetzplanNode(label, {
+    charWidth,
+    lineHeight,
+    minWidth,
+    maxWidth,
+} = {}) {
+    const lines = String(label || '').split('\n');
+    const maxChars = Math.max(1, ...lines.map(line => Array.from(line).length));
+    const rawWidth = maxChars * charWidth + NETZPLAN_NODE_METRICS.marginX;
+    return {
+        width: Math.max(minWidth, Math.min(maxWidth, rawWidth)),
+        height: Math.max(lineHeight + NETZPLAN_NODE_METRICS.marginY, lines.length * lineHeight + NETZPLAN_NODE_METRICS.marginY),
+    };
+}
+
+function _getNetzplanTaskMeta(st) {
+    const posLabel = st.position_number ? `${st.position_number}: ` : '';
+    const rawLabel = `${posLabel}${st.name || ''}`;
+    const label = _wrapNetzplanLabel(rawLabel, NETZPLAN_NODE_METRICS.taskMaxLineChars);
+    return {
+        rawLabel,
+        label,
+        ..._measureNetzplanNode(label, {
+            charWidth: NETZPLAN_NODE_METRICS.taskCharWidth,
+            lineHeight: NETZPLAN_NODE_METRICS.taskLineHeight,
+            minWidth: NETZPLAN_NODE_METRICS.minTaskWidth,
+            maxWidth: NETZPLAN_NODE_METRICS.maxTaskWidth,
+        }),
+    };
+}
+
+function _getNetzplanProjectMeta(projectName) {
+    const rawLabel = projectName || 'Projekt';
+    const label = _wrapNetzplanLabel(rawLabel, NETZPLAN_NODE_METRICS.projectMaxLineChars);
+    return {
+        rawLabel,
+        label,
+        ..._measureNetzplanNode(label, {
+            charWidth: NETZPLAN_NODE_METRICS.projectCharWidth,
+            lineHeight: NETZPLAN_NODE_METRICS.projectLineHeight,
+            minWidth: NETZPLAN_NODE_METRICS.minProjectWidth,
+            maxWidth: NETZPLAN_NODE_METRICS.maxProjectWidth,
+        }),
+    };
+}
+
+function _stackNetzplanLevel(group, positionMap, nodeMeta, x, verticalGap, centered) {
+    const totalHeight = group.reduce((sum, st) => sum + nodeMeta[st.id].height, 0)
+        + Math.max(0, group.length - 1) * verticalGap;
+    let cursor = centered ? -totalHeight / 2 : 0;
+    group.forEach(st => {
+        const height = nodeMeta[st.id].height;
+        positionMap[st.id] = {
+            x,
+            y: cursor + height / 2,
+        };
+        cursor += height + verticalGap;
+    });
+}
+
+function _rowNetzplanLevel(group, positionMap, nodeMeta, y, horizontalGap, centered) {
+    const totalWidth = group.reduce((sum, st) => sum + nodeMeta[st.id].width, 0)
+        + Math.max(0, group.length - 1) * horizontalGap;
+    let cursor = centered ? -totalWidth / 2 : 0;
+    group.forEach(st => {
+        const width = nodeMeta[st.id].width;
+        positionMap[st.id] = {
+            x: cursor + width / 2,
+            y,
+        };
+        cursor += width + horizontalGap;
+    });
+}
+
+function _getNetzplanEdgeDirection(fromId, toId, positionMap) {
+    const from = positionMap[fromId];
+    const to = positionMap[toId];
+    if (!from || !to) return 'horizontal';
+    return Math.abs(to.y - from.y) > Math.abs(to.x - from.x) ? 'vertical' : 'horizontal';
 }
 
 function _computeValidNetzplanTargets(sourceId, subtasks) {
@@ -1831,14 +1971,17 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
     }
     subtasks.forEach(st => computeLevel(st));
 
-    // Positionen berechnen: X nach Level, Y gleichmaessig verteilt pro Level
-    const levelSeparation = 220;
-    const nodeSpacing = 90;
+    // Positionen berechnen: X nach Level, Y kollisionsfrei nach Knotenhoehe
     const levelGroups = {};
     subtasks.forEach(st => {
         const lvl = levelMap[st.id];
         if (!levelGroups[lvl]) levelGroups[lvl] = [];
         levelGroups[lvl].push(st);
+    });
+
+    const nodeMeta = { 0: _getNetzplanProjectMeta(projectName) };
+    subtasks.forEach(st => {
+        nodeMeta[st.id] = _getNetzplanTaskMeta(st);
     });
 
     // Successor-Map aufbauen: nodeId -> [IDs der abhaengigen Knoten]
@@ -1893,42 +2036,70 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
 
     // Positionen aus optimierter Reihenfolge berechnen
     const positionMap = {};
+    const levelWidths = {};
+    const levelHeights = {};
+    levels.forEach(lvl => {
+        const group = levelGroups[lvl];
+        levelWidths[lvl] = Math.max(
+            NETZPLAN_NODE_METRICS.minTaskWidth,
+            ...group.map(st => nodeMeta[st.id].width),
+        );
+        levelHeights[lvl] = Math.max(
+            NETZPLAN_NODE_METRICS.taskLineHeight + NETZPLAN_NODE_METRICS.marginY,
+            ...group.map(st => nodeMeta[st.id].height),
+        );
+    });
 
-    if (layoutType === 'compact') {
-        // Kompakt: Gleiche Barycenter-Reihenfolge, aber geringerer Abstand
-        const compactSpacing = 55;
+    const levelGap = layoutType === 'compact'
+        ? NETZPLAN_NODE_METRICS.compactLevelGap
+        : NETZPLAN_NODE_METRICS.levelGap;
+    const verticalGap = layoutType === 'compact'
+        ? NETZPLAN_NODE_METRICS.compactVerticalGap
+        : NETZPLAN_NODE_METRICS.verticalGap;
+    const levelX = {};
+    levels.forEach((lvl, idx) => {
+        if (idx === 0) {
+            levelX[lvl] = 0;
+            return;
+        }
+        const prevLvl = levels[idx - 1];
+        levelX[lvl] = levelX[prevLvl] + (levelWidths[prevLvl] + levelWidths[lvl]) / 2 + levelGap;
+    });
+
+    if (layoutType === 'topDown') {
+        const levelY = {};
+        levels.forEach((lvl, idx) => {
+            if (idx === 0) {
+                levelY[lvl] = 0;
+                return;
+            }
+            const prevLvl = levels[idx - 1];
+            levelY[lvl] = levelY[prevLvl]
+                + (levelHeights[prevLvl] + levelHeights[lvl]) / 2
+                + NETZPLAN_NODE_METRICS.topDownLevelGap;
+        });
+
         levels.forEach(lvl => {
             const group = levelGroups[lvl];
-            const totalHeight = (group.length - 1) * compactSpacing;
-            group.forEach((st, idx) => {
-                positionMap[st.id] = {
-                    x: lvl * 180,
-                    y: -totalHeight / 2 + idx * compactSpacing,
-                };
-            });
+            _rowNetzplanLevel(group, positionMap, nodeMeta, levelY[lvl], NETZPLAN_NODE_METRICS.horizontalGap, true);
+        });
+    } else if (layoutType === 'compact') {
+        // Kompakt: Gleiche Barycenter-Reihenfolge, aber geringerer Abstand ohne Ueberlappung
+        levels.forEach(lvl => {
+            const group = levelGroups[lvl];
+            _stackNetzplanLevel(group, positionMap, nodeMeta, levelX[lvl], verticalGap, true);
         });
     } else if (layoutType === 'topAligned') {
         // Oben ausgerichtet: Alle Knoten starten bei y=0 (oben)
         levels.forEach(lvl => {
             const group = levelGroups[lvl];
-            group.forEach((st, idx) => {
-                positionMap[st.id] = {
-                    x: lvl * levelSeparation,
-                    y: idx * nodeSpacing,
-                };
-            });
+            _stackNetzplanLevel(group, positionMap, nodeMeta, levelX[lvl], verticalGap, false);
         });
     } else {
-        // Barycenter (Standard): Zentriert
+        // Barycenter (Standard): Zentriert und kollisionsfrei gestapelt
         levels.forEach(lvl => {
             const group = levelGroups[lvl];
-            const totalHeight = (group.length - 1) * nodeSpacing;
-            group.forEach((st, idx) => {
-                positionMap[st.id] = {
-                    x: lvl * levelSeparation,
-                    y: -totalHeight / 2 + idx * nodeSpacing,
-                };
-            });
+            _stackNetzplanLevel(group, positionMap, nodeMeta, levelX[lvl], verticalGap, true);
         });
     }
 
@@ -1937,7 +2108,25 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
     const projY = projSuccs.length > 0
         ? projSuccs.reduce((sum, sid) => sum + positionMap[sid].y, 0) / projSuccs.length
         : 0;
-    positionMap[0] = { x: -levelSeparation, y: projY };
+    const firstLevel = levels[0] ?? 0;
+    const firstLevelX = levelX[firstLevel] ?? 0;
+    const firstLevelWidth = levelWidths[firstLevel] ?? NETZPLAN_NODE_METRICS.minTaskWidth;
+    if (layoutType === 'topDown') {
+        const projX = projSuccs.length > 0
+            ? projSuccs.reduce((sum, sid) => sum + positionMap[sid].x, 0) / projSuccs.length
+            : 0;
+        const firstLevelY = positionMap[levelGroups[firstLevel]?.[0]?.id]?.y ?? 0;
+        const firstLevelHeight = levelHeights[firstLevel] ?? nodeMeta[0].height;
+        positionMap[0] = {
+            x: projX,
+            y: firstLevelY - (nodeMeta[0].height + firstLevelHeight) / 2 - NETZPLAN_NODE_METRICS.topDownLevelGap,
+        };
+    } else {
+        positionMap[0] = {
+            x: firstLevelX - (nodeMeta[0].width + firstLevelWidth) / 2 - levelGap,
+            y: projY,
+        };
+    }
 
     // Gespeicherte Positionen ueberschreiben (falls vorhanden)
     if (savedPositions) {
@@ -1954,7 +2143,7 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
     const projectPos = positionMap[0];
     nodesArr.push({
         id: 0,
-        label: projectName || 'Projekt',
+        label: nodeMeta[0].label,
         x: projectPos.x,
         y: projectPos.y,
         color: {
@@ -1965,6 +2154,7 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
         font: { color: pc.font, size: 14, bold: true, face: "'Segoe UI', Arial, sans-serif" },
         shape: 'diamond',
         size: 25,
+        widthConstraint: { maximum: NETZPLAN_NODE_METRICS.maxProjectWidth },
         borderWidth: 2,
         borderWidthSelected: 3,
         title: projectName || 'Projekt',
@@ -1973,13 +2163,12 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
     subtasks.forEach(st => {
         const statusPct = st.status_percent || 0;
         const nodeColor = getNodeColor(statusPct, colors);
-        const posLabel = st.position_number ? `${st.position_number}: ` : '';
-        const label = `${posLabel}${st.name}`;
         const pos = positionMap[st.id];
+        const meta = nodeMeta[st.id];
 
         nodesArr.push({
             id: st.id,
-            label: label,
+            label: meta.label,
             x: pos.x,
             y: pos.y,
             color: {
@@ -1990,6 +2179,10 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
             font: { color: nodeColor.font, size: 13, face: "'Segoe UI', Arial, sans-serif" },
             shape: 'box',
             margin: { top: 8, right: 12, bottom: 8, left: 12 },
+            widthConstraint: {
+                minimum: NETZPLAN_NODE_METRICS.minTaskWidth,
+                maximum: NETZPLAN_NODE_METRICS.maxTaskWidth,
+            },
             borderWidth: 2,
             borderWidthSelected: 3,
             title: `${st.name}\n${t('tasks.status')}: ${statusPct}%${st.deadline ? '\n' + t('subtask.col.deadline') + ': ' + st.deadline : ''}${st.area_name ? '\n' + t('subtask.col.area') + ': ' + st.area_name : ''}`,
@@ -1998,12 +2191,13 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
         // Kanten fuer Vorgaenger
         const predIds = st.predecessor_ids || [];
         predIds.forEach(pid => {
+            const edgeDirection = _getNetzplanEdgeDirection(pid, st.id, positionMap);
             edgesArr.push({
                 from: pid,
                 to: st.id,
                 arrows: { to: { enabled: true, scaleFactor: 0.8 } },
                 color: { color: colors.edge, highlight: colors.highlight.border },
-                smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.5 },
+                smooth: { type: 'cubicBezier', forceDirection: edgeDirection, roundness: 0.5 },
                 width: 1.5,
             });
         });
@@ -2126,6 +2320,7 @@ function openNetzplan(taskId) {
                         <button data-layout="barycenter">Barycenter (Standard)</button>
                         <button data-layout="compact">Kompakt</button>
                         <button data-layout="topAligned">Oben ausgerichtet</button>
+                        <button data-layout="topDown">Von oben nach unten</button>
                     </div>
                 </div>
                 <button class="netzplan-toolbar-btn" id="netzplanFitBtn">${t('netzplan.fit')}</button>
