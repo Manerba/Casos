@@ -73,6 +73,40 @@ def _subtask_to_dict(row) -> dict:
     }
 
 
+def _ordered_subtask_rows(db, project_id: int) -> list:
+    return db.execute(
+        """SELECT id, position_number FROM sub_tasks
+           WHERE project_id = ?
+           ORDER BY
+               CASE WHEN position_number IS NULL THEN 1 ELSE 0 END,
+               position_number ASC,
+               created_at ASC,
+               id ASC""",
+        (project_id,),
+    ).fetchall()
+
+
+def _renumber_project_subtasks(db, ordered_ids: list[int]) -> dict[int, int]:
+    new_positions: dict[int, int] = {}
+    for pos, sid in enumerate(ordered_ids, start=1):
+        db.execute("UPDATE sub_tasks SET position_number = ? WHERE id = ?", (pos, sid))
+        new_positions[sid] = pos
+    return new_positions
+
+
+def _subtask_with_predecessors(db, subtask_id: int) -> dict:
+    row = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+    if not row:
+        raise ToolError(f"Teilaufgabe {subtask_id} nicht gefunden")
+    preds = db.execute(
+        "SELECT depends_on_id FROM sub_task_dependencies WHERE sub_task_id = ?",
+        (subtask_id,),
+    ).fetchall()
+    result = _subtask_to_dict(row)
+    result["predecessor_ids"] = [p["depends_on_id"] for p in preds]
+    return result
+
+
 # ============================================================
 # FastMCP-Instanz
 # ============================================================
@@ -403,6 +437,122 @@ def delete_subtask(subtask_id: int) -> dict:
         "name": row["name"], "project_id": row["project_id"],
     })
     return {"deleted": True, "id": subtask_id}
+
+
+@mcp.tool
+def move_subtask(subtask_id: int, direction: str) -> dict:
+    """Verschiebt eine Teilaufgabe um eine Position. direction muss 'up' oder 'down' sein.
+    Abhaengigkeiten bleiben dabei unveraendert."""
+    user = _user()
+    direction = (direction or "").strip().lower()
+    if direction not in {"up", "down"}:
+        raise ToolError("direction muss 'up' oder 'down' sein")
+
+    with db_transaction() as db:
+        current = db.execute(
+            "SELECT id, project_id, position_number FROM sub_tasks WHERE id = ?",
+            (subtask_id,),
+        ).fetchone()
+        if not current:
+            raise ToolError(f"Teilaufgabe {subtask_id} nicht gefunden")
+
+        rows = _ordered_subtask_rows(db, current["project_id"])
+        ordered_ids = [row["id"] for row in rows]
+        try:
+            old_index = ordered_ids.index(subtask_id)
+        except ValueError:
+            raise ToolError(f"Teilaufgabe {subtask_id} nicht gefunden")
+
+        target_index = old_index - 1 if direction == "up" else old_index + 1
+        if target_index < 0 or target_index >= len(ordered_ids):
+            result = _subtask_with_predecessors(db, subtask_id)
+            return {
+                "moved": False,
+                "message": "Bereits am Rand",
+                "subtask": result,
+                "old_position": old_index + 1,
+                "new_position": old_index + 1,
+                "new_positions": {row["id"]: row["position_number"] for row in rows},
+                "removed_dependencies": [],
+            }
+
+        swapped_with = ordered_ids[target_index]
+        ordered_ids[old_index], ordered_ids[target_index] = ordered_ids[target_index], ordered_ids[old_index]
+        new_positions = _renumber_project_subtasks(db, ordered_ids)
+        result = _subtask_with_predecessors(db, subtask_id)
+
+    log_change(user, "sub_task", subtask_id, "move", {
+        "direction": direction,
+        "old_position": old_index + 1,
+        "new_position": target_index + 1,
+        "old_position_number": current["position_number"],
+        "swapped_with": swapped_with,
+        "new_positions": new_positions,
+        "dependencies_preserved": True,
+    })
+    return {
+        "moved": True,
+        "message": "Position geaendert",
+        "subtask": result,
+        "swapped_with": swapped_with,
+        "old_position": old_index + 1,
+        "new_position": target_index + 1,
+        "new_positions": new_positions,
+        "removed_dependencies": [],
+        "dependencies_preserved": True,
+    }
+
+
+@mcp.tool
+def set_subtask_position(subtask_id: int, position_number: int) -> dict:
+    """Setzt eine Teilaufgabe auf eine absolute 1-basierte Position innerhalb ihres Projekts.
+    Zu grosse Positionswerte werden auf die letzte Position geklemmt. Abhaengigkeiten bleiben unveraendert."""
+    user = _user()
+    if position_number is None or position_number < 1:
+        raise ToolError("position_number muss groesser oder gleich 1 sein")
+
+    with db_transaction() as db:
+        current = db.execute(
+            "SELECT id, project_id, position_number FROM sub_tasks WHERE id = ?",
+            (subtask_id,),
+        ).fetchone()
+        if not current:
+            raise ToolError(f"Teilaufgabe {subtask_id} nicht gefunden")
+
+        rows = _ordered_subtask_rows(db, current["project_id"])
+        ordered_ids = [row["id"] for row in rows]
+        try:
+            old_index = ordered_ids.index(subtask_id)
+        except ValueError:
+            raise ToolError(f"Teilaufgabe {subtask_id} nicht gefunden")
+
+        ordered_ids.pop(old_index)
+        target_index = min(position_number, len(rows)) - 1
+        ordered_ids.insert(target_index, subtask_id)
+        new_positions = _renumber_project_subtasks(db, ordered_ids)
+        result = _subtask_with_predecessors(db, subtask_id)
+
+    new_position = new_positions[subtask_id]
+    moved = old_index + 1 != new_position or current["position_number"] != new_position
+    log_change(user, "sub_task", subtask_id, "move", {
+        "requested_position": position_number,
+        "old_position": old_index + 1,
+        "new_position": new_position,
+        "old_position_number": current["position_number"],
+        "new_positions": new_positions,
+        "dependencies_preserved": True,
+    })
+    return {
+        "moved": moved,
+        "message": "Position geaendert",
+        "subtask": result,
+        "requested_position": position_number,
+        "old_position": old_index + 1,
+        "new_position": new_position,
+        "new_positions": new_positions,
+        "removed_dependencies": [],
+        "dependencies_preserved": True,
+    }
 
 
 # ============================================================

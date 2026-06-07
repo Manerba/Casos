@@ -3,7 +3,6 @@ Tareas - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
 """
 
 import asyncio
-import heapq
 import logging
 from collections import defaultdict
 from datetime import datetime
@@ -146,54 +145,6 @@ def _parse_date_input(date_str: Optional[str]) -> Optional[str]:
             return f"{parts[2]}-{parts[1]}-{parts[0]}"
     # Bereits ISO oder anderes Format -> durchreichen
     return date_str
-
-
-def _topological_reorder(db, project_id):
-    """Topologische Neuordnung der Teilaufgaben anhand der Abhaengigkeiten (Kahn-Algorithmus)."""
-    rows = db.execute(
-        "SELECT id, position_number FROM sub_tasks WHERE project_id = ?", (project_id,)
-    ).fetchall()
-    if not rows:
-        return {}
-
-    old_pos = {r["id"]: r["position_number"] for r in rows}
-    all_ids = set(old_pos.keys())
-
-    deps = db.execute(
-        "SELECT d.sub_task_id, d.depends_on_id FROM sub_task_dependencies d "
-        "JOIN sub_tasks s ON d.sub_task_id = s.id WHERE s.project_id = ?", (project_id,)
-    ).fetchall()
-
-    in_degree = defaultdict(int)
-    successors = defaultdict(list)
-    for d in deps:
-        if d["sub_task_id"] in all_ids and d["depends_on_id"] in all_ids:
-            in_degree[d["sub_task_id"]] += 1
-            successors[d["depends_on_id"]].append(d["sub_task_id"])
-
-    # Kahn's mit heapq: Tiebreaker = alte position_number
-    heap = []
-    for nid in all_ids:
-        if in_degree[nid] == 0:
-            heapq.heappush(heap, (old_pos.get(nid, 0), nid))
-
-    new_pos = {}
-    pos = 1
-    while heap:
-        _, nid = heapq.heappop(heap)
-        new_pos[nid] = pos
-        pos += 1
-        for succ in successors[nid]:
-            in_degree[succ] -= 1
-            if in_degree[succ] == 0:
-                heapq.heappush(heap, (old_pos.get(succ, 0), succ))
-
-    # Nur geaenderte Positionen aktualisieren
-    for nid, p in new_pos.items():
-        if old_pos.get(nid) != p:
-            db.execute("UPDATE sub_tasks SET position_number = ? WHERE id = ?", (p, nid))
-
-    return new_pos
 
 
 async def _send_assignment_mail(user_id, task_name, actor_name, deadline, priority):
@@ -860,37 +811,11 @@ async def move_subtask(subtask_id: int, move: SubTaskMove, user=Depends(get_curr
             (cur_pos, neighbor["id"]),
         )
 
-        # Abhaengigkeiten bereinigen: Alle Dependencies im Projekt laden
-        all_subtasks = db.execute(
-            "SELECT id, position_number FROM sub_tasks WHERE project_id = ?",
-            (current["project_id"],),
-        ).fetchall()
-        pos_map = {row["id"]: row["position_number"] for row in all_subtasks}
-
-        all_deps = db.execute(
-            """SELECT d.sub_task_id, d.depends_on_id
-               FROM sub_task_dependencies d
-               JOIN sub_tasks s ON d.sub_task_id = s.id
-               WHERE s.project_id = ?""",
-            (current["project_id"],),
-        ).fetchall()
-
-        removed = []
-        for dep in all_deps:
-            st_pos = pos_map.get(dep["sub_task_id"], 0)
-            dep_pos = pos_map.get(dep["depends_on_id"], 0)
-            # Vorgaenger muss niedrigere Position haben
-            if dep_pos >= st_pos:
-                db.execute(
-                    "DELETE FROM sub_task_dependencies WHERE sub_task_id = ? AND depends_on_id = ?",
-                    (dep["sub_task_id"], dep["depends_on_id"]),
-                )
-                removed.append({
-                    "sub_task_id": dep["sub_task_id"],
-                    "depends_on_id": dep["depends_on_id"],
-                })
-
-        return {"message": "Position getauscht", "removed_dependencies": removed}
+        return {
+            "message": "Position getauscht",
+            "removed_dependencies": [],
+            "dependencies_preserved": True,
+        }
 
 
 # ============================================================
@@ -997,8 +922,7 @@ async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_c
             (dep.to_id, dep.from_id),
         )
 
-        # Topologische Neuordnung
-        new_positions = _topological_reorder(db, task_id)
+        new_positions = {}
 
     log_change(user, "dependency", dep.to_id, "create",
                {"depends_on_id": dep.from_id, "project_id": task_id})
@@ -1035,8 +959,7 @@ async def remove_dependency(task_id: int, dep: DependencyAction, user=Depends(ge
                 (dep.to_id, dep.from_id),
             )
 
-        # Topologische Neuordnung
-        new_positions = _topological_reorder(db, task_id)
+        new_positions = {}
 
     log_change(user, "dependency", dep.to_id, "delete",
                {"depends_on_id": dep.from_id, "project_id": task_id})

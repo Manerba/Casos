@@ -950,8 +950,9 @@ function renderSubTasks(taskId, subtasks) {
         const stStatusROClass = stStatusRO ? 'field-readonly' : '';
         const dlISO = convertToISO(st.deadline);
 
-        // Vorgaenger-Optionen und Chips (nur niedrigere Positionen, keine transitiven Abhaengigkeiten)
+        // Vorgaenger-Optionen und Chips (positionsunabhaengig, aber ohne Zyklen/Redundanz)
         const transitivePreds = getTransitivePredecessors(st.id, subtasks);
+        const transitiveSuccessors = getTransitiveSuccessors(st.id, subtasks);
         let predOptions = '';
         // "Pos 0: Projekt" nur anbieten wenn keine Vorgaenger vorhanden
         if (predIds.length === 0) {
@@ -961,8 +962,8 @@ function renderSubTasks(taskId, subtasks) {
         predOptions += subtasks
             .filter(other =>
                 other.id !== st.id &&
-                other.position_number < st.position_number &&
-                !transitivePreds.has(other.id)
+                !transitivePreds.has(other.id) &&
+                !transitiveSuccessors.has(other.id)
             )
             .map(other => `<option value="${other.id}">Pos. ${other.position_number}: ${escapeHtml(other.name)}</option>`)
             .join('');
@@ -1356,6 +1357,21 @@ function getTransitivePredecessors(subtaskId, subtasks) {
         if (pred && pred.predecessor_ids) {
             queue.push(...pred.predecessor_ids);
         }
+    }
+    return visited;
+}
+
+function getTransitiveSuccessors(subtaskId, subtasks) {
+    const visited = new Set();
+    const queue = [subtaskId];
+    while (queue.length > 0) {
+        const id = queue.shift();
+        subtasks.forEach(st => {
+            if ((st.predecessor_ids || []).includes(id) && !visited.has(st.id)) {
+                visited.add(st.id);
+                queue.push(st.id);
+            }
+        });
     }
     return visited;
 }

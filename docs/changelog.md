@@ -1,6 +1,9 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+07.06.2026 20:43;0.0.1+102;Feature;MCP-Server: Teilaufgaben koennen per move_subtask(subtask_id, direction) um eine Position und per set_subtask_position(subtask_id, position_number) direkt auf eine 1-basierte Zielposition verschoben werden. Neue Positionen werden konsistent neu nummeriert und im Audit-Log protokolliert
+07.06.2026 20:43;0.0.1+102;Bugfix;Teilaufgaben-Positionen von Abhaengigkeitsgueltigkeit entkoppelt: Positionsaenderungen loeschen keine Vorgaenger mehr, Dependency-Add/Remove sortiert Positionen nicht mehr topologisch um und das Vorgaenger-Dropdown erlaubt positionsunabhaengige, azyklische Kanten
+07.06.2026 20:43;0.0.1+102;Aenderung;SQLite-Runtime-Dateien data/*.db-shm und data/*.db-wal werden ignoriert, damit lokale DB-Zugriffe den Git-Status nicht verschmutzen
 04.06.2026 19:28;0.0.1+101;Enhancement;Netzplan Auto-Anordnung verbessert: lange Knotennamen werden automatisch umgebrochen, Knotenabstaende werden aus Label-Groessen berechnet und eine neue Auto-Ansicht "Von oben nach unten" ordnet Abhaengigkeitsebenen vertikal an
 04.06.2026 17:29;0.0.1+100;Aenderung;GitHub-Publish-Dryrun abgesichert: Public-Clean-Copy behaelt .gitignore, schliesst AGENTS.md und .codex aus und verwendet fuer den Mail-Scheduler eine Production-Service-Datei ohne lokale Dev-Pfade
 04.06.2026 17:29;0.0.1+100;Docs;LDAP-Admin-Placeholder neutralisiert, damit keine konkrete private Infrastruktur-IP im oeffentlichen Repo erscheint

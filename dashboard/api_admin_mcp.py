@@ -32,6 +32,7 @@ router = APIRouter(prefix="/api/admin/mcp", tags=["mcp-admin"])
 MCP_TOOLS = [
     "list_projects", "get_project", "create_project", "update_project", "delete_project",
     "list_subtasks", "get_subtask", "create_subtask", "update_subtask", "delete_subtask",
+    "move_subtask", "set_subtask_position",
     "add_dependency", "remove_dependency",
     "get_notes", "write_note",
     "list_users", "list_areas", "search", "assign_self", "whoami",
