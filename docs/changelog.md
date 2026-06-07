@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+07.06.2026 20:59;0.0.1+103;Enhancement;Netzplan: Doppelklick auf Projekt- oder Teilaufgabenknoten oeffnet ein modales Detail-Overlay mit Status, Metadaten, Vorgaengern und Beschreibung. Single-Click-Linking bleibt per kurzer Klickverzoegerung erhalten
 07.06.2026 20:43;0.0.1+102;Feature;MCP-Server: Teilaufgaben koennen per move_subtask(subtask_id, direction) um eine Position und per set_subtask_position(subtask_id, position_number) direkt auf eine 1-basierte Zielposition verschoben werden. Neue Positionen werden konsistent neu nummeriert und im Audit-Log protokolliert
 07.06.2026 20:43;0.0.1+102;Bugfix;Teilaufgaben-Positionen von Abhaengigkeitsgueltigkeit entkoppelt: Positionsaenderungen loeschen keine Vorgaenger mehr, Dependency-Add/Remove sortiert Positionen nicht mehr topologisch um und das Vorgaenger-Dropdown erlaubt positionsunabhaengige, azyklische Kanten
 07.06.2026 20:43;0.0.1+102;Aenderung;SQLite-Runtime-Dateien data/*.db-shm und data/*.db-wal werden ignoriert, damit lokale DB-Zugriffe den Git-Status nicht verschmutzen

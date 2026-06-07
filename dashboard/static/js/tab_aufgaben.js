@@ -1962,6 +1962,129 @@ function _computeValidNetzplanTargets(sourceId, subtasks) {
     return valid;
 }
 
+function _netzplanValue(value) {
+    if (value === null || value === undefined || value === '') {
+        return '<span class="netzplan-detail-empty">-</span>';
+    }
+    return escapeHtml(value);
+}
+
+function _netzplanDetailField(label, value) {
+    return `
+        <div class="netzplan-detail-field">
+            <span class="netzplan-detail-label">${escapeHtml(label)}</span>
+            <span class="netzplan-detail-value">${value}</span>
+        </div>
+    `;
+}
+
+function _netzplanStatusFromPercent(percent) {
+    const pct = parseInt(percent, 10) || 0;
+    if (pct >= 100) return { key: 'erledigt', label: t('status.erledigt') };
+    if (pct > 0) return { key: 'in_arbeit', label: t('status.in_arbeit') };
+    return { key: 'offen', label: t('status.offen') };
+}
+
+function _netzplanRenderPredecessors(st, subtasks, projectName) {
+    const predIds = st.predecessor_ids || [];
+    if (predIds.length === 0) return '<span class="netzplan-detail-empty">-</span>';
+    return predIds.map(pid => {
+        if (pid === 0) {
+            return `<span class="netzplan-detail-chip">Pos. 0: ${escapeHtml(projectName || 'Projekt')}</span>`;
+        }
+        const pred = subtasks.find(s => s.id === pid);
+        if (!pred) return `<span class="netzplan-detail-chip">#${escapeHtml(pid)}</span>`;
+        return `<span class="netzplan-detail-chip">Pos. ${escapeHtml(pred.position_number || '?')}: ${escapeHtml(pred.name || '')}</span>`;
+    }).join('');
+}
+
+function _openNetzplanNodeDetails(nodeId, parentRow, subtasks, projectName) {
+    if (nodeId === 0) {
+        const statusKey = parentRow?.status || '';
+        const statusLabel = statusKey ? t(`status.${statusKey}`) : '-';
+        const typeKey = parentRow?.task_type || 'projekt';
+        const typeLabel = t(`type.${typeKey}`);
+        const subtaskTotal = parentRow?.subtask_total ?? subtasks.length;
+        const subtaskDone = parentRow?.subtask_done ?? subtasks.filter(st => (st.status_percent || 0) >= 100).length;
+        const description = sanitizeHtml(parentRow?.description || '') || `<em>${t('detail.noDescription')}</em>`;
+
+        createModal({
+            title: `${escapeHtml(typeLabel)} - Details`,
+            cssClass: 'modal-wide netzplan-detail-dialog',
+            maxWidth: '760px',
+            body: `
+                <div class="netzplan-detail-menu">
+                    <div class="netzplan-detail-summary">
+                        <span class="netzplan-detail-badge">Pos. 0</span>
+                        <div>
+                            <div class="netzplan-detail-name">${escapeHtml(projectName || parentRow?.name || 'Projekt')}</div>
+                            <div class="netzplan-detail-subline">${escapeHtml(typeLabel)}</div>
+                        </div>
+                    </div>
+                    <div class="netzplan-detail-grid">
+                        ${_netzplanDetailField(t('tasks.col.status'), _netzplanValue(statusLabel))}
+                        ${_netzplanDetailField(t('tasks.col.priority'), _netzplanValue(parentRow?.priority))}
+                        ${_netzplanDetailField(t('tasks.col.deadline'), _netzplanValue(parentRow?.deadline))}
+                        ${_netzplanDetailField(t('tasks.col.created'), _netzplanValue(parentRow?.created_at))}
+                        ${_netzplanDetailField(t('tasks.col.from'), _netzplanValue(parentRow?.created_by_name))}
+                        ${_netzplanDetailField(t('tasks.col.assignedTo'), _netzplanValue(parentRow?.assigned_to_name))}
+                        ${_netzplanDetailField(t('subtask.title'), _netzplanValue(`${subtaskDone}/${subtaskTotal}`))}
+                    </div>
+                    <div class="netzplan-detail-section">
+                        <div class="netzplan-detail-section-title">${t('detail.description')}</div>
+                        <div class="description-readonly">${description}</div>
+                    </div>
+                </div>
+            `,
+            footer: `<button class="action-btn" onclick="closeModal()">${t('common.close')}</button>`,
+        });
+        return;
+    }
+
+    const st = subtasks.find(s => s.id === nodeId);
+    if (!st) return;
+
+    const status = _netzplanStatusFromPercent(st.status_percent);
+    const statusHtml = `<span class="netzplan-detail-status status-${status.key}">${escapeHtml(status.label)} (${escapeHtml(st.status_percent || 0)}%)</span>`;
+    const predecessorHtml = _netzplanRenderPredecessors(st, subtasks, projectName);
+    const description = sanitizeHtml(st.description || '') || `<em>${t('detail.noDescription')}</em>`;
+
+    createModal({
+        title: `${t('subtask.title')} - Details`,
+        cssClass: 'modal-wide netzplan-detail-dialog',
+        maxWidth: '760px',
+        body: `
+            <div class="netzplan-detail-menu">
+                <div class="netzplan-detail-summary">
+                    <span class="netzplan-detail-badge">Pos. ${escapeHtml(st.position_number || '-')}</span>
+                    <div>
+                        <div class="netzplan-detail-name">${escapeHtml(st.name || '')}</div>
+                        <div class="netzplan-detail-subline">${escapeHtml(projectName || '')}</div>
+                    </div>
+                </div>
+                <div class="netzplan-detail-grid">
+                    ${_netzplanDetailField(t('subtask.col.status'), statusHtml)}
+                    ${_netzplanDetailField(t('subtask.col.area'), _netzplanValue(st.area_name))}
+                    ${_netzplanDetailField(t('subtask.col.priority'), _netzplanValue(st.priority))}
+                    ${_netzplanDetailField(t('subtask.col.deadline'), _netzplanValue(st.deadline))}
+                    ${_netzplanDetailField(t('subtask.col.created'), _netzplanValue(st.created_at))}
+                    ${_netzplanDetailField(t('subtask.col.from'), _netzplanValue(st.created_by_name))}
+                    ${_netzplanDetailField(t('subtask.col.assignedTo'), _netzplanValue(st.assigned_to_name))}
+                </div>
+                <div class="netzplan-detail-section">
+                    <div class="netzplan-detail-section-title">${t('subtask.col.predecessor')}</div>
+                    <div class="netzplan-detail-chip-list">${predecessorHtml}</div>
+                </div>
+                <div class="netzplan-detail-section">
+                    <div class="netzplan-detail-section-title">${t('detail.description')}</div>
+                    <div class="description-readonly">${description}</div>
+                </div>
+            </div>
+        `,
+        footer: `<button class="action-btn" onclick="closeModal()">${t('common.close')}</button>`,
+    });
+}
+
 function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, layoutType = 'barycenter') {
     const nodesArr = [];
     const edgesArr = [];
@@ -2678,8 +2801,10 @@ function openNetzplan(taskId) {
         netzplanNetwork.redraw();
     });
 
-    // click-Handler auf Network
-    netzplanNetwork.on('click', async (params) => {
+    let _netzplanClickTimer = null;
+    const NETZPLAN_CLICK_DELAY_MS = 220;
+
+    async function _handleNetzplanClick(params) {
         if (_netzplanRebuilding) return;
 
         const clickedNodeId = params.nodes && params.nodes.length > 0 ? params.nodes[0] : null;
@@ -2767,6 +2892,28 @@ function openNetzplan(taskId) {
                 showNotification(t('netzplan.invalidConnection'), 'error');
             }
         }
+    }
+
+    netzplanNetwork.on('click', (params) => {
+        if (_netzplanClickTimer) clearTimeout(_netzplanClickTimer);
+        _netzplanClickTimer = setTimeout(() => {
+            _netzplanClickTimer = null;
+            _handleNetzplanClick(params);
+        }, NETZPLAN_CLICK_DELAY_MS);
+    });
+
+    netzplanNetwork.on('doubleClick', (params) => {
+        if (_netzplanClickTimer) {
+            clearTimeout(_netzplanClickTimer);
+            _netzplanClickTimer = null;
+        }
+        if (_netzplanRebuilding) return;
+
+        const clickedNodeId = params.nodes && params.nodes.length > 0 ? params.nodes[0] : null;
+        if (clickedNodeId === null) return;
+
+        if (_netzplanLinkState) exitLinkingMode();
+        _openNetzplanNodeDetails(clickedNodeId, parentRow, subtasks, projectName);
     });
 
     // Theme-Wechsel: Graph-Farben aktualisieren
@@ -2889,6 +3036,10 @@ function openNetzplan(taskId) {
     // Schliessen-Logik (mit komplettem Cleanup)
     const closeOverlay = () => {
         _netzplanLinkState = null;
+        if (_netzplanClickTimer) {
+            clearTimeout(_netzplanClickTimer);
+            _netzplanClickTimer = null;
+        }
         document.removeEventListener('themeChanged', themeHandler);
         document.removeEventListener('keydown', keyHandler);
         if (netzplanNetwork) {
@@ -2899,6 +3050,7 @@ function openNetzplan(taskId) {
     };
 
     const keyHandler = (e) => {
+        if (document.querySelector('.modal-overlay')) return;
         if (e.key === 'Escape') {
             if (_netzplanLinkState) {
                 exitLinkingMode();
