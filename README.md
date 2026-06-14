@@ -98,6 +98,11 @@ Tareas exposes a Model Context Protocol (MCP) server at `/mcp/` for AI agents an
 - Write operations are recorded in the audit log and can be reviewed in the Admin Panel.
 - Available tools cover projects, subtasks, dependencies, notes, users, areas, search, self-assignment, and `whoami`.
 
+For using Tareas as the planning layer in another repository, see
+[Tareas Agent Guide](docs/tareas-agent-guide.md). The guide includes the
+recommended `AGENTS.md` snippet, Codex/Claude MCP setup, verification steps,
+and secret-handling rules.
+
 ### Default Credentials
 
 On first start, create an admin user via the admin panel. The first user created automatically gets admin privileges.
