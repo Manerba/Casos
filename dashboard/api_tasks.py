@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from dashboard.audit_log import log_change
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.task_types import normalize_task_type
 from dashboard.user_utils import get_display_name
 from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
@@ -313,17 +314,22 @@ async def get_tasks(user=Depends(get_current_user)):
 @router.post("/api/tasks")
 async def create_task(task: TaskCreate, user=Depends(get_current_user)):
     """Neue Aufgabe anlegen."""
+    try:
+        task_type = normalize_task_type(task.task_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
     with db_transaction() as db:
         deadline = _parse_date_input(task.deadline)
         cursor = db.execute(
             """INSERT INTO tasks (name, deadline, priority, task_type, status, description, created_by)
                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (task.name, deadline, task.priority, task.task_type, task.status, task.description, user["id"]),
+            (task.name, deadline, task.priority, task_type, task.status, task.description, user["id"]),
         )
         new_id = cursor.lastrowid
     log_change(user, "task", new_id, "create", {
         "name": task.name, "priority": task.priority, "deadline": deadline,
-        "task_type": task.task_type, "status": task.status,
+        "task_type": task_type, "status": task.status,
     })
     return {"id": new_id, "message": "Aufgabe erstellt"}
 
@@ -375,9 +381,13 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                 values.append(task.priority)
                 changes_diff["priority"] = task.priority
             if task.task_type is not None:
+                try:
+                    task_type = normalize_task_type(task.task_type)
+                except ValueError as exc:
+                    raise HTTPException(status_code=422, detail=str(exc))
                 updates.append("task_type = ?")
-                values.append(task.task_type)
-                changes_diff["task_type"] = task.task_type
+                values.append(task_type)
+                changes_diff["task_type"] = task_type
             if task.description is not None:
                 updates.append("description = ?")
                 values.append(task.description)

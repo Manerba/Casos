@@ -21,6 +21,7 @@ from fastmcp.exceptions import ToolError
 from dashboard.agent_guide import build_agent_guide_markdown, build_agent_metadata
 from dashboard.audit_log import log_change, diff_fields
 from dashboard.db_utils import db_query, db_transaction
+from dashboard.task_types import normalize_task_type
 
 logger = logging.getLogger(__name__)
 
@@ -190,12 +191,16 @@ def create_project(
     deadline: str | None = None,
     priority: int = 50,
     status: str = "offen",
-    task_type: str = "aufgabe",
+    task_type: str = "projekt",
 ) -> dict:
     """Legt ein neues Projekt an. Gibt das angelegte Projekt-Dict (mit id) zurueck."""
     user = _user()
     if not name.strip():
         raise ToolError("name darf nicht leer sein")
+    try:
+        task_type = normalize_task_type(task_type)
+    except ValueError as exc:
+        raise ToolError(str(exc))
     with db_transaction() as db:
         cursor = db.execute(
             """INSERT INTO tasks (name, description, deadline, priority, status, task_type, created_by, assigned_to)
