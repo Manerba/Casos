@@ -16,28 +16,29 @@ geben:
 
 ```text
 Wir verwenden Tareas zur Projektplanung. Lies den Tareas-Agent-Guide:
-git@10.0.12.17:mir/Tareas.git, Datei docs/tareas-agent-guide.md.
+http://10.0.12.7:8504/agent-guide.md
 
 Richte dieses Repo danach ein: AGENTS.md ergaenzen, Tareas-MCP pruefen,
 Tareas-Projekt anlegen oder referenzieren, Projekt-ID dokumentieren.
 Token niemals ins Repo schreiben.
 ```
 
-Alternative Browser-URL fuer den Guide:
-
-```text
-https://10.0.12.17:3000/mir/Tareas/src/branch/main/docs/tareas-agent-guide.md
-```
-
 ## Gemeinsame Tareas-Instanz
 
 - Web-UI: `http://10.0.12.7:8504/`
+- Agent-Guide: `http://10.0.12.7:8504/agent-guide.md`
+- Agent-Bootstrap-JSON: `http://10.0.12.7:8504/.well-known/tareas-agent.json`
 - MCP-Endpoint: `http://10.0.12.7:8504/mcp/`
 - MCP-Transport: Streamable HTTP
 - MCP-Servername: `tareas`
 - Admin-UI fuer MCP-Tokens: `http://10.0.12.7:8505`, Tab `MCP`
 
 `10.0.12.16:8505` ist in dieser Umgebung Kiron, nicht Tareas.
+
+Die laufende Tareas-Instanz ist die kanonische Quelle fuer diesen Guide. Das
+Gitea-Repo versioniert die Dokumentation nur; neue Projekte sollen den Guide
+ueber die Tareas-URL lesen, damit keine Gitea-Verfuegbarkeit vorausgesetzt
+wird.
 
 ## Lokale MCP-Konfiguration
 

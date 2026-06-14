@@ -18,6 +18,7 @@ from contextvars import ContextVar
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
+from dashboard.agent_guide import build_agent_guide_markdown, build_agent_metadata
 from dashboard.audit_log import log_change, diff_fields
 from dashboard.db_utils import db_query, db_transaction
 
@@ -121,6 +122,16 @@ mcp = FastMCP(
         "Fortschritt/Findings."
     ),
 )
+
+
+@mcp.tool
+def get_agent_guide() -> dict:
+    """Liefert die tokenfreie Tareas-Nutzungsanleitung inkl. URLs und AGENTS.md-Snippet."""
+    metadata = build_agent_metadata()
+    return {
+        "metadata": metadata,
+        "markdown": build_agent_guide_markdown(metadata),
+    }
 
 
 # ============================================================

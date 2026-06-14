@@ -103,6 +103,11 @@ For using Tareas as the planning layer in another repository, see
 recommended `AGENTS.md` snippet, Codex/Claude MCP setup, verification steps,
 and secret-handling rules.
 
+Running Tareas instances also expose token-free bootstrap endpoints directly:
+
+- `GET /agent-guide.md` - Markdown guide for agents and humans
+- `GET /.well-known/tareas-agent.json` - machine-readable URLs, MCP metadata, and `AGENTS.md` snippet
+
 ### Default Credentials
 
 On first start, create an admin user via the admin panel. The first user created automatically gets admin privileges.

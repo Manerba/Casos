@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+14.06.2026 22:54;0.0.1+105;Feature;Agenten-Bootstrap direkt in Tareas bereitgestellt: oeffentlicher Markdown-Guide unter /agent-guide.md, maschinenlesbare Metadaten unter /.well-known/tareas-agent.json und MCP-Tool get_agent_guide. Guide enthaelt MCP-Setup, Token-Regeln und AGENTS.md-Snippet ohne Gitea-Abhaengigkeit
 14.06.2026 15:00;0.0.1+104;Docs;Tareas-Agent-Guide ergaenzt: neues How-to fuer Projekt-Onboarding mit AGENTS.md-Snippet, lokaler Codex/Claude-MCP-Konfiguration, Verifikation, Tareas-Arbeitsregeln und Secret-Regeln
 07.06.2026 20:59;0.0.1+103;Enhancement;Netzplan: Doppelklick auf Projekt- oder Teilaufgabenknoten oeffnet ein modales Detail-Overlay mit Status, Metadaten, Vorgaengern und Beschreibung. Single-Click-Linking bleibt per kurzer Klickverzoegerung erhalten
 07.06.2026 20:43;0.0.1+102;Feature;MCP-Server: Teilaufgaben koennen per move_subtask(subtask_id, direction) um eine Position und per set_subtask_position(subtask_id, position_number) direkt auf eine 1-basierte Zielposition verschoben werden. Neue Positionen werden konsistent neu nummeriert und im Audit-Log protokolliert
