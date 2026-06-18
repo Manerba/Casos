@@ -113,6 +113,7 @@
   "subtask.saved": "Subtask saved",
   "subtask.deleteConfirm": "Really delete this subtask?",
   "subtask.col.pos": "Pos.",
+  "subtask.col.id": "ID",
   "subtask.col.name": "Name",
   "subtask.col.predecessor": "Predecessor",
   "subtask.col.area": "Area",

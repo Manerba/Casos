@@ -113,6 +113,7 @@
   "subtask.saved": "Sous-tache enregistree",
   "subtask.deleteConfirm": "Vraiment supprimer cette sous-tache ?",
   "subtask.col.pos": "Pos.",
+  "subtask.col.id": "ID",
   "subtask.col.name": "Nom",
   "subtask.col.predecessor": "Predecesseur",
   "subtask.col.area": "Domaine",

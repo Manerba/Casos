@@ -113,6 +113,7 @@
   "subtask.saved": "Subsarcina salvata",
   "subtask.deleteConfirm": "Stergeti aceasta subsarcina?",
   "subtask.col.pos": "Poz.",
+  "subtask.col.id": "ID",
   "subtask.col.name": "Nume",
   "subtask.col.predecessor": "Predecesor",
   "subtask.col.area": "Domeniu",

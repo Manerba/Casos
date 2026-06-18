@@ -598,6 +598,16 @@
     text-align: center;
 }
 
+.subtask-table .subtask-id-cell {
+    text-align: center;
+    width: 52px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
 /* Positions-Pfeile */
 .pos-arrows {
     display: inline-flex;
