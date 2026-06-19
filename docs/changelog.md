@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+19.06.2026 21:52;0.0.1+108;Enhancement;Teilaufgaben-Detailansicht zeigt alle Notizen einer Teilaufgabe als read-only Liste, inklusive MCP-/Agent-Notizen. Dadurch sind per MCP geschriebene sub_task_notes in der UI nachvollziehbar sichtbar
 18.06.2026 04:54;0.0.1+107;Enhancement;Teilaufgaben-Tabelle zeigt die technische Subtask-ID als zweite Spalte neben der Positionsnummer. Dadurch sind MCP-Referenzen wie subtask_id eindeutig in der UI nachvollziehbar
 14.06.2026 23:26;0.0.1+106;Bugfix;Task-Typen werden serverseitig validiert: REST und MCP akzeptieren nur noch aufgabe/projekt, MCP create_project legt standardmaessig projekt an. Ungueltiger Runtime-Datensatz task_type=epic wurde auf projekt bereinigt und im Audit-Log dokumentiert
 14.06.2026 22:54;0.0.1+105;Feature;Agenten-Bootstrap direkt in Tareas bereitgestellt: oeffentlicher Markdown-Guide unter /agent-guide.md, maschinenlesbare Metadaten unter /.well-known/tareas-agent.json und MCP-Tool get_agent_guide. Guide enthaelt MCP-Setup, Token-Regeln und AGENTS.md-Snippet ohne Gitea-Abhaengigkeit

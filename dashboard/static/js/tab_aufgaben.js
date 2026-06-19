@@ -1049,15 +1049,16 @@ function renderSubTasks(taskId, subtasks) {
         // WYSIWYG oder Readonly-Beschreibung
         if (isSubCreator && isSubAssigned) {
             html += `<div class="description-readonly">${sanitizeHtml(st.description) || `<em>${t('detail.noDescription')}</em>`}</div>`;
-            html += `<div class="notes-section" id="stAssigneeNotes_${st.id}">
-                <h5>${t('detail.notesFrom', { name: escapeHtml(st.assigned_to_name || 'Zugewiesenem') })}</h5>
-                <div class="description-readonly" id="stAssigneeNotesContent_${st.id}"><em>${t('common.loading')}</em></div>
-            </div>`;
         } else if (canEdit) {
             html += `<div id="stWysiwyg_${st.id}"></div>`;
         } else {
             html += `<div class="description-readonly">${sanitizeHtml(st.description) || `<em>${t('detail.noDescription')}</em>`}</div>`;
         }
+
+        html += `<div class="notes-section subtask-notes-list">
+            <h5>${t('detail.notes')}</h5>
+            <div class="subtask-notes-content" id="stAllNotesContent_${st.id}"><em>${t('common.loading')}</em></div>
+        </div>`;
 
         html += `</div>
             </td>
@@ -1076,6 +1077,24 @@ function renderSubTasks(taskId, subtasks) {
     }
 
     container.innerHTML = html;
+}
+
+function renderSubTaskNotesList(notes) {
+    if (!notes || notes.length === 0) {
+        return `<em>${t('detail.noNotes')}</em>`;
+    }
+
+    return notes.map(note => {
+        const userName = note.user_name || `User ${note.user_id}`;
+        const updatedAt = note.updated_at ? `<span>${escapeHtml(note.updated_at)}</span>` : '';
+        return `<div class="subtask-note-item">
+            <div class="subtask-note-meta">
+                <strong>${escapeHtml(userName)}</strong>
+                ${updatedAt}
+            </div>
+            <div class="subtask-note-body">${sanitizeHtml(note.content || '') || `<em>${t('detail.noNotes')}</em>`}</div>
+        </div>`;
+    }).join('');
 }
 
 async function toggleSubTaskDetail(taskId, subtaskId) {
@@ -1109,20 +1128,14 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
             editorContainer._editorInit = true;
         }
 
-        // Zugewiesenen-Notizen lazy laden (fuer Creator mit zugewiesener Subtask)
-        const notesContent = document.getElementById(`stAssigneeNotesContent_${subtaskId}`);
+        // Alle Teilaufgaben-Notizen lazy laden, inkl. MCP-/Agent-Notizen.
+        const notesContent = document.getElementById(`stAllNotesContent_${subtaskId}`);
         if (notesContent && !notesContent._loaded) {
             notesContent._loaded = true;
             try {
                 const notesResp = await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}/notes`);
                 const notesData = await notesResp.json();
-                const container = document.getElementById(`subtaskContainer_${taskId}`);
-                const subtasks = container?._subtasksData || [];
-                const st = subtasks.find(s => s.id === subtaskId);
-                const assigneeNote = (notesData.items || []).find(n => n.user_id === st?.assigned_to);
-                notesContent.innerHTML = assigneeNote && assigneeNote.content
-                    ? sanitizeHtml(assigneeNote.content)
-                    : `<em>${t('detail.noNotes')}</em>`;
+                notesContent.innerHTML = renderSubTaskNotesList(notesData.items || []);
             } catch (e) {
                 notesContent.innerHTML = `<em>${t('detail.loadError')}</em>`;
             }

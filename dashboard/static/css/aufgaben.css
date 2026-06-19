@@ -949,6 +949,43 @@
     font-weight: 600;
 }
 
+.subtask-notes-list {
+    margin-top: 12px;
+}
+
+.subtask-notes-content {
+    display: grid;
+    gap: 8px;
+}
+
+.subtask-note-item {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--bg-secondary);
+    padding: 8px 10px;
+}
+
+.subtask-note-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.subtask-note-meta strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.subtask-note-body {
+    color: var(--text-primary);
+    line-height: 1.45;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 /* ----------------------------------------
    Team-Dialog (Sprint C)
    ---------------------------------------- */

@@ -135,6 +135,7 @@
   "detail.description": "Descriere",
   "detail.descriptionFrom": "Descriere de {name}",
   "detail.noDescription": "Fara descriere",
+  "detail.notes": "Notite",
   "detail.myNotes": "Notitele mele",
   "detail.notesFrom": "Notite de {name}",
   "detail.noNotes": "Nu exista notite disponibile",

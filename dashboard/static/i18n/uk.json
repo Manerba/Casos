@@ -135,6 +135,7 @@
   "detail.description": "Опис",
   "detail.descriptionFrom": "Опис від {name}",
   "detail.noDescription": "Немає опису",
+  "detail.notes": "Нотатки",
   "detail.myNotes": "Мої нотатки",
   "detail.notesFrom": "Нотатки від {name}",
   "detail.noNotes": "Нотатки відсутні",

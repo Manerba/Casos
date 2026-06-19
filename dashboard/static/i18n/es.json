@@ -135,6 +135,7 @@
   "detail.description": "Descripcion",
   "detail.descriptionFrom": "Descripcion de {name}",
   "detail.noDescription": "Sin descripcion",
+  "detail.notes": "Notas",
   "detail.myNotes": "Mis Notas",
   "detail.notesFrom": "Notas de {name}",
   "detail.noNotes": "No hay notas disponibles",
