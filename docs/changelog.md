@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+21.06.2026 01:45;0.0.1+109;Feature;Append-only Notizverlauf ergaenzt: neue MCP-Tools append_note/get_note_entries, separate task_note_entries/sub_task_note_entries Tabellen, REST-Leseendpunkte und UI-Verlauf fuer Aufgaben und Teilaufgaben. Agent-Guide empfiehlt append_note fuer Handoffs/Fortschritt, write_note bleibt Upsert der aktuellen User-Notiz
 19.06.2026 21:52;0.0.1+108;Enhancement;Teilaufgaben-Detailansicht zeigt alle Notizen einer Teilaufgabe als read-only Liste, inklusive MCP-/Agent-Notizen. Dadurch sind per MCP geschriebene sub_task_notes in der UI nachvollziehbar sichtbar
 18.06.2026 04:54;0.0.1+107;Enhancement;Teilaufgaben-Tabelle zeigt die technische Subtask-ID als zweite Spalte neben der Positionsnummer. Dadurch sind MCP-Referenzen wie subtask_id eindeutig in der UI nachvollziehbar
 14.06.2026 23:26;0.0.1+106;Bugfix;Task-Typen werden serverseitig validiert: REST und MCP akzeptieren nur noch aufgabe/projekt, MCP create_project legt standardmaessig projekt an. Ungueltiger Runtime-Datensatz task_type=epic wurde auf projekt bereinigt und im Audit-Log dokumentiert

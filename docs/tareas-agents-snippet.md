@@ -22,8 +22,10 @@ Arbeitsregeln:
 - Vor Schreiboperationen den aktuellen Projektstand per MCP lesen.
 - `description` enthaelt Scope, Implementierungsbriefing, Akzeptanzkriterien
   und Definition of Done.
-- `write_note` dokumentiert Fortschritt, Entscheidungen, Testergebnisse,
-  Blocker und Audit-Zusammenfassungen.
+- `append_note` dokumentiert Fortschritt, Handoffs, Entscheidungen,
+  Testergebnisse, Blocker und Audit-Zusammenfassungen als neuen Verlaufseintrag.
+- `write_note` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
+  wiederholte Aufrufe ueberschreiben diese Notiz.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.

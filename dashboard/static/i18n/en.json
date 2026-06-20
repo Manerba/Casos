@@ -139,6 +139,8 @@
   "detail.myNotes": "My Notes",
   "detail.notesFrom": "Notes by {name}",
   "detail.noNotes": "No notes available",
+  "detail.noteHistory": "History / handoffs",
+  "detail.noNoteEntries": "No history entries available",
   "detail.loadError": "Error loading",
   "netzplan.title": "Network Plan",
   "netzplan.noSubtasks": "No subtasks available",

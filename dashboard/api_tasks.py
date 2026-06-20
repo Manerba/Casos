@@ -121,6 +121,22 @@ def _format_date(iso_str: Optional[str]) -> str:
         return iso_str or ""
 
 
+def _format_datetime(iso_str: Optional[str]) -> str:
+    """Konvertiert ISO-Datum/-Zeit zu DD.MM.YYYY HH:MM."""
+    if not iso_str:
+        return ""
+    try:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                dt = datetime.strptime(iso_str.strip(), fmt)
+                return dt.strftime("%d.%m.%Y %H:%M")
+            except ValueError:
+                continue
+        return iso_str.strip()
+    except Exception:
+        return iso_str or ""
+
+
 def _project_status(row) -> str:
     """Berechnet den Projektstatus aus Teilaufgaben-Fortschritt."""
     total = row["subtask_total"] or 0
@@ -1074,6 +1090,35 @@ async def upsert_task_note(task_id: int, note: NoteUpdate, user=Depends(get_curr
     return {"message": "Notiz gespeichert"}
 
 
+@router.get("/api/tasks/{task_id}/note-entries")
+async def get_task_note_entries(task_id: int, limit: int = 100, user=Depends(get_current_user)):
+    """Append-only Notiz-Eintraege fuer eine Aufgabe abrufen."""
+    limit = max(1, min(limit, 200))
+    with db_query() as db:
+        rows = db.execute(
+            """SELECT tne.*, u.vorname || ' ' || u.nachname AS user_name
+               FROM task_note_entries tne
+               JOIN users u ON tne.user_id = u.id
+               WHERE tne.task_id = ?
+               ORDER BY tne.created_at DESC, tne.id DESC
+               LIMIT ?""",
+            (task_id, limit),
+        ).fetchall()
+        return {
+            "items": [
+                {
+                    "id": r["id"],
+                    "task_id": r["task_id"],
+                    "user_id": r["user_id"],
+                    "user_name": (r["user_name"] or "").strip(),
+                    "content": r["content"] or "",
+                    "created_at": _format_datetime(r["created_at"]),
+                }
+                for r in rows
+            ]
+        }
+
+
 @router.get("/api/tasks/{task_id}/subtasks/{subtask_id}/notes")
 async def get_subtask_notes(task_id: int, subtask_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Teilaufgabe abrufen."""
@@ -1113,6 +1158,41 @@ async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, u
         )
     log_change(user, "sub_task_note", subtask_id, "update", {"content_len": len(note.content)})
     return {"message": "Notiz gespeichert"}
+
+
+@router.get("/api/tasks/{task_id}/subtasks/{subtask_id}/note-entries")
+async def get_subtask_note_entries(task_id: int, subtask_id: int, limit: int = 100, user=Depends(get_current_user)):
+    """Append-only Notiz-Eintraege fuer eine Teilaufgabe abrufen."""
+    limit = max(1, min(limit, 200))
+    with db_query() as db:
+        if not db.execute(
+            "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
+            (subtask_id, task_id),
+        ).fetchone():
+            raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
+        rows = db.execute(
+            """SELECT sne.*, u.vorname || ' ' || u.nachname AS user_name
+               FROM sub_task_note_entries sne
+               JOIN users u ON sne.user_id = u.id
+               WHERE sne.sub_task_id = ?
+               ORDER BY sne.created_at DESC, sne.id DESC
+               LIMIT ?""",
+            (subtask_id, limit),
+        ).fetchall()
+        return {
+            "items": [
+                {
+                    "id": r["id"],
+                    "task_id": task_id,
+                    "subtask_id": r["sub_task_id"],
+                    "user_id": r["user_id"],
+                    "user_name": (r["user_name"] or "").strip(),
+                    "content": r["content"] or "",
+                    "created_at": _format_datetime(r["created_at"]),
+                }
+                for r in rows
+            ]
+        }
 
 
 # ============================================================

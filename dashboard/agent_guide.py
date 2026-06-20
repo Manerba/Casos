@@ -118,7 +118,8 @@ def build_agent_metadata(request: Request | None = None) -> dict[str, Any]:
             "Never write tokens or secrets to AGENTS.md, docs, .env files, logs, issues, or Tareas notes.",
             "Use Tareas MCP as the single point of truth for project planning.",
             "If MCP tools are missing, configure MCP instead of creating a local shadow database.",
-            "Use descriptions for scope and acceptance criteria; use notes for progress and decisions.",
+            "Use descriptions for scope and acceptance criteria; use append_note for progress, handoffs, and decisions.",
+            "write_note is an upsert for the current user's one editable note and overwrites that note on repeated calls.",
             "Treat predecessor_ids as dependency edges; position_number is display order only.",
         ],
     }
@@ -143,8 +144,10 @@ Arbeitsregeln:
 - Vor Schreiboperationen den aktuellen Projektstand per MCP lesen.
 - `description` enthaelt Scope, Implementierungsbriefing, Akzeptanzkriterien
   und Definition of Done.
-- `write_note` dokumentiert Fortschritt, Entscheidungen, Testergebnisse,
-  Blocker und Audit-Zusammenfassungen.
+- `append_note` dokumentiert Fortschritt, Handoffs, Entscheidungen,
+  Testergebnisse, Blocker und Audit-Zusammenfassungen als neuen Verlaufseintrag.
+- `write_note` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
+  wiederholte Aufrufe ueberschreiben diese Notiz.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.
@@ -231,6 +234,8 @@ mcp__tareas__whoami
 mcp__tareas__list_projects
 mcp__tareas__get_project
 mcp__tareas__write_note
+mcp__tareas__append_note
+mcp__tareas__get_note_entries
 ```
 
 Pruefablauf:
@@ -262,14 +267,15 @@ Benutzer um lokale Konfiguration bitten.
 8. Abhaengigkeiten mit `predecessor_ids` bzw. Dependency-Tools modellieren.
 9. Laengere Implementierungsplaene im Zielprojekt unter `docs/TODOS/` ablegen
    und dort auf Tareas-Projekt-/Subtask-IDs verweisen.
-10. Fortschritt und Entscheidungen per `write_note` dokumentieren.
+10. Fortschritt, Handoffs und Entscheidungen per `append_note` dokumentieren.
 
 ## Fachliche Nutzung
 
 - Projekte: Epics oder groessere Arbeitsvorhaben.
 - Subtasks: operative Sprintpakete oder klar abgrenzbare Arbeitspakete.
 - Dependencies: echte Reihenfolge-/Blocker-Beziehungen im DAG.
-- Notes: Fortschritt, Entscheidungen, Testergebnisse, Handoffs, Audit-Spuren.
+- Notes: `write_note` fuer die aktuelle eigene Notiz; `append_note` fuer
+  Fortschritt, Entscheidungen, Testergebnisse, Handoffs und Audit-Spuren.
 - Assignments: aktuelle Bearbeitung und Verantwortlichkeit.
 
 Markdown-Dateien im Zielprojekt bleiben sinnvoll fuer laengere Plaene,

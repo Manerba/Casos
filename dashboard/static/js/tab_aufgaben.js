@@ -527,6 +527,11 @@ async function onTaskRowExpanded(rowId, detailElement) {
         html += `<div class="project-detail-resize" id="pdResize_${row.id}"></div>`;
     }
 
+    html += `<div class="notes-section note-entries-list">
+        <h5>${t('detail.noteHistory')}</h5>
+        <div class="subtask-notes-content" id="taskNoteEntries_${row.id}"><em>${t('common.loading')}</em></div>
+    </div>`;
+
     // Dateiablage-Button fuer Aufgaben (nicht-Projekte)
     if (row.task_type !== 'projekt' && ncConfigured && (perm.isCreator || perm.isLegacy)) {
         html += `<div class="subtask-section-actions" style="margin-top:8px;display:flex;justify-content:flex-end">
@@ -602,6 +607,8 @@ async function onTaskRowExpanded(rowId, detailElement) {
             autoSaveDebounced(`taskNotes_${row.id}`, () => saveTask(row.id, true));
         });
     }
+
+    loadTaskNoteEntries(row.id);
 
     // File Browser initialisieren wenn Verzeichnis zugeordnet
     if (row.nextcloud_path && ncConfigured) {
@@ -777,6 +784,11 @@ async function onSubtaskViewExpanded(row, detailElement) {
         <div id="stViewNotes_${stId}"></div>
     </div>`;
 
+    html += `<div class="notes-section note-entries-list">
+        <h5>${t('detail.noteHistory')}</h5>
+        <div class="subtask-notes-content" id="stViewNoteEntries_${stId}"><em>${t('common.loading')}</em></div>
+    </div>`;
+
     html += `</div>`;
     detailElement.innerHTML = html;
 
@@ -792,6 +804,13 @@ async function onSubtaskViewExpanded(row, detailElement) {
         }
     } else {
         new WysiwygEditor(`stViewNotes_${stId}`, '');
+    }
+
+    if (projectId) {
+        loadSubtaskNoteEntries(projectId, stId, `stViewNoteEntries_${stId}`);
+    } else {
+        const entriesContent = document.getElementById(`stViewNoteEntries_${stId}`);
+        if (entriesContent) entriesContent.innerHTML = `<em>${t('detail.noNoteEntries')}</em>`;
     }
 
     // Auto-Save: Status-Feld
@@ -1060,6 +1079,11 @@ function renderSubTasks(taskId, subtasks) {
             <div class="subtask-notes-content" id="stAllNotesContent_${st.id}"><em>${t('common.loading')}</em></div>
         </div>`;
 
+        html += `<div class="notes-section note-entries-list">
+            <h5>${t('detail.noteHistory')}</h5>
+            <div class="subtask-notes-content" id="stNoteEntriesContent_${st.id}"><em>${t('common.loading')}</em></div>
+        </div>`;
+
         html += `</div>
             </td>
         </tr>`;
@@ -1095,6 +1119,48 @@ function renderSubTaskNotesList(notes) {
             <div class="subtask-note-body">${sanitizeHtml(note.content || '') || `<em>${t('detail.noNotes')}</em>`}</div>
         </div>`;
     }).join('');
+}
+
+function renderNoteEntriesList(entries) {
+    if (!entries || entries.length === 0) {
+        return `<em>${t('detail.noNoteEntries')}</em>`;
+    }
+
+    return entries.map(entry => {
+        const userName = entry.user_name || `User ${entry.user_id}`;
+        const createdAt = entry.created_at ? `<span>${escapeHtml(entry.created_at)}</span>` : '';
+        return `<div class="subtask-note-item note-entry-item">
+            <div class="subtask-note-meta">
+                <strong>${escapeHtml(userName)}</strong>
+                ${createdAt}
+            </div>
+            <div class="subtask-note-body">${sanitizeHtml(entry.content || '') || `<em>${t('detail.noNoteEntries')}</em>`}</div>
+        </div>`;
+    }).join('');
+}
+
+async function loadTaskNoteEntries(taskId) {
+    const entriesContent = document.getElementById(`taskNoteEntries_${taskId}`);
+    if (!entriesContent) return;
+    try {
+        const resp = await fetch(`/api/tasks/${taskId}/note-entries`);
+        const data = await resp.json();
+        entriesContent.innerHTML = renderNoteEntriesList(data.items || []);
+    } catch (e) {
+        entriesContent.innerHTML = `<em>${t('detail.loadError')}</em>`;
+    }
+}
+
+async function loadSubtaskNoteEntries(taskId, subtaskId, elementId) {
+    const entriesContent = document.getElementById(elementId);
+    if (!entriesContent) return;
+    try {
+        const resp = await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}/note-entries`);
+        const data = await resp.json();
+        entriesContent.innerHTML = renderNoteEntriesList(data.items || []);
+    } catch (e) {
+        entriesContent.innerHTML = `<em>${t('detail.loadError')}</em>`;
+    }
 }
 
 async function toggleSubTaskDetail(taskId, subtaskId) {
@@ -1139,6 +1205,12 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
             } catch (e) {
                 notesContent.innerHTML = `<em>${t('detail.loadError')}</em>`;
             }
+        }
+
+        const entriesContent = document.getElementById(`stNoteEntriesContent_${subtaskId}`);
+        if (entriesContent && !entriesContent._loaded) {
+            entriesContent._loaded = true;
+            loadSubtaskNoteEntries(taskId, subtaskId, `stNoteEntriesContent_${subtaskId}`);
         }
 
         // Auto-Save: Inline-Felder (in der Daten-Zeile) bei Aenderung sofort speichern

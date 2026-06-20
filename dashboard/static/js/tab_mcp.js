@@ -160,7 +160,7 @@ function renderMcpTokensSection() {
 function renderMcpAuditSection() {
     const filterOptions = {
         actor_type: ['', 'mcp', 'user', 'system'],
-        entity_type: ['', 'task', 'sub_task', 'task_note', 'sub_task_note', 'dependency', 'mcp_token', 'mcp_config'],
+        entity_type: ['', 'task', 'sub_task', 'task_note', 'sub_task_note', 'task_note_entry', 'sub_task_note_entry', 'dependency', 'mcp_token', 'mcp_config'],
         action: ['', 'create', 'update', 'delete', 'status_change', 'revoke'],
     };
     const mkOpt = (k, val) => {

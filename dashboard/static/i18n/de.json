@@ -139,6 +139,8 @@
   "detail.myNotes": "Meine Notizen",
   "detail.notesFrom": "Notizen von {name}",
   "detail.noNotes": "Keine Notizen vorhanden",
+  "detail.noteHistory": "Verlauf / Handoffs",
+  "detail.noNoteEntries": "Keine Verlaufseintraege vorhanden",
   "detail.loadError": "Fehler beim Laden",
   "netzplan.title": "Netzplan",
   "netzplan.noSubtasks": "Keine Teilaufgaben vorhanden",

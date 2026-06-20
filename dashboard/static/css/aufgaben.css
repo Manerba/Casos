@@ -953,6 +953,10 @@
     margin-top: 12px;
 }
 
+.note-entries-list {
+    margin-top: 12px;
+}
+
 .subtask-notes-content {
     display: grid;
     gap: 8px;
@@ -984,6 +988,10 @@
     line-height: 1.45;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+.note-entry-item {
+    border-left: 3px solid var(--accent-primary);
 }
 
 /* ----------------------------------------

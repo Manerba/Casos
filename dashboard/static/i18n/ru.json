@@ -139,6 +139,8 @@
   "detail.myNotes": "Мои заметки",
   "detail.notesFrom": "Заметки от {name}",
   "detail.noNotes": "Заметки отсутствуют",
+  "detail.noteHistory": "История / handoff",
+  "detail.noNoteEntries": "Нет записей истории",
   "detail.loadError": "Ошибка загрузки",
   "netzplan.title": "Сетевой план",
   "netzplan.noSubtasks": "Подзадачи отсутствуют",

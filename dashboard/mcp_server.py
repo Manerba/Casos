@@ -120,7 +120,7 @@ mcp = FastMCP(
         "registriert; alle Aenderungen werden im Audit-Log protokolliert. "
         "Aufgaben (Projekte) haben Teilaufgaben (Subtasks) mit optionalen "
         "Abhaengigkeiten. Felder: description = Spec/Anforderung, notes = "
-        "Fortschritt/Findings."
+        "aktuelle User-Notiz, note_entries = chronologische Handoffs/Findings."
     ),
 )
 
@@ -663,6 +663,62 @@ def get_notes(task_id: int, subtask_id: int | None = None) -> list[dict]:
 
 
 @mcp.tool
+def get_note_entries(task_id: int, subtask_id: int | None = None, limit: int = 100) -> list[dict]:
+    """Listet append-only Notiz-Eintraege einer Aufgabe oder Teilaufgabe.
+
+    Fuer Handoffs, Fortschritt, Entscheidungen und Audit-Spuren verwenden.
+    Neueste Eintraege werden zuerst geliefert. Wenn subtask_id gesetzt ist,
+    muss sie zu task_id gehoeren.
+    """
+    limit = max(1, min(limit, 200))
+    with db_query() as db:
+        if subtask_id is not None:
+            if not db.execute(
+                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
+                (subtask_id, task_id),
+            ).fetchone():
+                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+            rows = db.execute(
+                """SELECT sne.id, sne.sub_task_id, sne.user_id, sne.content, sne.created_at,
+                          u.vorname || ' ' || u.nachname AS user_name,
+                          u.auth_source
+                   FROM sub_task_note_entries sne
+                   JOIN users u ON sne.user_id = u.id
+                   WHERE sne.sub_task_id = ?
+                   ORDER BY sne.created_at DESC, sne.id DESC
+                   LIMIT ?""",
+                (subtask_id, limit),
+            ).fetchall()
+        else:
+            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
+                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+            rows = db.execute(
+                """SELECT tne.id, tne.task_id, tne.user_id, tne.content, tne.created_at,
+                          u.vorname || ' ' || u.nachname AS user_name,
+                          u.auth_source
+                   FROM task_note_entries tne
+                   JOIN users u ON tne.user_id = u.id
+                   WHERE tne.task_id = ?
+                   ORDER BY tne.created_at DESC, tne.id DESC
+                   LIMIT ?""",
+                (task_id, limit),
+            ).fetchall()
+        return [
+            {
+                "id": r["id"],
+                "task_id": r["task_id"] if "task_id" in r.keys() else task_id,
+                "subtask_id": r["sub_task_id"] if "sub_task_id" in r.keys() else None,
+                "user_id": r["user_id"],
+                "user_name": (r["user_name"] or "").strip(),
+                "auth_source": r["auth_source"] or "local",
+                "content": r["content"] or "",
+                "created_at": r["created_at"],
+            }
+            for r in rows
+        ]
+
+
+@mcp.tool
 def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dict:
     """Schreibt/aktualisiert eine Notiz des aufrufenden MCP-Users an einer Aufgabe oder
     Teilaufgabe. Notizen sind per User unique; wiederholtes Schreiben ueberschreibt."""
@@ -690,6 +746,48 @@ def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dic
             entity_type = "task_note"
     log_change(user, entity_type, entity_id, "update", {"content_len": len(content)})
     return {"saved": True, "task_id": task_id, "subtask_id": subtask_id}
+
+
+@mcp.tool
+def append_note(task_id: int, content: str, subtask_id: int | None = None) -> dict:
+    """Fuegt einen neuen append-only Notiz-Eintrag hinzu.
+
+    Fuer Handoffs, Fortschritt, Entscheidungen, Testergebnisse, Gate-Notizen
+    und Audit-Zusammenfassungen verwenden. Im Gegensatz zu write_note wird
+    kein bestehender Inhalt desselben MCP-Users ueberschrieben.
+    """
+    user = _user()
+    if not content.strip():
+        raise ToolError("content darf nicht leer sein")
+
+    with db_transaction() as db:
+        if subtask_id is not None:
+            if not db.execute(
+                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
+                (subtask_id, task_id),
+            ).fetchone():
+                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+            cursor = db.execute(
+                """INSERT INTO sub_task_note_entries (sub_task_id, user_id, content)
+                   VALUES (?, ?, ?)""",
+                (subtask_id, user["id"], content),
+            )
+            entity_id = subtask_id
+            entity_type = "sub_task_note_entry"
+        else:
+            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
+                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+            cursor = db.execute(
+                """INSERT INTO task_note_entries (task_id, user_id, content)
+                   VALUES (?, ?, ?)""",
+                (task_id, user["id"], content),
+            )
+            entity_id = task_id
+            entity_type = "task_note_entry"
+        entry_id = cursor.lastrowid
+
+    log_change(user, entity_type, entity_id, "create", {"entry_id": entry_id, "content_len": len(content)})
+    return {"saved": True, "entry_id": entry_id, "task_id": task_id, "subtask_id": subtask_id}
 
 
 # ============================================================
@@ -768,6 +866,26 @@ def search(query: str, limit: int = 20) -> list[dict]:
         ).fetchall():
             results.append({
                 "type": "sub_task_note", "sub_task_id": r["sub_task_id"], "user": r["username"],
+                "snippet": (r["content"] or "")[:200],
+            })
+        for r in db.execute(
+            """SELECT tne.id, tne.task_id, tne.user_id, tne.content, u.username
+               FROM task_note_entries tne JOIN users u ON tne.user_id = u.id
+               WHERE tne.content LIKE ? LIMIT ?""",
+            (q, limit),
+        ).fetchall():
+            results.append({
+                "type": "task_note_entry", "id": r["id"], "task_id": r["task_id"], "user": r["username"],
+                "snippet": (r["content"] or "")[:200],
+            })
+        for r in db.execute(
+            """SELECT sne.id, sne.sub_task_id, sne.user_id, sne.content, u.username
+               FROM sub_task_note_entries sne JOIN users u ON sne.user_id = u.id
+               WHERE sne.content LIKE ? LIMIT ?""",
+            (q, limit),
+        ).fetchall():
+            results.append({
+                "type": "sub_task_note_entry", "id": r["id"], "sub_task_id": r["sub_task_id"], "user": r["username"],
                 "snippet": (r["content"] or "")[:200],
             })
     return results[:limit]

@@ -139,6 +139,8 @@
   "detail.myNotes": "Notitele mele",
   "detail.notesFrom": "Notite de {name}",
   "detail.noNotes": "Nu exista notite disponibile",
+  "detail.noteHistory": "Istoric / handoff-uri",
+  "detail.noNoteEntries": "Nu exista intrari in istoric",
   "detail.loadError": "Eroare la incarcare",
   "netzplan.title": "Plan retea",
   "netzplan.noSubtasks": "Nu exista subsarcini disponibile",
