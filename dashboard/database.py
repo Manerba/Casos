@@ -194,8 +194,16 @@ def init_db():
         "ON task_note_entries(task_id, created_at DESC)"
     )
     conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_task_note_entries_user "
+        "ON task_note_entries(user_id)"
+    )
+    conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_sub_task_note_entries_subtask_created "
         "ON sub_task_note_entries(sub_task_id, created_at DESC)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_sub_task_note_entries_user "
+        "ON sub_task_note_entries(user_id)"
     )
 
     # Migration: subtask_permissions entfernen (nicht mehr benoetigt)

@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+21.06.2026 02:12;0.0.1+110;Security;Notiz- und Verlauf-Endpunkte pruefen jetzt Leseberechtigungen und liefern 404/403 statt leerer Listen bei falschen IDs oder fehlendem Zugriff. UI zeigt HTTP-Fehler als Ladefehler, MCP write_note validiert task_id/subtask_id-Kombinationen, Append-Tabellen erhalten user_id-Indizes und der Agent-Guide ist konsistent
 21.06.2026 01:45;0.0.1+109;Feature;Append-only Notizverlauf ergaenzt: neue MCP-Tools append_note/get_note_entries, separate task_note_entries/sub_task_note_entries Tabellen, REST-Leseendpunkte und UI-Verlauf fuer Aufgaben und Teilaufgaben. Agent-Guide empfiehlt append_note fuer Handoffs/Fortschritt, write_note bleibt Upsert der aktuellen User-Notiz
 19.06.2026 21:52;0.0.1+108;Enhancement;Teilaufgaben-Detailansicht zeigt alle Notizen einer Teilaufgabe als read-only Liste, inklusive MCP-/Agent-Notizen. Dadurch sind per MCP geschriebene sub_task_notes in der UI nachvollziehbar sichtbar
 18.06.2026 04:54;0.0.1+107;Enhancement;Teilaufgaben-Tabelle zeigt die technische Subtask-ID als zweite Spalte neben der Positionsnummer. Dadurch sind MCP-Referenzen wie subtask_id eindeutig in der UI nachvollziehbar

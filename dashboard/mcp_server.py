@@ -725,6 +725,11 @@ def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dic
     user = _user()
     with db_transaction() as db:
         if subtask_id is not None:
+            if not db.execute(
+                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
+                (subtask_id, task_id),
+            ).fetchone():
+                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
             db.execute(
                 """INSERT INTO sub_task_notes (sub_task_id, user_id, content, updated_at)
                    VALUES (?, ?, ?, datetime('now'))
@@ -735,6 +740,8 @@ def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dic
             entity_id = subtask_id
             entity_type = "sub_task_note"
         else:
+            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
+                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
             db.execute(
                 """INSERT INTO task_notes (task_id, user_id, content, updated_at)
                    VALUES (?, ?, ?, datetime('now'))

@@ -164,6 +164,62 @@ def _parse_date_input(date_str: Optional[str]) -> Optional[str]:
     return date_str
 
 
+def _require_task_read_access(db, task_id: int, user: dict):
+    """Prueft Leserechte fuer eine Aufgabe/ein Projekt und liefert die Zeile."""
+    task = db.execute(
+        "SELECT id, created_by, assigned_to FROM tasks WHERE id = ?",
+        (task_id,),
+    ).fetchone()
+    if not task:
+        raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
+
+    if user.get("is_admin"):
+        return task
+    if task["created_by"] is None:
+        return task
+    if task["created_by"] == user["id"] or task["assigned_to"] == user["id"]:
+        return task
+
+    membership = db.execute(
+        "SELECT can_read FROM project_members WHERE project_id = ? AND user_id = ?",
+        (task_id, user["id"]),
+    ).fetchone()
+    if membership and membership["can_read"]:
+        return task
+
+    raise HTTPException(status_code=403, detail="Keine Leseberechtigung")
+
+
+def _require_subtask_read_access(db, task_id: int, subtask_id: int, user: dict):
+    """Prueft Leserechte fuer eine Teilaufgabe und liefert die Zeile."""
+    row = db.execute(
+        """SELECT st.id, st.project_id, st.assigned_to AS subtask_assigned_to,
+                  t.created_by AS task_created_by
+           FROM sub_tasks st
+           JOIN tasks t ON t.id = st.project_id
+           WHERE st.id = ? AND st.project_id = ?""",
+        (subtask_id, task_id),
+    ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
+
+    if user.get("is_admin"):
+        return row
+    if row["task_created_by"] is None:
+        return row
+    if row["task_created_by"] == user["id"] or row["subtask_assigned_to"] == user["id"]:
+        return row
+
+    membership = db.execute(
+        "SELECT can_read FROM project_members WHERE project_id = ? AND user_id = ?",
+        (task_id, user["id"]),
+    ).fetchone()
+    if membership and membership["can_read"]:
+        return row
+
+    raise HTTPException(status_code=403, detail="Keine Leseberechtigung")
+
+
 async def _send_assignment_mail(user_id, task_name, actor_name, deadline, priority):
     """Sendet Zuweisungs-Mail (non-blocking)."""
     try:
@@ -1053,6 +1109,7 @@ async def get_users_list(user=Depends(get_current_user)):
 async def get_task_notes(task_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Aufgabe abrufen."""
     with db_query() as db:
+        _require_task_read_access(db, task_id, user)
         rows = db.execute(
             """SELECT tn.*, u.vorname || ' ' || u.nachname AS user_name
                FROM task_notes tn
@@ -1078,6 +1135,7 @@ async def get_task_notes(task_id: int, user=Depends(get_current_user)):
 async def upsert_task_note(task_id: int, note: NoteUpdate, user=Depends(get_current_user)):
     """Eigene Notiz fuer eine Aufgabe erstellen/aktualisieren."""
     with db_transaction() as db:
+        _require_task_read_access(db, task_id, user)
         db.execute(
             """INSERT INTO task_notes (task_id, user_id, content, updated_at)
                VALUES (?, ?, ?, datetime('now'))
@@ -1095,6 +1153,7 @@ async def get_task_note_entries(task_id: int, limit: int = 100, user=Depends(get
     """Append-only Notiz-Eintraege fuer eine Aufgabe abrufen."""
     limit = max(1, min(limit, 200))
     with db_query() as db:
+        _require_task_read_access(db, task_id, user)
         rows = db.execute(
             """SELECT tne.*, u.vorname || ' ' || u.nachname AS user_name
                FROM task_note_entries tne
@@ -1123,6 +1182,7 @@ async def get_task_note_entries(task_id: int, limit: int = 100, user=Depends(get
 async def get_subtask_notes(task_id: int, subtask_id: int, user=Depends(get_current_user)):
     """Notizen fuer eine Teilaufgabe abrufen."""
     with db_query() as db:
+        _require_subtask_read_access(db, task_id, subtask_id, user)
         rows = db.execute(
             """SELECT sn.*, u.vorname || ' ' || u.nachname AS user_name
                FROM sub_task_notes sn
@@ -1148,6 +1208,7 @@ async def get_subtask_notes(task_id: int, subtask_id: int, user=Depends(get_curr
 async def upsert_subtask_note(task_id: int, subtask_id: int, note: NoteUpdate, user=Depends(get_current_user)):
     """Eigene Notiz fuer eine Teilaufgabe erstellen/aktualisieren."""
     with db_transaction() as db:
+        _require_subtask_read_access(db, task_id, subtask_id, user)
         db.execute(
             """INSERT INTO sub_task_notes (sub_task_id, user_id, content, updated_at)
                VALUES (?, ?, ?, datetime('now'))
@@ -1165,11 +1226,7 @@ async def get_subtask_note_entries(task_id: int, subtask_id: int, limit: int = 1
     """Append-only Notiz-Eintraege fuer eine Teilaufgabe abrufen."""
     limit = max(1, min(limit, 200))
     with db_query() as db:
-        if not db.execute(
-            "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
-            (subtask_id, task_id),
-        ).fetchone():
-            raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
+        _require_subtask_read_access(db, task_id, subtask_id, user)
         rows = db.execute(
             """SELECT sne.*, u.vorname || ' ' || u.nachname AS user_name
                FROM sub_task_note_entries sne

@@ -565,6 +565,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
         // Notizen-Editor fuer Zugewiesenen: Notiz laden und Editor initialisieren
         try {
             const notesResp = await fetch(`/api/tasks/${row.id}/notes`);
+            if (!notesResp.ok) throw new Error(`HTTP ${notesResp.status}`);
             const notesData = await notesResp.json();
             const myNote = (notesData.items || []).find(n => n.user_id === currentUser.id);
             new WysiwygEditor(`notesEditor_${row.id}`, myNote ? myNote.content : '');
@@ -575,6 +576,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
         // Notizen des Zugewiesenen laden
         try {
             const notesResp = await fetch(`/api/tasks/${row.id}/notes`);
+            if (!notesResp.ok) throw new Error(`HTTP ${notesResp.status}`);
             const notesData = await notesResp.json();
             const assigneeNote = (notesData.items || []).find(n => n.user_id === row.assigned_to);
             const contentEl = document.getElementById(`assigneeNotesContent_${row.id}`);
@@ -796,6 +798,7 @@ async function onSubtaskViewExpanded(row, detailElement) {
     if (projectId) {
         try {
             const notesResp = await fetch(`/api/tasks/${projectId}/subtasks/${stId}/notes`);
+            if (!notesResp.ok) throw new Error(`HTTP ${notesResp.status}`);
             const notesData = await notesResp.json();
             const myNote = (notesData.items || []).find(n => n.user_id === currentUser.id);
             new WysiwygEditor(`stViewNotes_${stId}`, myNote ? myNote.content : '');
@@ -1144,6 +1147,7 @@ async function loadTaskNoteEntries(taskId) {
     if (!entriesContent) return;
     try {
         const resp = await fetch(`/api/tasks/${taskId}/note-entries`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         entriesContent.innerHTML = renderNoteEntriesList(data.items || []);
     } catch (e) {
@@ -1156,6 +1160,7 @@ async function loadSubtaskNoteEntries(taskId, subtaskId, elementId) {
     if (!entriesContent) return;
     try {
         const resp = await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}/note-entries`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         entriesContent.innerHTML = renderNoteEntriesList(data.items || []);
     } catch (e) {
@@ -1200,6 +1205,7 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
             notesContent._loaded = true;
             try {
                 const notesResp = await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}/notes`);
+                if (!notesResp.ok) throw new Error(`HTTP ${notesResp.status}`);
                 const notesData = await notesResp.json();
                 notesContent.innerHTML = renderSubTaskNotesList(notesData.items || []);
             } catch (e) {

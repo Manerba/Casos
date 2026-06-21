@@ -286,6 +286,7 @@ auf Tareas-IDs.
 
 - Token in `AGENTS.md`, docs, `.env`, Logs oder Tareas-Notizen schreiben.
 - `localhost:8504` in einem Remote-Projekt dokumentieren.
+- Kiron (`10.0.12.16:8505`) statt Tareas verwenden.
 - Bei fehlendem MCP eine lokale Schatten-DB anlegen.
 - REST-Web-API mit MCP-Bearer aufrufen.
 - Positionsnummern als Dependency-Gueltigkeit interpretieren.
