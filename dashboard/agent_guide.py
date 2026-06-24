@@ -120,6 +120,7 @@ def build_agent_metadata(request: Request | None = None) -> dict[str, Any]:
             "If MCP tools are missing, configure MCP instead of creating a local shadow database.",
             "Use descriptions for scope and acceptance criteria; use append_note for progress, handoffs, and decisions.",
             "write_note is an upsert for the current user's one editable note and overwrites that note on repeated calls.",
+            "delete_note removes only the current user's editable note; append-only note entries remain immutable.",
             "Treat predecessor_ids as dependency edges; position_number is display order only.",
         ],
     }
@@ -148,6 +149,8 @@ Arbeitsregeln:
   Testergebnisse, Blocker und Audit-Zusammenfassungen als neuen Verlaufseintrag.
 - `write_note` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
   wiederholte Aufrufe ueberschreiben diese Notiz.
+- `delete_note` loescht nur die eine aktuelle Notiz des aufrufenden Users;
+  append-only Verlaufseintraege bleiben unveraendert.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.
@@ -234,6 +237,7 @@ mcp__tareas__whoami
 mcp__tareas__list_projects
 mcp__tareas__get_project
 mcp__tareas__write_note
+mcp__tareas__delete_note
 mcp__tareas__append_note
 mcp__tareas__get_note_entries
 ```
@@ -274,8 +278,9 @@ Benutzer um lokale Konfiguration bitten.
 - Projekte: Epics oder groessere Arbeitsvorhaben.
 - Subtasks: operative Sprintpakete oder klar abgrenzbare Arbeitspakete.
 - Dependencies: echte Reihenfolge-/Blocker-Beziehungen im DAG.
-- Notes: `write_note` fuer die aktuelle eigene Notiz; `append_note` fuer
-  Fortschritt, Entscheidungen, Testergebnisse, Handoffs und Audit-Spuren.
+- Notes: `write_note` fuer die aktuelle eigene Notiz, `delete_note` zum
+  Loeschen dieser eigenen Notiz; `append_note` fuer Fortschritt,
+  Entscheidungen, Testergebnisse, Handoffs und Audit-Spuren.
 - Assignments: aktuelle Bearbeitung und Verantwortlichkeit.
 
 Markdown-Dateien im Zielprojekt bleiben sinnvoll fuer laengere Plaene,

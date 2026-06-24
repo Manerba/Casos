@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+24.06.2026 18:41;0.0.1+111;Feature;MCP-Tool delete_note ergaenzt: Agenten koennen ihre eigene aktuelle Upsert-Notiz an Aufgaben oder Teilaufgaben loeschen, waehrend append-only Verlaufseintraege unveraenderlich bleiben. Admin-Toolliste und Agent-Guide dokumentieren das neue Verhalten
+22.06.2026 09:29;0.0.1+111;Bugfix;ExpandableTable-Detailbereiche haben kein fixes max-height-Limit mehr. Lange Projekt-/Aufgaben-Details mit vielen oder langen Notizen wachsen auf ihre natuerliche Hoehe und werden unten nicht mehr abgeschnitten
 21.06.2026 02:12;0.0.1+110;Security;Notiz- und Verlauf-Endpunkte pruefen jetzt Leseberechtigungen und liefern 404/403 statt leerer Listen bei falschen IDs oder fehlendem Zugriff. UI zeigt HTTP-Fehler als Ladefehler, MCP write_note validiert task_id/subtask_id-Kombinationen, Append-Tabellen erhalten user_id-Indizes und der Agent-Guide ist konsistent
 21.06.2026 01:45;0.0.1+109;Feature;Append-only Notizverlauf ergaenzt: neue MCP-Tools append_note/get_note_entries, separate task_note_entries/sub_task_note_entries Tabellen, REST-Leseendpunkte und UI-Verlauf fuer Aufgaben und Teilaufgaben. Agent-Guide empfiehlt append_note fuer Handoffs/Fortschritt, write_note bleibt Upsert der aktuellen User-Notiz
 19.06.2026 21:52;0.0.1+108;Enhancement;Teilaufgaben-Detailansicht zeigt alle Notizen einer Teilaufgabe als read-only Liste, inklusive MCP-/Agent-Notizen. Dadurch sind per MCP geschriebene sub_task_notes in der UI nachvollziehbar sichtbar

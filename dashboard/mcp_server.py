@@ -756,6 +756,53 @@ def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dic
 
 
 @mcp.tool
+def delete_note(task_id: int, subtask_id: int | None = None) -> dict:
+    """Loescht die aktuelle eigene Upsert-Notiz des aufrufenden MCP-Users.
+
+    Betrifft nur `task_notes` bzw. `sub_task_notes`. Append-only Eintraege aus
+    `append_note` bleiben unveraendert.
+    """
+    user = _user()
+    with db_transaction() as db:
+        if subtask_id is not None:
+            if not db.execute(
+                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
+                (subtask_id, task_id),
+            ).fetchone():
+                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+            existing = db.execute(
+                "SELECT id, content FROM sub_task_notes WHERE sub_task_id = ? AND user_id = ?",
+                (subtask_id, user["id"]),
+            ).fetchone()
+            if not existing:
+                return {"deleted": False, "task_id": task_id, "subtask_id": subtask_id}
+            db.execute(
+                "DELETE FROM sub_task_notes WHERE sub_task_id = ? AND user_id = ?",
+                (subtask_id, user["id"]),
+            )
+            entity_id = subtask_id
+            entity_type = "sub_task_note"
+        else:
+            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
+                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+            existing = db.execute(
+                "SELECT id, content FROM task_notes WHERE task_id = ? AND user_id = ?",
+                (task_id, user["id"]),
+            ).fetchone()
+            if not existing:
+                return {"deleted": False, "task_id": task_id, "subtask_id": None}
+            db.execute(
+                "DELETE FROM task_notes WHERE task_id = ? AND user_id = ?",
+                (task_id, user["id"]),
+            )
+            entity_id = task_id
+            entity_type = "task_note"
+
+    log_change(user, entity_type, entity_id, "delete", {"content_len": len(existing["content"] or "")})
+    return {"deleted": True, "task_id": task_id, "subtask_id": subtask_id}
+
+
+@mcp.tool
 def append_note(task_id: int, content: str, subtask_id: int | None = None) -> dict:
     """Fuegt einen neuen append-only Notiz-Eintrag hinzu.
 

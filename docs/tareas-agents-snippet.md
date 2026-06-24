@@ -26,6 +26,8 @@ Arbeitsregeln:
   Testergebnisse, Blocker und Audit-Zusammenfassungen als neuen Verlaufseintrag.
 - `write_note` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
   wiederholte Aufrufe ueberschreiben diese Notiz.
+- `delete_note` loescht nur die eine aktuelle Notiz des aufrufenden Users;
+  append-only Verlaufseintraege bleiben unveraendert.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.
