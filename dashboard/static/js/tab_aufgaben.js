@@ -67,6 +67,7 @@ async function initAufgabenTab() {
         // Custom Renderer registrieren
         aufgabenTable.renderers['badge'] = renderAufgabenBadge;
         aufgabenTable.renderers['priority'] = renderPriority;
+        aufgabenTable.renderers['taskId'] = renderTaskId;
         aufgabenTable.renderers['deleteAction'] = renderDeleteAction;
 
         // Prioritaet-Spalte Renderer zuweisen
@@ -226,11 +227,6 @@ function toggleCategoryFilter(category) {
 // Inline-Editing (Haupt-Tabelle)
 // ========================================
 
-/**
- * Zellen-Index-Mapping (nach expand-icon):
- * 0=expand, 1=Name, 2=Typ, 3=Status, 4=Prioritaet, 5=Von, 6=Zugewiesen, 7=Erstellt, 8=Deadline, 9=Actions
- */
-
 function activateInlineEditing(rowId) {
     const wrapper = document.querySelector(`[data-row-id="${rowId}"]`);
     if (!wrapper) return;
@@ -247,21 +243,27 @@ function activateInlineEditing(rowId) {
 
     const cells = tableRow.querySelectorAll('.table-cell');
     if (!cells.length) return;
+    const cellForField = (field) => {
+        const index = aufgabenTable.config.columns.findIndex(col => col.field === field);
+        return index >= 0 ? cells[index] : null;
+    };
 
     const deadlineISO = convertToISO(row.deadline);
 
-    // Cell 1: Name
-    if (cells[0] && !perm.isAssignee && !(perm.isCreator && perm.isAssigned)) {
-        cells[0]._originalHTML = cells[0].innerHTML;
-        cells[0].innerHTML = `<input type="text" class="inline-edit-input" id="inlineName_${row.id}" value="${escapeAttr(row.name)}" onclick="event.stopPropagation()">`;
+    // Name
+    const nameCell = cellForField('name');
+    if (nameCell && !perm.isAssignee && !(perm.isCreator && perm.isAssigned)) {
+        nameCell._originalHTML = nameCell.innerHTML;
+        nameCell.innerHTML = `<input type="text" class="inline-edit-input" id="inlineName_${row.id}" value="${escapeAttr(row.name)}" onclick="event.stopPropagation()">`;
     }
 
-    // Cell 3: Status (nicht bei Projekten)
-    if (cells[2] && row.task_type !== 'projekt') {
+    // Status (nicht bei Projekten)
+    const statusCell = cellForField('status');
+    if (statusCell && row.task_type !== 'projekt') {
         const canEditStatus = perm.isAssignee || perm.isOwnTask || perm.isLegacy;
         if (canEditStatus) {
-            cells[2]._originalHTML = cells[2].innerHTML;
-            cells[2].innerHTML = `<select class="inline-edit-select" id="inlineStatus_${row.id}" onclick="event.stopPropagation()">
+            statusCell._originalHTML = statusCell.innerHTML;
+            statusCell.innerHTML = `<select class="inline-edit-select" id="inlineStatus_${row.id}" onclick="event.stopPropagation()">
                 <option value="offen" ${row.status === 'offen' ? 'selected' : ''}>${t('status.offen')}</option>
                 <option value="in_arbeit" ${row.status === 'in_arbeit' ? 'selected' : ''}>${t('status.in_arbeit')}</option>
                 <option value="erledigt" ${row.status === 'erledigt' ? 'selected' : ''}>${t('status.erledigt')}</option>
@@ -269,24 +271,27 @@ function activateInlineEditing(rowId) {
         }
     }
 
-    // Cell 4: Prioritaet
-    if (cells[3] && !perm.isAssignee) {
-        cells[3]._originalHTML = cells[3].innerHTML;
-        cells[3].innerHTML = `<input type="number" class="inline-edit-input" id="inlinePriority_${row.id}" value="${row.priority}" min="1" max="100" onclick="event.stopPropagation()">`;
+    // Prioritaet
+    const priorityCell = cellForField('priority');
+    if (priorityCell && !perm.isAssignee) {
+        priorityCell._originalHTML = priorityCell.innerHTML;
+        priorityCell.innerHTML = `<input type="number" class="inline-edit-input" id="inlinePriority_${row.id}" value="${row.priority}" min="1" max="100" onclick="event.stopPropagation()">`;
     }
 
-    // Cell 6: Zugewiesen an (nur Ersteller/Legacy)
-    if (cells[5] && (perm.isCreator || perm.isOwnTask || perm.isLegacy)) {
-        cells[5]._originalHTML = cells[5].innerHTML;
-        cells[5].innerHTML = `<select class="inline-edit-select" id="inlineAssigned_${row.id}" onclick="event.stopPropagation()">
+    // Zugewiesen an (nur Ersteller/Legacy)
+    const assignedCell = cellForField('assigned_to_name');
+    if (assignedCell && (perm.isCreator || perm.isOwnTask || perm.isLegacy)) {
+        assignedCell._originalHTML = assignedCell.innerHTML;
+        assignedCell.innerHTML = `<select class="inline-edit-select" id="inlineAssigned_${row.id}" onclick="event.stopPropagation()">
             ${buildUserOptions(row.assigned_to)}
         </select>`;
     }
 
-    // Cell 8: Deadline
-    if (cells[7] && !perm.isAssignee) {
-        cells[7]._originalHTML = cells[7].innerHTML;
-        cells[7].innerHTML = `<input type="date" class="inline-edit-input" id="inlineDeadline_${row.id}" value="${deadlineISO}" onclick="event.stopPropagation()">`;
+    // Deadline
+    const deadlineCell = cellForField('deadline');
+    if (deadlineCell && !perm.isAssignee) {
+        deadlineCell._originalHTML = deadlineCell.innerHTML;
+        deadlineCell.innerHTML = `<input type="date" class="inline-edit-input" id="inlineDeadline_${row.id}" value="${deadlineISO}" onclick="event.stopPropagation()">`;
     }
 
     // Auto-Save auf alle inline inputs wiren
@@ -392,6 +397,11 @@ async function saveTaskFromInline(taskId) {
 // ========================================
 // Custom Renderer
 // ========================================
+
+function renderTaskId(value, col, row) {
+    const displayId = row._type === 'assigned_subtask' ? row._subtask_id : value;
+    return escapeHtml(displayId ?? '-');
+}
 
 function renderAufgabenBadge(value, col, row) {
     if (!value) return '-';

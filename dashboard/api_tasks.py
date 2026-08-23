@@ -1287,6 +1287,10 @@ async def get_tasks_config():
         api_endpoint="/api/tasks",
         expandable=True,
         columns=[
+            Column(
+                "ID", "id", width=52, sortable=True, css_class="task-id-cell",
+                renderer="taskId", align="center", i18n_key="tasks.col.id",
+            ),
             Column("Name", "name", width=0, sortable=True, i18n_key="tasks.col.name"),
             Column("Typ", "task_type", width=90, sortable=True, renderer="badge", i18n_key="tasks.col.type"),
             Column("Status", "status", width=90, sortable=True, renderer="badge", i18n_key="tasks.col.status"),

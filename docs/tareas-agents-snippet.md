@@ -22,12 +22,15 @@ Arbeitsregeln:
 - Vor Schreiboperationen den aktuellen Projektstand per MCP lesen.
 - `description` enthaelt Scope, Implementierungsbriefing, Akzeptanzkriterien
   und Definition of Done.
-- `append_note` dokumentiert Fortschritt, Handoffs, Entscheidungen,
+- `handoff.add` dokumentiert Fortschritt, Handoffs, Entscheidungen,
   Testergebnisse, Blocker und Audit-Zusammenfassungen als neuen Verlaufseintrag.
-- `write_note` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
+- `handoff.list` liest diese Verlaufseintraege; `handoff.delete` loescht einen
+  Handoff anhand seiner typisierten `handoff_id` (`task:123` oder
+  `subtask:456`).
+- `note.write` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
   wiederholte Aufrufe ueberschreiben diese Notiz.
-- `delete_note` loescht nur die eine aktuelle Notiz des aufrufenden Users;
-  append-only Verlaufseintraege bleiben unveraendert.
+- `note.list` liest editierbare User-Notizen; `note.delete` loescht nur die
+  eine aktuelle Notiz des aufrufenden Users.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.

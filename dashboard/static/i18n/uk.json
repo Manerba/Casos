@@ -94,6 +94,7 @@
   "tasks.typeLabel": "Тип:",
   "tasks.statusLabel": "Статус:",
   "tasks.unassigned": "-- Не призначено --",
+  "tasks.col.id": "ID",
   "tasks.col.name": "Назва",
   "tasks.col.type": "Тип",
   "tasks.col.status": "Статус",

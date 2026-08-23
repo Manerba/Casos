@@ -120,7 +120,7 @@ mcp = FastMCP(
         "registriert; alle Aenderungen werden im Audit-Log protokolliert. "
         "Aufgaben (Projekte) haben Teilaufgaben (Subtasks) mit optionalen "
         "Abhaengigkeiten. Felder: description = Spec/Anforderung, notes = "
-        "aktuelle User-Notiz, note_entries = chronologische Handoffs/Findings."
+        "aktuelle User-Notiz, handoffs = chronologischer Verlauf/Findings."
     ),
 )
 
@@ -619,16 +619,152 @@ def remove_dependency(subtask_id: int, depends_on_id: int) -> dict:
 
 
 # ============================================================
-# Notes
+# Notes und Handoffs
 # ============================================================
 
-@mcp.tool
-def get_notes(task_id: int, subtask_id: int | None = None) -> list[dict]:
-    """Listet Notizen einer Aufgabe oder Teilaufgabe (alle User, sortiert nach updated_at DESC).
+def _task_readable(db, task, user: dict) -> bool:
+    if user.get("is_admin"):
+        return True
+    if task["created_by"] is None:
+        return True
+    if task["created_by"] == user["id"] or task["assigned_to"] == user["id"]:
+        return True
+
+    membership = db.execute(
+        "SELECT can_read FROM project_members WHERE project_id = ? AND user_id = ?",
+        (task["id"], user["id"]),
+    ).fetchone()
+    return bool(membership and membership["can_read"])
+
+
+def _require_task_read_access(db, task_id: int, user: dict):
+    row = db.execute(
+        "SELECT id, created_by, assigned_to FROM tasks WHERE id = ?",
+        (task_id,),
+    ).fetchone()
+    if not row:
+        raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+    if not _task_readable(db, row, user):
+        raise ToolError(f"Keine Leseberechtigung fuer Aufgabe/Projekt {task_id}")
+    return row
+
+
+def _can_read_task(db, task_id: int, user: dict) -> bool:
+    row = db.execute(
+        "SELECT id, created_by, assigned_to FROM tasks WHERE id = ?",
+        (task_id,),
+    ).fetchone()
+    return bool(row and _task_readable(db, row, user))
+
+
+def _subtask_readable(db, row, user: dict) -> bool:
+    if user.get("is_admin"):
+        return True
+    if row["task_created_by"] is None:
+        return True
+    if row["task_created_by"] == user["id"] or row["subtask_assigned_to"] == user["id"]:
+        return True
+
+    membership = db.execute(
+        "SELECT can_read FROM project_members WHERE project_id = ? AND user_id = ?",
+        (row["project_id"], user["id"]),
+    ).fetchone()
+    return bool(membership and membership["can_read"])
+
+
+def _require_subtask_read_access(db, task_id: int, subtask_id: int, user: dict):
+    row = db.execute(
+        """SELECT st.id, st.project_id, st.assigned_to AS subtask_assigned_to,
+                  t.created_by AS task_created_by
+           FROM sub_tasks st
+           JOIN tasks t ON t.id = st.project_id
+           WHERE st.id = ? AND st.project_id = ?""",
+        (subtask_id, task_id),
+    ).fetchone()
+    if not row:
+        raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+    if not _subtask_readable(db, row, user):
+        raise ToolError(f"Keine Leseberechtigung fuer Teilaufgabe {subtask_id}")
+    return row
+
+
+def _can_read_subtask(db, task_id: int, subtask_id: int, user: dict) -> bool:
+    row = db.execute(
+        """SELECT st.id, st.project_id, st.assigned_to AS subtask_assigned_to,
+                  t.created_by AS task_created_by
+           FROM sub_tasks st
+           JOIN tasks t ON t.id = st.project_id
+           WHERE st.id = ? AND st.project_id = ?""",
+        (subtask_id, task_id),
+    ).fetchone()
+    return bool(row and _subtask_readable(db, row, user))
+
+
+def _task_visibility_sql(task_alias: str, user: dict) -> tuple[str, list[int]]:
+    if user.get("is_admin"):
+        return "1 = 1", []
+    return (
+        f"({task_alias}.created_by IS NULL "
+        f"OR {task_alias}.created_by = ? "
+        f"OR {task_alias}.assigned_to = ? "
+        f"OR EXISTS ("
+        f"SELECT 1 FROM project_members pm "
+        f"WHERE pm.project_id = {task_alias}.id "
+        f"AND pm.user_id = ? "
+        f"AND pm.can_read = 1"
+        f"))",
+        [user["id"], user["id"], user["id"]],
+    )
+
+
+def _subtask_visibility_sql(task_alias: str, subtask_alias: str, user: dict) -> tuple[str, list[int]]:
+    if user.get("is_admin"):
+        return "1 = 1", []
+    return (
+        f"({task_alias}.created_by IS NULL "
+        f"OR {task_alias}.created_by = ? "
+        f"OR {subtask_alias}.assigned_to = ? "
+        f"OR EXISTS ("
+        f"SELECT 1 FROM project_members pm "
+        f"WHERE pm.project_id = {subtask_alias}.project_id "
+        f"AND pm.user_id = ? "
+        f"AND pm.can_read = 1"
+        f"))",
+        [user["id"], user["id"], user["id"]],
+    )
+
+
+def _make_handoff_id(scope: str, local_id: int) -> str:
+    return f"{scope}:{local_id}"
+
+
+def _parse_handoff_id(handoff_id: str) -> tuple[str, int]:
+    value = str(handoff_id).strip()
+    if ":" not in value:
+        raise ToolError("handoff_id muss typisiert sein, z.B. 'task:123' oder 'subtask:456'")
+    scope, raw_id = value.split(":", 1)
+    if scope not in {"task", "subtask"}:
+        raise ToolError("handoff_id muss mit 'task:' oder 'subtask:' beginnen")
+    try:
+        local_id = int(raw_id)
+    except ValueError as exc:
+        raise ToolError("handoff_id enthaelt keine gueltige numerische ID") from exc
+    if local_id < 1:
+        raise ToolError("handoff_id muss eine positive ID enthalten")
+    return scope, local_id
+
+
+@mcp.tool(name="note.list")
+def note_list(task_id: int, subtask_id: int | None = None) -> list[dict]:
+    """Listet editierbare User-Notizen einer Aufgabe oder Teilaufgabe.
+
     Wenn subtask_id gesetzt ist, werden die Notizen dieser Teilaufgabe geliefert,
-    sonst die der Aufgabe (Projekt)."""
+    sonst die der Aufgabe/des Projekts. Neueste Notizen stehen zuerst.
+    """
+    user = _user()
     with db_query() as db:
         if subtask_id is not None:
+            _require_subtask_read_access(db, task_id, subtask_id, user)
             rows = db.execute(
                 """SELECT sn.user_id, sn.content, sn.updated_at,
                           u.vorname || ' ' || u.nachname AS user_name,
@@ -640,6 +776,7 @@ def get_notes(task_id: int, subtask_id: int | None = None) -> list[dict]:
                 (subtask_id,),
             ).fetchall()
         else:
+            _require_task_read_access(db, task_id, user)
             rows = db.execute(
                 """SELECT tn.user_id, tn.content, tn.updated_at,
                           u.vorname || ' ' || u.nachname AS user_name,
@@ -662,74 +799,17 @@ def get_notes(task_id: int, subtask_id: int | None = None) -> list[dict]:
         ]
 
 
-@mcp.tool
-def get_note_entries(task_id: int, subtask_id: int | None = None, limit: int = 100) -> list[dict]:
-    """Listet append-only Notiz-Eintraege einer Aufgabe oder Teilaufgabe.
+@mcp.tool(name="note.write")
+def note_write(task_id: int, content: str, subtask_id: int | None = None) -> dict:
+    """Schreibt oder aktualisiert die aktuelle eigene User-Notiz.
 
-    Fuer Handoffs, Fortschritt, Entscheidungen und Audit-Spuren verwenden.
-    Neueste Eintraege werden zuerst geliefert. Wenn subtask_id gesetzt ist,
-    muss sie zu task_id gehoeren.
+    Pro User gibt es je Aufgabe/Teilaufgabe genau eine solche Notiz.
+    Wiederholte Aufrufe ueberschreiben diese Notiz.
     """
-    limit = max(1, min(limit, 200))
-    with db_query() as db:
-        if subtask_id is not None:
-            if not db.execute(
-                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
-                (subtask_id, task_id),
-            ).fetchone():
-                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
-            rows = db.execute(
-                """SELECT sne.id, sne.sub_task_id, sne.user_id, sne.content, sne.created_at,
-                          u.vorname || ' ' || u.nachname AS user_name,
-                          u.auth_source
-                   FROM sub_task_note_entries sne
-                   JOIN users u ON sne.user_id = u.id
-                   WHERE sne.sub_task_id = ?
-                   ORDER BY sne.created_at DESC, sne.id DESC
-                   LIMIT ?""",
-                (subtask_id, limit),
-            ).fetchall()
-        else:
-            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
-                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
-            rows = db.execute(
-                """SELECT tne.id, tne.task_id, tne.user_id, tne.content, tne.created_at,
-                          u.vorname || ' ' || u.nachname AS user_name,
-                          u.auth_source
-                   FROM task_note_entries tne
-                   JOIN users u ON tne.user_id = u.id
-                   WHERE tne.task_id = ?
-                   ORDER BY tne.created_at DESC, tne.id DESC
-                   LIMIT ?""",
-                (task_id, limit),
-            ).fetchall()
-        return [
-            {
-                "id": r["id"],
-                "task_id": r["task_id"] if "task_id" in r.keys() else task_id,
-                "subtask_id": r["sub_task_id"] if "sub_task_id" in r.keys() else None,
-                "user_id": r["user_id"],
-                "user_name": (r["user_name"] or "").strip(),
-                "auth_source": r["auth_source"] or "local",
-                "content": r["content"] or "",
-                "created_at": r["created_at"],
-            }
-            for r in rows
-        ]
-
-
-@mcp.tool
-def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dict:
-    """Schreibt/aktualisiert eine Notiz des aufrufenden MCP-Users an einer Aufgabe oder
-    Teilaufgabe. Notizen sind per User unique; wiederholtes Schreiben ueberschreibt."""
     user = _user()
     with db_transaction() as db:
         if subtask_id is not None:
-            if not db.execute(
-                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
-                (subtask_id, task_id),
-            ).fetchone():
-                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+            _require_subtask_read_access(db, task_id, subtask_id, user)
             db.execute(
                 """INSERT INTO sub_task_notes (sub_task_id, user_id, content, updated_at)
                    VALUES (?, ?, ?, datetime('now'))
@@ -740,8 +820,7 @@ def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dic
             entity_id = subtask_id
             entity_type = "sub_task_note"
         else:
-            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
-                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+            _require_task_read_access(db, task_id, user)
             db.execute(
                 """INSERT INTO task_notes (task_id, user_id, content, updated_at)
                    VALUES (?, ?, ?, datetime('now'))
@@ -755,21 +834,13 @@ def write_note(task_id: int, content: str, subtask_id: int | None = None) -> dic
     return {"saved": True, "task_id": task_id, "subtask_id": subtask_id}
 
 
-@mcp.tool
-def delete_note(task_id: int, subtask_id: int | None = None) -> dict:
-    """Loescht die aktuelle eigene Upsert-Notiz des aufrufenden MCP-Users.
-
-    Betrifft nur `task_notes` bzw. `sub_task_notes`. Append-only Eintraege aus
-    `append_note` bleiben unveraendert.
-    """
+@mcp.tool(name="note.delete")
+def note_delete(task_id: int, subtask_id: int | None = None) -> dict:
+    """Loescht die aktuelle eigene User-Notiz des aufrufenden MCP-Users."""
     user = _user()
     with db_transaction() as db:
         if subtask_id is not None:
-            if not db.execute(
-                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
-                (subtask_id, task_id),
-            ).fetchone():
-                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+            _require_subtask_read_access(db, task_id, subtask_id, user)
             existing = db.execute(
                 "SELECT id, content FROM sub_task_notes WHERE sub_task_id = ? AND user_id = ?",
                 (subtask_id, user["id"]),
@@ -783,8 +854,7 @@ def delete_note(task_id: int, subtask_id: int | None = None) -> dict:
             entity_id = subtask_id
             entity_type = "sub_task_note"
         else:
-            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
-                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+            _require_task_read_access(db, task_id, user)
             existing = db.execute(
                 "SELECT id, content FROM task_notes WHERE task_id = ? AND user_id = ?",
                 (task_id, user["id"]),
@@ -802,13 +872,66 @@ def delete_note(task_id: int, subtask_id: int | None = None) -> dict:
     return {"deleted": True, "task_id": task_id, "subtask_id": subtask_id}
 
 
-@mcp.tool
-def append_note(task_id: int, content: str, subtask_id: int | None = None) -> dict:
-    """Fuegt einen neuen append-only Notiz-Eintrag hinzu.
+@mcp.tool(name="handoff.list")
+def handoff_list(task_id: int, subtask_id: int | None = None, limit: int = 100) -> list[dict]:
+    """Listet Handoffs einer Aufgabe oder Teilaufgabe.
 
-    Fuer Handoffs, Fortschritt, Entscheidungen, Testergebnisse, Gate-Notizen
-    und Audit-Zusammenfassungen verwenden. Im Gegensatz zu write_note wird
-    kein bestehender Inhalt desselben MCP-Users ueberschrieben.
+    Fuer Fortschritt, Uebergaben, Entscheidungen, Testergebnisse und
+    Audit-Zusammenfassungen verwenden. Neueste Handoffs werden zuerst
+    geliefert. Wenn subtask_id gesetzt ist, muss sie zu task_id gehoeren.
+    """
+    limit = max(1, min(limit, 200))
+    user = _user()
+    with db_query() as db:
+        if subtask_id is not None:
+            _require_subtask_read_access(db, task_id, subtask_id, user)
+            rows = db.execute(
+                """SELECT sne.id, sne.sub_task_id, sne.user_id, sne.content, sne.created_at,
+                          u.vorname || ' ' || u.nachname AS user_name,
+                          u.auth_source
+                   FROM sub_task_note_entries sne
+                   JOIN users u ON sne.user_id = u.id
+                   WHERE sne.sub_task_id = ?
+                   ORDER BY sne.created_at DESC, sne.id DESC
+                   LIMIT ?""",
+                (subtask_id, limit),
+            ).fetchall()
+        else:
+            _require_task_read_access(db, task_id, user)
+            rows = db.execute(
+                """SELECT tne.id, tne.task_id, tne.user_id, tne.content, tne.created_at,
+                          u.vorname || ' ' || u.nachname AS user_name,
+                          u.auth_source
+                   FROM task_note_entries tne
+                   JOIN users u ON tne.user_id = u.id
+                   WHERE tne.task_id = ?
+                   ORDER BY tne.created_at DESC, tne.id DESC
+                   LIMIT ?""",
+                (task_id, limit),
+            ).fetchall()
+        return [
+            {
+                "handoff_id": _make_handoff_id("subtask" if "sub_task_id" in r.keys() else "task", r["id"]),
+                "local_id": r["id"],
+                "task_id": r["task_id"] if "task_id" in r.keys() else task_id,
+                "subtask_id": r["sub_task_id"] if "sub_task_id" in r.keys() else None,
+                "user_id": r["user_id"],
+                "user_name": (r["user_name"] or "").strip(),
+                "auth_source": r["auth_source"] or "local",
+                "content": r["content"] or "",
+                "created_at": r["created_at"],
+            }
+            for r in rows
+        ]
+
+
+@mcp.tool(name="handoff.add")
+def handoff_add(task_id: int, content: str, subtask_id: int | None = None) -> dict:
+    """Fuegt einen neuen Handoff hinzu.
+
+    Fuer Fortschritt, Uebergaben, Entscheidungen, Testergebnisse, Gate-Notizen
+    und Audit-Zusammenfassungen verwenden. Jeder Aufruf erzeugt einen eigenen
+    Verlaufseintrag und ueberschreibt keine User-Notiz.
     """
     user = _user()
     if not content.strip():
@@ -816,32 +939,119 @@ def append_note(task_id: int, content: str, subtask_id: int | None = None) -> di
 
     with db_transaction() as db:
         if subtask_id is not None:
-            if not db.execute(
-                "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?",
-                (subtask_id, task_id),
-            ).fetchone():
-                raise ToolError(f"Teilaufgabe {subtask_id} gehoert nicht zu Projekt {task_id}")
+            _require_subtask_read_access(db, task_id, subtask_id, user)
             cursor = db.execute(
                 """INSERT INTO sub_task_note_entries (sub_task_id, user_id, content)
                    VALUES (?, ?, ?)""",
                 (subtask_id, user["id"], content),
             )
             entity_id = subtask_id
-            entity_type = "sub_task_note_entry"
+            entity_type = "sub_task_handoff"
+            scope = "subtask"
         else:
-            if not db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone():
-                raise ToolError(f"Aufgabe/Projekt {task_id} nicht gefunden")
+            _require_task_read_access(db, task_id, user)
             cursor = db.execute(
                 """INSERT INTO task_note_entries (task_id, user_id, content)
                    VALUES (?, ?, ?)""",
                 (task_id, user["id"], content),
             )
             entity_id = task_id
-            entity_type = "task_note_entry"
-        entry_id = cursor.lastrowid
+            entity_type = "task_handoff"
+            scope = "task"
+        local_id = cursor.lastrowid
+        handoff_id = _make_handoff_id(scope, local_id)
 
-    log_change(user, entity_type, entity_id, "create", {"entry_id": entry_id, "content_len": len(content)})
-    return {"saved": True, "entry_id": entry_id, "task_id": task_id, "subtask_id": subtask_id}
+    log_change(user, entity_type, entity_id, "create", {
+        "handoff_id": handoff_id,
+        "local_id": local_id,
+        "owner_user_id": user["id"],
+        "content_len": len(content),
+    })
+    return {
+        "saved": True,
+        "handoff_id": handoff_id,
+        "local_id": local_id,
+        "task_id": task_id,
+        "subtask_id": subtask_id,
+    }
+
+
+@mcp.tool(name="handoff.delete")
+def handoff_delete(task_id: int, handoff_id: str, subtask_id: int | None = None) -> dict:
+    """Loescht einen Handoff aus dem Verlauf.
+
+    Normale MCP-User duerfen nur eigene Handoffs loeschen. Admin-User duerfen
+    auch fremde Handoffs loeschen. Wenn subtask_id gesetzt ist, muss sie zu
+    task_id gehoeren.
+    """
+    user = _user()
+    scope, local_id = _parse_handoff_id(handoff_id)
+    with db_transaction() as db:
+        if scope == "subtask":
+            if subtask_id is None:
+                row = db.execute(
+                    """SELECT sne.id, sne.user_id, sne.content,
+                              st.id AS subtask_id,
+                              st.project_id,
+                              st.assigned_to AS subtask_assigned_to,
+                              t.created_by AS task_created_by
+                       FROM sub_task_note_entries sne
+                       JOIN sub_tasks st ON st.id = sne.sub_task_id
+                       JOIN tasks t ON t.id = st.project_id
+                       WHERE sne.id = ? AND st.project_id = ?""",
+                    (local_id, task_id),
+                ).fetchone()
+                if not row:
+                    _require_task_read_access(db, task_id, user)
+                    return {"deleted": False, "handoff_id": handoff_id, "task_id": task_id, "subtask_id": None}
+                if not _subtask_readable(db, row, user):
+                    raise ToolError(f"Keine Leseberechtigung fuer Aufgabe/Projekt {task_id}")
+                subtask_id = row["subtask_id"]
+                existing = row
+            else:
+                _require_subtask_read_access(db, task_id, subtask_id, user)
+                existing = db.execute(
+                    "SELECT id, user_id, content FROM sub_task_note_entries WHERE id = ? AND sub_task_id = ?",
+                    (local_id, subtask_id),
+                ).fetchone()
+
+            if not existing:
+                return {"deleted": False, "handoff_id": handoff_id, "task_id": task_id, "subtask_id": subtask_id}
+            if existing["user_id"] != user["id"] and not user.get("is_admin"):
+                raise ToolError("Nur eigene Handoffs koennen geloescht werden")
+            db.execute(
+                "DELETE FROM sub_task_note_entries WHERE id = ? AND sub_task_id = ?",
+                (local_id, subtask_id),
+            )
+            entity_id = subtask_id
+            entity_type = "sub_task_handoff"
+        else:
+            if subtask_id is not None:
+                raise ToolError("task-Handoff darf nicht mit subtask_id geloescht werden")
+            _require_task_read_access(db, task_id, user)
+            existing = db.execute(
+                "SELECT id, user_id, content FROM task_note_entries WHERE id = ? AND task_id = ?",
+                (local_id, task_id),
+            ).fetchone()
+            if not existing:
+                return {"deleted": False, "handoff_id": handoff_id, "task_id": task_id, "subtask_id": None}
+            if existing["user_id"] != user["id"] and not user.get("is_admin"):
+                raise ToolError("Nur eigene Handoffs koennen geloescht werden")
+            db.execute(
+                "DELETE FROM task_note_entries WHERE id = ? AND task_id = ?",
+                (local_id, task_id),
+            )
+            entity_id = task_id
+            entity_type = "task_handoff"
+
+    log_change(user, entity_type, entity_id, "delete", {
+        "handoff_id": handoff_id,
+        "local_id": local_id,
+        "owner_user_id": existing["user_id"],
+        "deleted_by_admin": bool(user.get("is_admin") and existing["user_id"] != user["id"]),
+        "content_len": len(existing["content"] or ""),
+    })
+    return {"deleted": True, "handoff_id": handoff_id, "task_id": task_id, "subtask_id": subtask_id}
 
 
 # ============================================================
@@ -878,25 +1088,42 @@ def list_areas() -> list[dict]:
 
 @mcp.tool
 def search(query: str, limit: int = 20) -> list[dict]:
-    """Volltextsuche ueber Name + Description + Notes (LIKE-basiert).
-    Liefert Treffer mit type ('task'|'sub_task'|'note') und kurzem Snippet."""
+    """Volltextsuche ueber Name, Description, Notes und Handoffs.
+
+    Liefert Treffer mit type ('task'|'sub_task'|'task_note'|'sub_task_note'|
+    'task_handoff'|'sub_task_handoff') und kurzem Snippet.
+    """
     if not query.strip():
         return []
     q = f"%{query.strip()}%"
     limit = max(1, min(limit, 200))
     results: list[dict] = []
+    user = _user()
     with db_query() as db:
+        task_vis_sql, task_vis_params = _task_visibility_sql("t", user)
         for r in db.execute(
-            "SELECT id, name, description FROM tasks WHERE name LIKE ? OR description LIKE ? LIMIT ?",
-            (q, q, limit),
+            """SELECT id, name, description, created_by, assigned_to
+               FROM tasks t
+               WHERE (name LIKE ? OR description LIKE ?)
+                 AND """ + task_vis_sql + """
+               LIMIT ?""",
+            (q, q, *task_vis_params, limit),
         ).fetchall():
             results.append({
                 "type": "task", "id": r["id"], "name": r["name"],
                 "snippet": (r["description"] or "")[:200],
             })
+        subtask_vis_sql, subtask_vis_params = _subtask_visibility_sql("t", "st", user)
         for r in db.execute(
-            "SELECT id, project_id, name, description FROM sub_tasks WHERE name LIKE ? OR description LIKE ? LIMIT ?",
-            (q, q, limit),
+            """SELECT st.id, st.project_id, st.name, st.description,
+                      st.assigned_to AS subtask_assigned_to,
+                      t.created_by AS task_created_by
+               FROM sub_tasks st
+               JOIN tasks t ON t.id = st.project_id
+               WHERE (st.name LIKE ? OR st.description LIKE ?)
+                 AND """ + subtask_vis_sql + """
+               LIMIT ?""",
+            (q, q, *subtask_vis_params, limit),
         ).fetchall():
             results.append({
                 "type": "sub_task", "id": r["id"], "project_id": r["project_id"],
@@ -904,42 +1131,73 @@ def search(query: str, limit: int = 20) -> list[dict]:
             })
         for r in db.execute(
             """SELECT tn.task_id, tn.user_id, tn.content, u.username
-               FROM task_notes tn JOIN users u ON tn.user_id = u.id
-               WHERE tn.content LIKE ? LIMIT ?""",
-            (q, limit),
+               FROM task_notes tn
+               JOIN users u ON tn.user_id = u.id
+               JOIN tasks t ON t.id = tn.task_id
+               WHERE tn.content LIKE ?
+                 AND """ + task_vis_sql + """
+               LIMIT ?""",
+            (q, *task_vis_params, limit),
         ).fetchall():
             results.append({
                 "type": "task_note", "task_id": r["task_id"], "user": r["username"],
                 "snippet": (r["content"] or "")[:200],
             })
         for r in db.execute(
-            """SELECT sn.sub_task_id, sn.user_id, sn.content, u.username
-               FROM sub_task_notes sn JOIN users u ON sn.user_id = u.id
-               WHERE sn.content LIKE ? LIMIT ?""",
-            (q, limit),
+            """SELECT sn.sub_task_id, st.project_id, sn.user_id, sn.content, u.username
+               FROM sub_task_notes sn
+               JOIN users u ON sn.user_id = u.id
+               JOIN sub_tasks st ON st.id = sn.sub_task_id
+               JOIN tasks t ON t.id = st.project_id
+               WHERE sn.content LIKE ?
+                 AND """ + subtask_vis_sql + """
+               LIMIT ?""",
+            (q, *subtask_vis_params, limit),
         ).fetchall():
             results.append({
-                "type": "sub_task_note", "sub_task_id": r["sub_task_id"], "user": r["username"],
+                "type": "sub_task_note",
+                "task_id": r["project_id"],
+                "project_id": r["project_id"],
+                "subtask_id": r["sub_task_id"],
+                "user": r["username"],
                 "snippet": (r["content"] or "")[:200],
             })
         for r in db.execute(
             """SELECT tne.id, tne.task_id, tne.user_id, tne.content, u.username
-               FROM task_note_entries tne JOIN users u ON tne.user_id = u.id
-               WHERE tne.content LIKE ? LIMIT ?""",
-            (q, limit),
+               FROM task_note_entries tne
+               JOIN users u ON tne.user_id = u.id
+               JOIN tasks t ON t.id = tne.task_id
+               WHERE tne.content LIKE ?
+                 AND """ + task_vis_sql + """
+               LIMIT ?""",
+            (q, *task_vis_params, limit),
         ).fetchall():
             results.append({
-                "type": "task_note_entry", "id": r["id"], "task_id": r["task_id"], "user": r["username"],
+                "type": "task_handoff",
+                "handoff_id": _make_handoff_id("task", r["id"]),
+                "local_id": r["id"],
+                "task_id": r["task_id"], "user": r["username"],
                 "snippet": (r["content"] or "")[:200],
             })
         for r in db.execute(
-            """SELECT sne.id, sne.sub_task_id, sne.user_id, sne.content, u.username
-               FROM sub_task_note_entries sne JOIN users u ON sne.user_id = u.id
-               WHERE sne.content LIKE ? LIMIT ?""",
-            (q, limit),
+            """SELECT sne.id, sne.sub_task_id, st.project_id, sne.user_id, sne.content, u.username
+               FROM sub_task_note_entries sne
+               JOIN users u ON sne.user_id = u.id
+               JOIN sub_tasks st ON st.id = sne.sub_task_id
+               JOIN tasks t ON t.id = st.project_id
+               WHERE sne.content LIKE ?
+                 AND """ + subtask_vis_sql + """
+               LIMIT ?""",
+            (q, *subtask_vis_params, limit),
         ).fetchall():
             results.append({
-                "type": "sub_task_note_entry", "id": r["id"], "sub_task_id": r["sub_task_id"], "user": r["username"],
+                "type": "sub_task_handoff",
+                "handoff_id": _make_handoff_id("subtask", r["id"]),
+                "local_id": r["id"],
+                "task_id": r["project_id"],
+                "project_id": r["project_id"],
+                "subtask_id": r["sub_task_id"],
+                "user": r["username"],
                 "snippet": (r["content"] or "")[:200],
             })
     return results[:limit]

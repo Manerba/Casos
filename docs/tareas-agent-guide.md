@@ -81,10 +81,11 @@ Eine korrekt gestartete Session sieht Tareas-Tools, z.B.:
 mcp__tareas__whoami
 mcp__tareas__list_projects
 mcp__tareas__get_project
-mcp__tareas__write_note
-mcp__tareas__delete_note
-mcp__tareas__append_note
-mcp__tareas__get_note_entries
+mcp__tareas__note.write
+mcp__tareas__note.delete
+mcp__tareas__handoff.add
+mcp__tareas__handoff.list
+mcp__tareas__handoff.delete
 ```
 
 Pruefablauf:
@@ -121,12 +122,15 @@ Arbeitsregeln:
 - Vor Schreiboperationen den aktuellen Projektstand per MCP lesen.
 - `description` enthaelt Scope, Implementierungsbriefing, Akzeptanzkriterien
   und Definition of Done.
-- `append_note` dokumentiert Fortschritt, Handoffs, Entscheidungen,
+- `handoff.add` dokumentiert Fortschritt, Handoffs, Entscheidungen,
   Testergebnisse, Blocker und Audit-Zusammenfassungen als neuen Verlaufseintrag.
-- `write_note` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
+- `handoff.list` liest diese Verlaufseintraege; `handoff.delete` loescht einen
+  Handoff anhand seiner typisierten `handoff_id` (`task:123` oder
+  `subtask:456`).
+- `note.write` aktualisiert nur die eine aktuelle Notiz des aufrufenden Users;
   wiederholte Aufrufe ueberschreiben diese Notiz.
-- `delete_note` loescht nur die eine aktuelle Notiz des aufrufenden Users;
-  append-only Verlaufseintraege bleiben unveraendert.
+- `note.list` liest editierbare User-Notizen; `note.delete` loescht nur die
+  eine aktuelle Notiz des aufrufenden Users.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.
@@ -152,7 +156,7 @@ Eine separate Kopiervorlage liegt in `docs/tareas-agents-snippet.md`.
 9. Laengere Implementierungsplaene im Zielprojekt unter `docs/TODOS/` ablegen
    und dort auf Tareas-Projekt-/Subtask-IDs verweisen.
 10. Fortschritt, Handoffs und Entscheidungen waehrend der Arbeit per
-    `append_note` dokumentieren.
+    `handoff.add` dokumentieren.
 
 ## Fachliche Nutzung
 
@@ -161,9 +165,12 @@ Tareas ist die Steuerungsebene:
 - Projekte: Epics oder groessere Arbeitsvorhaben.
 - Subtasks: operative Sprintpakete oder klar abgrenzbare Arbeitspakete.
 - Dependencies: echte Reihenfolge-/Blocker-Beziehungen im DAG.
-- Notes: `write_note` fuer die aktuelle eigene Notiz, `delete_note` zum
-  Loeschen dieser eigenen Notiz; `append_note` fuer Fortschritt,
-  Entscheidungen, Testergebnisse, Handoffs und Audit-Spuren.
+- Notes: `note.write` fuer die aktuelle eigene Notiz, `note.list` zum Lesen
+  editierbarer User-Notizen, `note.delete` zum Loeschen der eigenen Notiz.
+- Handoffs: `handoff.add` fuer Fortschritt, Entscheidungen, Testergebnisse,
+  Uebergaben und Audit-Zusammenfassungen; `handoff.list` zum Lesen;
+  `handoff.delete` zum Loeschen anhand der typisierten `handoff_id`
+  (`task:123` oder `subtask:456`).
 - Assignments: aktuelle Bearbeitung und Verantwortlichkeit.
 
 Markdown-Dateien im Zielprojekt bleiben sinnvoll fuer laengere Plaene,

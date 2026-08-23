@@ -35,7 +35,8 @@ MCP_TOOLS = [
     "list_subtasks", "get_subtask", "create_subtask", "update_subtask", "delete_subtask",
     "move_subtask", "set_subtask_position",
     "add_dependency", "remove_dependency",
-    "get_notes", "write_note", "delete_note", "get_note_entries", "append_note",
+    "note.list", "note.write", "note.delete",
+    "handoff.list", "handoff.add", "handoff.delete",
     "list_users", "list_areas", "search", "assign_self", "whoami",
 ]
 

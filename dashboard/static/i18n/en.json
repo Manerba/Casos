@@ -94,6 +94,7 @@
   "tasks.typeLabel": "Type:",
   "tasks.statusLabel": "Status:",
   "tasks.unassigned": "-- Unassigned --",
+  "tasks.col.id": "ID",
   "tasks.col.name": "Name",
   "tasks.col.type": "Type",
   "tasks.col.status": "Status",
