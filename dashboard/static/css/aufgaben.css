@@ -1003,6 +1003,78 @@
 
 .note-entry-item {
     border-left: 3px solid var(--accent-primary);
+    padding: 0;
+    overflow: hidden;
+}
+
+.note-entry-summary {
+    padding: 8px 10px;
+    cursor: pointer;
+    list-style: none;
+    transition: background-color 0.15s;
+}
+
+.note-entry-summary::-webkit-details-marker {
+    display: none;
+}
+
+.note-entry-summary::marker {
+    content: '';
+}
+
+.note-entry-summary:hover {
+    background-color: var(--bg-row-hover);
+}
+
+.note-entry-summary:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: -2px;
+}
+
+.note-entry-summary .subtask-note-meta {
+    margin-bottom: 4px;
+}
+
+.note-entry-meta-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.note-entry-toggle-icon {
+    display: inline-block;
+    font-size: 9px;
+    transition: transform 0.2s;
+}
+
+.note-entry-item:not([open]) .note-entry-toggle-icon {
+    transform: rotate(-90deg);
+}
+
+.note-entry-preview {
+    display: block;
+    overflow: hidden;
+    color: var(--text-primary);
+    line-height: 1.45;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.note-entry-item[open] .note-entry-preview {
+    display: none;
+}
+
+.note-entry-item[open] .subtask-note-body {
+    padding: 0 10px 8px;
+}
+
+.note-entry-item .subtask-note-body > :first-child {
+    margin-top: 0;
+}
+
+.note-entry-item .subtask-note-body > :last-child {
+    margin-bottom: 0;
 }
 
 /* ----------------------------------------

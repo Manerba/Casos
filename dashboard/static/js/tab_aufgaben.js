@@ -1134,6 +1134,18 @@ function renderSubTaskNotesList(notes) {
     }).join('');
 }
 
+function getNoteEntryPreview(html) {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+    // Zeilen- und Blockgrenzen als Leerzeichen erhalten, damit Woerter aus
+    // aufeinanderfolgenden Absaetzen in der Vorschau nicht zusammenlaufen.
+    doc.body.querySelectorAll('br, p, div, pre, h1, h2, h3, li').forEach(node => {
+        node.after(doc.createTextNode(' '));
+    });
+
+    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
 function renderNoteEntriesList(entries) {
     if (!entries || entries.length === 0) {
         return `<em>${t('detail.noNoteEntries')}</em>`;
@@ -1142,13 +1154,23 @@ function renderNoteEntriesList(entries) {
     return entries.map(entry => {
         const userName = entry.user_name || `User ${entry.user_id}`;
         const createdAt = entry.created_at ? `<span>${escapeHtml(entry.created_at)}</span>` : '';
-        return `<div class="subtask-note-item note-entry-item">
-            <div class="subtask-note-meta">
-                <strong>${escapeHtml(userName)}</strong>
-                ${createdAt}
-            </div>
-            <div class="subtask-note-body">${sanitizeHtml(entry.content || '') || `<em>${t('detail.noNoteEntries')}</em>`}</div>
-        </div>`;
+        const sanitizedContent = sanitizeHtml(entry.content || '');
+        const emptyText = t('detail.noNoteEntries');
+        const preview = getNoteEntryPreview(sanitizedContent) || emptyText;
+        const body = sanitizedContent || `<em>${emptyText}</em>`;
+        return `<details class="subtask-note-item note-entry-item">
+            <summary class="note-entry-summary">
+                <span class="subtask-note-meta">
+                    <strong>${escapeHtml(userName)}</strong>
+                    <span class="note-entry-meta-end">
+                        ${createdAt}
+                        <span class="note-entry-toggle-icon" aria-hidden="true">&#9660;</span>
+                    </span>
+                </span>
+                <span class="note-entry-preview">${escapeHtml(preview)}</span>
+            </summary>
+            <div class="subtask-note-body">${body}</div>
+        </details>`;
     }).join('');
 }
 

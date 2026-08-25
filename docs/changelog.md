@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+25.08.2026 15:06;0.0.1+113;Aenderung;Verlauf-/Handoff-Eintraege in Aufgaben, Projekten und Teilaufgaben sind standardmaessig kompakt zugeklappt, zeigen eine einzeilige Textvorschau und lassen sich per Maus oder Tastatur vollstaendig aufklappen
 23.08.2026 15:19;0.0.1+112;Aenderung;Aufgaben- und Projekt-Tabelle zeigt die technische ID als erste Datenspalte vor dem Namen, sortierbar und kompakt wie die Subtask-ID. Zugewiesene Subtask-Pseudozeilen zeigen ihre echte Subtask-ID; die Inline-Bearbeitung ordnet Zellen robust anhand ihrer Datenfelder zu
 26.06.2026 00:49;0.0.1+112;Security;MCP note.* und handoff.* pruefen jetzt Projekt-/Teilaufgaben-Leserechte wie REST, search begrenzt Treffer per SQL nach Sichtbarkeitsfilter und gibt fuer Subtask-Notes/-Handoffs task_id/project_id zurueck, handoff_id ist typisiert (task:<id>/subtask:<id>) gegen Cross-Type-Loeschungen, handoff.delete erlaubt Subtask-only-Rechte ohne Handoff-Enumeration und loggt den Owner geloeschter Handoffs. Admin-Audit-Filter markiert historische note_entry-Typen als legacy
 26.06.2026 00:32;0.0.1+112;Feature;MCP-Notiz-API objektorientiert umgestellt: editierbare User-Notizen laufen jetzt ueber note.list/note.write/note.delete, Verlaufseintraege ueber handoff.list/handoff.add/handoff.delete. Alte Notiz-Toolnamen werden nicht mehr registriert, Handoffs koennen per handoff_id geloescht werden
