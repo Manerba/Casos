@@ -112,6 +112,7 @@ function buildControlBar() {
                     <option value="offen">${t('status.offen')}</option>
                     <option value="in_arbeit">${t('status.in_arbeit')}</option>
                     <option value="erledigt">${t('status.erledigt')}</option>
+                    <option value="abgebrochen">${t('status.abgebrochen')}</option>
                 </select>
             </div>
             <span class="spacer"></span>
@@ -257,16 +258,24 @@ function activateInlineEditing(rowId) {
         nameCell.innerHTML = `<input type="text" class="inline-edit-input" id="inlineName_${row.id}" value="${escapeAttr(row.name)}" onclick="event.stopPropagation()">`;
     }
 
-    // Status (nicht bei Projekten)
+    // Projekte koennen zwischen berechnetem Fortschritt und Abgebrochen wechseln.
     const statusCell = cellForField('status');
-    if (statusCell && row.task_type !== 'projekt') {
-        const canEditStatus = perm.isAssignee || perm.isOwnTask || perm.isLegacy;
+    if (statusCell) {
+        const canEditStatus = row.can_edit_status ?? (perm.isCreator || perm.isAssignee || perm.isLegacy);
         if (canEditStatus) {
+            const isProject = row.task_type === 'projekt';
+            const progressStatus = row.subtask_total > 0 && row.subtask_done >= row.subtask_total
+                ? 'erledigt' : row.subtask_done > 0 ? 'in_arbeit' : 'offen';
+            const statuses = isProject
+                ? [progressStatus, 'abgebrochen']
+                : ['offen', 'in_arbeit', 'erledigt', 'abgebrochen'];
             statusCell._originalHTML = statusCell.innerHTML;
             statusCell.innerHTML = `<select class="inline-edit-select" id="inlineStatus_${row.id}" onclick="event.stopPropagation()">
-                <option value="offen" ${row.status === 'offen' ? 'selected' : ''}>${t('status.offen')}</option>
-                <option value="in_arbeit" ${row.status === 'in_arbeit' ? 'selected' : ''}>${t('status.in_arbeit')}</option>
-                <option value="erledigt" ${row.status === 'erledigt' ? 'selected' : ''}>${t('status.erledigt')}</option>
+                ${statuses.map(status => {
+                    const progress = isProject && status !== 'abgebrochen' && row.subtask_total > 0
+                        ? ` (${row.subtask_done}/${row.subtask_total})` : '';
+                    return `<option value="${status}" ${row.status === status ? 'selected' : ''}>${t(`status.${status}`)}${progress}</option>`;
+                }).join('')}
             </select>`;
         }
     }
@@ -337,7 +346,7 @@ async function saveTaskFromInline(taskId) {
     if (nameInput) body.name = nameInput.value;
 
     const statusInput = document.getElementById(`inlineStatus_${taskId}`);
-    if (statusInput) body.status = statusInput.value;
+    if (statusInput && statusInput.value !== row.status) body.status = statusInput.value;
 
     const prioInput = document.getElementById(`inlinePriority_${taskId}`);
     if (prioInput) body.priority = parseInt(prioInput.value) || 50;
@@ -406,8 +415,8 @@ function renderTaskId(value, col, row) {
 function renderAufgabenBadge(value, col, row) {
     if (!value) return '-';
 
-    // Projekte: Teilaufgaben-Fortschritt anzeigen
-    if (col.field === 'status' && row.task_type === 'projekt' && row.subtask_total > 0) {
+    // Abgebrochene Projekte behalten ihren Status statt der Fortschrittsanzeige.
+    if (col.field === 'status' && row.task_type === 'projekt' && value !== 'abgebrochen' && row.subtask_total > 0) {
         const done = row.subtask_done;
         const total = row.subtask_total;
         const cssClass = done === total ? 'erledigt' : done > 0 ? 'in_arbeit' : 'offen';
@@ -419,6 +428,7 @@ function renderAufgabenBadge(value, col, row) {
         'offen': t('status.offen'),
         'in_arbeit': t('status.in_arbeit'),
         'erledigt': t('status.erledigt'),
+        'abgebrochen': t('status.abgebrochen'),
         'aufgabe': t('type.aufgabe'),
         'projekt': t('type.projekt'),
     };
@@ -693,7 +703,7 @@ async function saveTask(taskId, silent = false) {
     if (nameInput) body.name = nameInput.value;
 
     const statusInput = document.getElementById(`inlineStatus_${taskId}`);
-    if (statusInput) body.status = statusInput.value;
+    if (statusInput && statusInput.value !== row?.status) body.status = statusInput.value;
 
     const prioInput = document.getElementById(`inlinePriority_${taskId}`);
     if (prioInput) body.priority = parseInt(prioInput.value) || 50;
