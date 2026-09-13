@@ -412,7 +412,16 @@ function renderTaskId(value, col, row) {
     return escapeHtml(displayId ?? '-');
 }
 
+function renderSubtaskProgress(value) {
+    const percent = parseInt(value, 10) || 0;
+    const cssClass = percent >= 100 ? 'erledigt' : percent > 0 ? 'in_arbeit' : 'offen';
+    return `<span class="badge badge-${cssClass}">${percent}%</span>`;
+}
+
 function renderAufgabenBadge(value, col, row) {
+    if (col.field === 'status' && row._type === 'assigned_subtask') {
+        return renderSubtaskProgress(row._status_percent);
+    }
     if (!value) return '-';
 
     // Abgebrochene Projekte behalten ihren Status statt der Fortschrittsanzeige.
@@ -785,12 +794,8 @@ async function onSubtaskViewExpanded(row, detailElement) {
             <input type="number" value="${row.priority}" disabled class="field-readonly" style="width:70px">
         </div>
         <div class="detail-edit-field">
-            <label>${t('tasks.status')}</label>
-            <select id="stViewStatus_${stId}">
-                <option value="0" ${row._status_percent === 0 ? 'selected' : ''}>${t('status.offen')}</option>
-                <option value="50" ${row._status_percent > 0 && row._status_percent < 100 ? 'selected' : ''}>${t('status.in_arbeit')}</option>
-                <option value="100" ${row._status_percent >= 100 ? 'selected' : ''}>${t('status.erledigt')}</option>
-            </select>
+            <label>${t('subtask.col.status')}</label>
+            <input type="number" id="stViewStatus_${stId}" value="${escapeAttr(row._status_percent ?? 0)}" min="0" max="100" step="1" required style="width:70px">
         </div>
     </div>`;
 
@@ -854,16 +859,25 @@ async function onSubtaskViewExpanded(row, detailElement) {
 async function saveSubtaskView(row, silent = false) {
     const stId = row._subtask_id || Math.abs(row.id);
     const projectId = row._project_id;
-    const statusPercent = parseInt(document.getElementById(`stViewStatus_${stId}`)?.value) || 0;
+    const statusInput = document.getElementById(`stViewStatus_${stId}`);
+    if (statusInput && !statusInput.reportValidity()) return;
 
     try {
-        // 1. Status speichern
-        const resp = await fetch(`/api/subtasks/${stId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status_percent: statusPercent }),
-        });
-        if (!resp.ok) throw new Error(t('common.saveError'));
+        // 1. Prozentwert speichern und auch in der Haupttabelle aktualisieren.
+        if (statusInput) {
+            const statusPercent = statusInput.valueAsNumber;
+            const resp = await fetch(`/api/subtasks/${stId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status_percent: statusPercent }),
+            });
+            if (!resp.ok) throw new Error(t('common.saveError'));
+            row._status_percent = statusPercent;
+            row.status = statusPercent >= 100 ? 'erledigt' : statusPercent > 0 ? 'in_arbeit' : 'offen';
+            const statusIndex = aufgabenTable.config.columns.findIndex(col => col.field === 'status');
+            const cells = document.querySelector(`[data-row-id="${row.id}"] .table-row`)?.querySelectorAll('.table-cell');
+            if (cells?.[statusIndex]) cells[statusIndex].innerHTML = renderSubtaskProgress(statusPercent);
+        }
 
         // 2. Notizen speichern (nur wenn project_id bekannt)
         if (projectId) {
@@ -990,7 +1004,6 @@ function renderSubTasks(taskId, subtasks) {
         const stPrioRO = !canEdit ? 'disabled' : '';
         const stPrioROClass = stPrioRO ? 'field-readonly' : '';
         const stStatusRO = (!canEdit || (isSubCreator && isSubAssigned)) ? 'disabled' : '';
-        const stStatusROClass = stStatusRO ? 'field-readonly' : '';
         const dlISO = convertToISO(st.deadline);
 
         // Vorgaenger-Optionen und Chips (positionsunabhaengig, aber ohne Zyklen/Redundanz)
@@ -1066,13 +1079,9 @@ function renderSubTasks(taskId, subtasks) {
                 <span class="st-cell-edit"><input type="number" id="stEditPriority_${st.id}" value="${st.priority}" min="1" max="100" style="width:60px" onclick="event.stopPropagation()"></span>
             </td>` : `<td>${renderPriority(st.priority)}</td>`}
             ${!stStatusRO ? `<td>
-                <span class="st-cell-text">${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</span>
-                <span class="st-cell-edit"><select id="stEditStatus_${st.id}" onclick="event.stopPropagation()">
-                    <option value="0" ${statusPct === 0 ? 'selected' : ''}>${t('status.offen')}</option>
-                    <option value="50" ${statusPct > 0 && statusPct < 100 ? 'selected' : ''}>${t('status.in_arbeit')}</option>
-                    <option value="100" ${statusPct >= 100 ? 'selected' : ''}>${t('status.erledigt')}</option>
-                </select></span>
-            </td>` : `<td>${renderAufgabenBadge(statusPct >= 100 ? 'erledigt' : statusPct > 0 ? 'in_arbeit' : 'offen', {field:'status'}, st)}</td>`}`;
+                <span class="st-cell-text">${renderSubtaskProgress(statusPct)}</span>
+                <span class="st-cell-edit"><input type="number" id="stEditStatus_${st.id}" value="${escapeAttr(statusPct)}" min="0" max="100" step="1" required onclick="event.stopPropagation()"></span>
+            </td>` : `<td>${renderSubtaskProgress(statusPct)}</td>`}`;
 
         // Delete-Button (Ersteller, Legacy oder Admin)
         html += `<td>`;
@@ -1301,7 +1310,10 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
     if (prioInput && !prioInput.disabled) body.priority = parseInt(prioInput.value) || 50;
 
     const statusInput = document.getElementById(`stEditStatus_${subtaskId}`);
-    if (statusInput && !statusInput.disabled) body.status_percent = parseInt(statusInput.value) || 0;
+    if (statusInput && !statusInput.disabled) {
+        if (!statusInput.reportValidity()) return;
+        body.status_percent = statusInput.valueAsNumber;
+    }
 
     // WYSIWYG-Content nur senden wenn Editor existiert (nicht bei readonly-Beschreibung)
     const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
@@ -1354,7 +1366,7 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
                     if (inputId.startsWith('stEditName_')) {
                         textSpan.textContent = input.value;
                     } else if (inputId.startsWith('stEditStatus_')) {
-                        textSpan.textContent = input.value + '%';
+                        textSpan.innerHTML = renderSubtaskProgress(st.status_percent);
                     } else if (inputId.startsWith('stEditPriority_')) {
                         textSpan.textContent = input.value;
                     } else if (inputId.startsWith('stEditDeadline_')) {

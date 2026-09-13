@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+13.09.2026 05:28;0.0.1+115;Bugfix;Teilaufgaben zeigen in Projektlisten und zugewiesenen Ansichten den genauen Prozentwert. Numerische Eingabe von 0 bis 100 ersetzt die Statusauswahl, bewahrt Zwischenwerte beim Speichern und aktualisiert die Anzeige unmittelbar
 12.09.2026 19:57;0.0.1+114;Feature;Aufgaben und Projekte koennen per Statusauswahl abgebrochen und wieder aufgenommen werden. Inhalte und Teilaufgaben bleiben erhalten, Abbruch hat Vorrang vor dem Projektfortschritt. Statusfilter, sieben Sprachen, Team-Bearbeitungsrechte und Fristerinnerungen angepasst
 25.08.2026 15:06;0.0.1+113;Aenderung;Verlauf-/Handoff-Eintraege in Aufgaben, Projekten und Teilaufgaben sind standardmaessig kompakt zugeklappt, zeigen eine einzeilige Textvorschau und lassen sich per Maus oder Tastatur vollstaendig aufklappen
 23.08.2026 15:19;0.0.1+112;Aenderung;Aufgaben- und Projekt-Tabelle zeigt die technische ID als erste Datenspalte vor dem Namen, sortierbar und kompakt wie die Subtask-ID. Zugewiesene Subtask-Pseudozeilen zeigen ihre echte Subtask-ID; die Inline-Bearbeitung ordnet Zellen robust anhand ihrer Datenfelder zu
