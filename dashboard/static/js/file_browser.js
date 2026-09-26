@@ -1,6 +1,6 @@
 /**
  * Tareas - Dateiablage (File Browser)
- * Baumansicht und Icon-Grid fuer Nextcloud-Dateien via WebDAV-Proxy.
+ * Baumansicht und Icon-Grid fuer lokale und WebDAV-Dateien.
  */
 
 class FileBrowser {
@@ -13,6 +13,7 @@ class FileBrowser {
         this.expandedDirs = new Set();
         this.treeCache = {}; // Pfad -> Items (Lazy-Load Cache)
         this._contextMenu = null;
+        this.canWrite = false;
 
         this.render();
         this.loadDirectory('');
@@ -38,10 +39,10 @@ class FileBrowser {
                         <button class="fb-view-toggle" id="fb-toggle-${this.taskId}" title="${t('files.toggleView')}">
                             ${this.viewMode === 'tree' ? this._iconGrid() : this._iconTree()}
                         </button>
-                        <button class="fb-action-btn" id="fb-upload-${this.taskId}" title="${t('files.upload')}">
+                        <button class="fb-action-btn" id="fb-upload-${this.taskId}" title="${t('files.upload')}" hidden>
                             ${this._iconUpload()} ${t('files.upload')}
                         </button>
-                        <button class="fb-action-btn" id="fb-mkdir-${this.taskId}" title="${t('files.folder')}">
+                        <button class="fb-action-btn" id="fb-mkdir-${this.taskId}" title="${t('files.folder')}" hidden>
                             ${this._iconNewFolder()} ${t('files.folder')}
                         </button>
                     </div>
@@ -140,7 +141,7 @@ class FileBrowser {
             content.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                content.classList.add('fb-drag-over');
+                if (this.canWrite) content.classList.add('fb-drag-over');
             });
             content.addEventListener('dragleave', (e) => {
                 e.preventDefault();
@@ -151,7 +152,7 @@ class FileBrowser {
                 e.preventDefault();
                 e.stopPropagation();
                 content.classList.remove('fb-drag-over');
-                if (e.dataTransfer.files.length > 0) {
+                if (this.canWrite && e.dataTransfer.files.length > 0) {
                     this.uploadFiles(e.dataTransfer.files);
                 }
             });
@@ -180,6 +181,11 @@ class FileBrowser {
                 throw new Error(err.detail || t('common.loadError'));
             }
             const data = await resp.json();
+            this.canWrite = data.can_write === true;
+            for (const action of ['upload', 'mkdir']) {
+                const button = document.getElementById(`fb-${action}-${this.taskId}`);
+                if (button) button.hidden = !this.canWrite;
+            }
             this.items = data.items || [];
             this.currentPath = path;
 
@@ -405,9 +411,11 @@ class FileBrowser {
         } else {
             html += `<div class="fb-ctx-item" data-action="open" data-path="${escapeAttr(fullPath)}">${t('files.open')}</div>`;
         }
-        html += `<div class="fb-ctx-sep"></div>`;
-        html += `<div class="fb-ctx-item" data-action="rename" data-path="${escapeAttr(fullPath)}" data-name="${escapeAttr(name)}">${t('files.rename')}</div>`;
-        html += `<div class="fb-ctx-item fb-ctx-danger" data-action="delete" data-path="${escapeAttr(fullPath)}" data-type="${escapeAttr(type)}">${t('files.delete')}</div>`;
+        if (this.canWrite) {
+            html += `<div class="fb-ctx-sep"></div>`;
+            html += `<div class="fb-ctx-item" data-action="rename" data-path="${escapeAttr(fullPath)}" data-name="${escapeAttr(name)}">${t('files.rename')}</div>`;
+            html += `<div class="fb-ctx-item fb-ctx-danger" data-action="delete" data-path="${escapeAttr(fullPath)}" data-type="${escapeAttr(type)}">${t('files.delete')}</div>`;
+        }
         html += '</div>';
 
         const menu = document.createElement('div');
@@ -509,6 +517,7 @@ class FileBrowser {
     }
 
     async uploadFiles(files) {
+        if (!this.canWrite) return;
         const progressBar = document.getElementById(`fb-progress-${this.taskId}`);
         const progressFill = document.getElementById(`fb-progress-fill-${this.taskId}`);
         const progressText = document.getElementById(`fb-progress-text-${this.taskId}`);
@@ -551,6 +560,7 @@ class FileBrowser {
     }
 
     async onMkdirClick() {
+        if (!this.canWrite) return;
         const name = prompt(t('files.newFolderPrompt'));
         if (!name || !name.trim()) return;
 

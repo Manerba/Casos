@@ -520,6 +520,27 @@
 }
 
 /* --- Projektverzeichnis-Dialog --- */
+.file-storage-help {
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 12px 0;
+}
+
+.fb-action-btn[hidden],
+#localStorageSave[hidden],
+#webdavStorageBrowser[hidden] {
+    display: none;
+}
+
+button.nc-bc-item,
+button.nc-dir-name {
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
 .nc-browse-breadcrumb {
     display: flex;
     align-items: center;

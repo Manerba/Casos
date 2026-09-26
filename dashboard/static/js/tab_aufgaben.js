@@ -10,7 +10,6 @@ let allExpanded = false;
 let cachedAreas = null;
 let cachedUsers = [];
 let ncConfigured = false;
-let ncDirectories = [];
 
 // Auto-Save: Debounce-Timer pro Feld
 const _autoSaveTimers = {};
@@ -538,10 +537,14 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
     let html = `<div class="detail-edit" data-task-id="${row.id}">`;
 
-    // Beschreibung + Dateiablage: Zwei-Spalten-Layout wenn NC-Verzeichnis zugeordnet
-    const hasNcPath = !!row.nextcloud_path && ncConfigured;
+    // Beschreibung und zugeordnete Dateiablage nebeneinander anzeigen.
+    const storageType = row.file_storage_type || (row.nextcloud_path ? 'webdav' : 'none');
+    const hasStorage = storageType === 'local' || (storageType === 'webdav' && ncConfigured);
+    const canManageStorage = perm.isAdmin || perm.isCreator || perm.isLegacy || (perm.isTeamMember && row.can_edit_status);
+    const storageLabel = storageType === 'local' ? t('files.localStorage') : row.nextcloud_path;
+    const storageButton = `<button class="control-btn${storageType !== 'none' ? ' nc-active' : ''}" onclick="event.stopPropagation(); openFileStorageDialog(${row.id})">${storageLabel ? '&#128194; ' + escapeHtml(storageLabel) : t('nc.fileStorage')}</button>`;
 
-    if (hasNcPath) {
+    if (hasStorage) {
         html += `<div class="project-detail-columns">`;
         html += `<div class="project-detail-left">`;
     }
@@ -569,7 +572,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
         html += `<div id="wysiwygEditor_${row.id}"></div>`;
     }
 
-    if (hasNcPath) {
+    if (hasStorage) {
         html += `</div>`; // project-detail-left
         html += `<div class="project-detail-right">
             <div id="fileBrowserContainer_${row.id}"></div>
@@ -591,9 +594,9 @@ async function onTaskRowExpanded(rowId, detailElement) {
     </div>`;
 
     // Dateiablage-Button fuer Aufgaben (nicht-Projekte)
-    if (row.task_type !== 'projekt' && ncConfigured && (perm.isAdmin || perm.isCreator || perm.isLegacy)) {
+    if (row.task_type !== 'projekt' && canManageStorage) {
         html += `<div class="subtask-section-actions" style="margin-top:8px;display:flex;justify-content:flex-end">
-            <button class="control-btn${row.nextcloud_path ? ' nc-active' : ''}" onclick="event.stopPropagation(); openNcDirDialog(${row.id}, '${escapeAttr(row.nextcloud_path || '')}')">${row.nextcloud_path ? '&#128194; ' + escapeHtml(row.nextcloud_path) : t('nc.fileStorage')}</button>
+            ${storageButton}
         </div>`;
     }
 
@@ -605,7 +608,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <div class="subtask-section-actions">
                     <button class="control-btn" onclick="event.stopPropagation(); openNetzplan(${row.id})">${t('netzplan.title')}</button>
                     ${(perm.isAdmin || perm.isCreator) ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">${t('team.title')}</button>` : ''}
-                    ${ncConfigured && (perm.isAdmin || perm.isCreator || perm.isLegacy) ? `<button class="control-btn${row.nextcloud_path ? ' nc-active' : ''}" onclick="event.stopPropagation(); openNcDirDialog(${row.id}, '${escapeAttr(row.nextcloud_path || '')}')">${row.nextcloud_path ? '&#128194; ' + escapeHtml(row.nextcloud_path) : t('nc.fileStorage')}</button>` : ''}
+                    ${canManageStorage ? storageButton : ''}
                 </div>
             </div>
             <div id="subtaskContainer_${row.id}">
@@ -680,7 +683,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     loadTaskNoteEntries(row.id);
 
     // File Browser initialisieren wenn Verzeichnis zugeordnet
-    if (row.nextcloud_path && ncConfigured) {
+    if (hasStorage) {
         const fbContainer = document.getElementById(`fileBrowserContainer_${row.id}`);
         if (fbContainer) {
             new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
@@ -3343,31 +3346,51 @@ function openNetzplan(taskId) {
 }
 
 // ========================================
-// Nextcloud-Integration
+// Dateiablage: lokal oder WebDAV
 // ========================================
 
-async function openNcDirDialog(taskId, currentPath) {
-    if (currentPath) {
-        const confirmed = await msgbox('confirm', 'warning', t('nc.changeConfirm'));
-        if (!confirmed) return;
-    }
-
+function openFileStorageDialog(taskId) {
+    const row = aufgabenTable.filteredData.find(item => item.id === taskId);
+    if (!row) return;
+    const currentType = row.file_storage_type || (row.nextcloud_path ? 'webdav' : 'none');
+    const selectedType = currentType === 'webdav' && ncConfigured ? 'webdav' : 'local';
     createModal({
         title: t('nc.fileStorage'),
         cssClass: 'modal-wide',
         body: `
-            <div class="nc-browse-breadcrumb" id="ncBrowseBc"></div>
-            <div id="ncDirList">
-                <div class="table-loading"><div class="spinner"></div></div>
+            <div class="form-group">
+                <label for="fileStorageType">${t('files.storageType')}</label>
+                <select id="fileStorageType">
+                    <option value="local" ${selectedType === 'local' ? 'selected' : ''}>${t('files.localStorage')}</option>
+                    <option value="webdav" ${selectedType === 'webdav' ? 'selected' : ''} ${ncConfigured ? '' : 'disabled'}>${t('files.webdavStorage')}</option>
+                </select>
+            </div>
+            <p class="file-storage-help" id="localStorageHelp">${t('files.localStorageHelp')}</p>
+            ${!ncConfigured ? `<p class="file-storage-help">${t('files.webdavUnavailable')}</p>` : ''}
+            <p class="file-storage-help">${t('files.storageRetained')}</p>
+            <div id="webdavStorageBrowser" hidden>
+                <div class="nc-browse-breadcrumb" id="ncBrowseBc"></div>
+                <div id="ncDirList"></div>
             </div>`,
-        footer: (currentPath ? `<button class="action-btn danger" onclick="saveNcPath(${taskId}, '')">${t('nc.removeMapping')}</button>` : '') +
-                `<button class="action-btn" onclick="closeModal()">${t('common.cancel')}</button>`,
+        footer: `<button class="action-btn primary" id="localStorageSave">${t('files.useLocalStorage')}</button>` +
+            (currentType !== 'none' ? `<button class="action-btn danger" id="storageRemove">${t('nc.removeMapping')}</button>` : '') +
+            `<button class="action-btn" onclick="closeModal()">${t('common.cancel')}</button>`,
         onOpen: () => {
-            // Footer braucht ID fuer dynamische Buttons
             const footer = document.querySelector('.modal-overlay .modal-footer');
             if (footer) footer.id = 'ncDirFooter';
-            // Browse starten bei Root
-            ncBrowseDir(taskId, '', currentPath);
+            const selector = document.getElementById('fileStorageType');
+            const updateChoice = () => {
+                const local = selector.value === 'local';
+                document.getElementById('localStorageHelp').hidden = !local;
+                document.getElementById('localStorageSave').hidden = !local;
+                document.getElementById('webdavStorageBrowser').hidden = local;
+                footer?.querySelectorAll('.nc-select-btn').forEach(button => button.remove());
+                if (!local) ncBrowseDir(taskId, '', row.nextcloud_path || '');
+            };
+            selector.addEventListener('change', updateChoice);
+            document.getElementById('localStorageSave').onclick = () => saveFileStorage(taskId, 'local');
+            document.getElementById('storageRemove')?.addEventListener('click', () => saveFileStorage(taskId, 'none'));
+            updateChoice();
         },
     });
 }
@@ -3376,80 +3399,102 @@ async function ncBrowseDir(taskId, browsePath, selectedPath) {
     const listContainer = document.getElementById('ncDirList');
     const bcContainer = document.getElementById('ncBrowseBc');
     if (!listContainer) return;
-
+    listContainer.dataset.path = browsePath;
     listContainer.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
 
-    // Breadcrumb aktualisieren
     if (bcContainer) {
-        const parts = browsePath ? browsePath.split('/').filter(Boolean) : [];
-        let bcHtml = `<span class="nc-bc-item" onclick="ncBrowseDir(${taskId}, '', '${escapeAttr(selectedPath)}')">&#127968; ${t('nc.rootDir')}</span>`;
+        bcContainer.replaceChildren();
+        const addCrumb = (label, path) => {
+            const button = document.createElement('button');
+            button.className = 'nc-bc-item';
+            button.textContent = label;
+            button.onclick = () => ncBrowseDir(taskId, path, selectedPath);
+            bcContainer.appendChild(button);
+        };
+        addCrumb('⌂ ' + t('nc.rootDir'), '');
         let accumulated = '';
-        parts.forEach(part => {
+        for (const part of browsePath.split('/').filter(Boolean)) {
             accumulated += (accumulated ? '/' : '') + part;
-            const p = accumulated;
-            bcHtml += `<span class="nc-bc-sep">/</span>`;
-            bcHtml += `<span class="nc-bc-item" onclick="ncBrowseDir(${taskId}, '${escapeAttr(p)}', '${escapeAttr(selectedPath)}')">${escapeHtml(part)}</span>`;
-        });
-        bcContainer.innerHTML = bcHtml;
+            const separator = document.createElement('span');
+            separator.className = 'nc-bc-sep';
+            separator.textContent = '/';
+            bcContainer.appendChild(separator);
+            addCrumb(part, accumulated);
+        }
     }
 
-    // "Diesen Ordner waehlen"-Button anzeigen wenn wir nicht in Root sind
     const footer = document.getElementById('ncDirFooter');
-    if (footer && browsePath) {
-        // Bestehende "waehlen"-Buttons entfernen
-        footer.querySelectorAll('.nc-select-btn').forEach(b => b.remove());
-        const selectBtn = document.createElement('button');
-        selectBtn.className = 'action-btn primary nc-select-btn';
-        selectBtn.textContent = t('nc.selectDir', { name: browsePath.split('/').pop() });
-        selectBtn.onclick = () => saveNcPath(taskId, browsePath);
-        footer.insertBefore(selectBtn, footer.firstChild);
-    } else if (footer) {
-        footer.querySelectorAll('.nc-select-btn').forEach(b => b.remove());
-    }
+    footer?.querySelectorAll('.nc-select-btn').forEach(button => button.remove());
 
     try {
         const resp = await fetch(`/api/nextcloud/directories?path=${encodeURIComponent(browsePath)}`);
         if (!resp.ok) throw new Error(t('nc.loadDirError'));
         const data = await resp.json();
-        const dirs = data.directories || [];
+        if (document.getElementById('ncDirList') !== listContainer || listContainer.dataset.path !== browsePath
+            || document.getElementById('fileStorageType').value !== 'webdav') return;
 
+        if (footer && browsePath) {
+            const selectBtn = document.createElement('button');
+            selectBtn.className = 'action-btn primary nc-select-btn';
+            selectBtn.textContent = t('nc.selectDir', { name: browsePath.split('/').pop() });
+            selectBtn.onclick = () => saveFileStorage(taskId, 'webdav', browsePath);
+            footer.insertBefore(selectBtn, footer.firstChild);
+        }
+
+        const dirs = data.directories || [];
         if (dirs.length === 0) {
             listContainer.innerHTML = `<div class="nc-dir-empty">${t('nc.noSubdirs')}</div>`;
             return;
         }
-
-        let html = '<div class="nc-dir-grid">';
-        dirs.forEach(d => {
-            const isSelected = d.path === selectedPath;
-            html += `<div class="nc-dir-item${isSelected ? ' nc-dir-selected' : ''}">
-                <span class="nc-dir-icon" onclick="event.stopPropagation(); ncBrowseDir(${taskId}, '${escapeAttr(d.path)}', '${escapeAttr(selectedPath)}')">&#128194;</span>
-                <span class="nc-dir-name" onclick="event.stopPropagation(); ncBrowseDir(${taskId}, '${escapeAttr(d.path)}', '${escapeAttr(selectedPath)}')">${escapeHtml(d.name)}</span>
-                <button class="nc-dir-select-btn" onclick="event.stopPropagation(); saveNcPath(${taskId}, '${escapeAttr(d.path)}')">${isSelected ? '&#10003; ' + t('nc.selected') : t('nc.select')}</button>
-            </div>`;
-        });
-        html += '</div>';
-        listContainer.innerHTML = html;
+        listContainer.innerHTML = '<div class="nc-dir-grid"></div>';
+        const grid = listContainer.firstElementChild;
+        for (const dir of dirs) {
+            const item = document.createElement('div');
+            const selected = dir.path === selectedPath;
+            item.className = 'nc-dir-item' + (selected ? ' nc-dir-selected' : '');
+            const browse = document.createElement('button');
+            browse.className = 'nc-dir-name';
+            browse.textContent = '📂 ' + dir.name;
+            browse.onclick = () => ncBrowseDir(taskId, dir.path, selectedPath);
+            const select = document.createElement('button');
+            select.className = 'nc-dir-select-btn';
+            select.textContent = selected ? '✓ ' + t('nc.selected') : t('nc.select');
+            select.onclick = () => saveFileStorage(taskId, 'webdav', dir.path);
+            item.append(browse, select);
+            grid.appendChild(item);
+        }
     } catch (error) {
-        listContainer.innerHTML = `<p style="color:var(--color-bearish,#e74c3c)">${escapeHtml(error.message)}</p>`;
+        if (document.getElementById('ncDirList') === listContainer && listContainer.dataset.path === browsePath) {
+            listContainer.innerHTML = `<p class="fb-error">${escapeHtml(error.message)}</p>`;
+        }
     }
 }
 
-async function saveNcPath(taskId, value) {
+async function saveFileStorage(taskId, type, path = '') {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal?.dataset.saving === 'true') return;
+    if (modal) modal.dataset.saving = 'true';
+    const controls = modal?.querySelectorAll('button, select') || [];
+    controls.forEach(control => { control.disabled = true; });
     try {
+        const payload = { file_storage_type: type };
+        if (type === 'webdav') payload.nextcloud_path = path;
         const resp = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nextcloud_path: value }),
+            body: JSON.stringify(payload),
         });
-        if (!resp.ok) throw new Error(t('common.error'));
-        showNotification(value ? t('nc.pathAssigned', { path: value }) : t('nc.pathRemoved'), 'success');
-
-        // Modal schliessen
+        if (!resp.ok) {
+            const error = await resp.json().catch(() => ({}));
+            throw new Error(error.detail || t('nc.saveFailed'));
+        }
+        showNotification(type === 'none' ? t('nc.pathRemoved') : t('files.storageSaved'), 'success');
         closeModal();
-
-        // Tabelle neu laden damit das Detail mit/ohne File Browser aktualisiert wird
         await aufgabenTable.loadData();
     } catch (error) {
-        showNotification(t('nc.saveFailed'), 'error');
+        showNotification(error.message || t('nc.saveFailed'), 'error');
+    } finally {
+        if (modal) modal.dataset.saving = 'false';
+        controls.forEach(control => { control.disabled = false; });
     }
 }

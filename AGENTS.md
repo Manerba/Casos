@@ -43,6 +43,8 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Aufgaben-/Teilaufgaben-Zuweisung und Notizen fuer Zugewiesene.
 - WYSIWYG-Beschreibungen mit zentralem HTML-Sanitizer in `app_core.js`.
 - Nextcloud/WebDAV-Dateiablage ueber `dashboard/webdav.py` und `api_nextcloud.py`.
+- Alternativ lokale Dateiablage pro Aufgabe/Projekt unter `data/files/task-<ID>/`, gemeinsame Dateischnittstelle in `dashboard/file_storage.py`. Auswahl ueber `file_storage_type` (`local`, `webdav`, `none` in der API), bestehende `nextcloud_path`-Zuordnungen bleiben kompatibel. Lokale Dateien bei Backups einschliessen.
+- Beim Wechseln/Entfernen der Ablagezuordnung und beim Loeschen einer Aufgabe bleiben lokale Dateien zur manuellen Wiederherstellung/Bereinigung erhalten. Datei-Schreibzugriffe brauchen Bearbeitungsrechte, ONLYOFFICE unterstuetzt beide Ablagearten.
 - ONLYOFFICE/WOPI-Integration ueber `api_onlyoffice.py` und `/editor`.
 - LDAP/Active Directory Login und Sync ueber `api_ldap.py`, `ldap_utils.py`, `ldap_sync.py`.
 - Mail-Benachrichtigungen mit SMTP-Konfig, Templates und User-Prefs.

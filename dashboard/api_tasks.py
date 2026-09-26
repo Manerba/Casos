@@ -6,7 +6,7 @@ import asyncio
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
@@ -19,6 +19,7 @@ from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
 from dashboard.mail_service import notify_event
 from dashboard.note_service import update_note_as_admin
+from dashboard.file_storage import ensure_local_directory, safe_rel_path, storage_type
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     assigned_to: Optional[int] = None
     nextcloud_path: Optional[str] = None
+    file_storage_type: Optional[Literal["local", "webdav", "none"]] = None
 
 
 class SubTaskCreate(BaseModel):
@@ -344,6 +346,7 @@ async def get_tasks(user=Depends(get_current_user)):
                     or assigned_to == user["id"] or bool(row["team_can_edit"])
                 ),
                 "nextcloud_path": row["nextcloud_path"] or "",
+                "file_storage_type": storage_type(row),
                 "subtask_total": row["subtask_total"] or 0,
                 "subtask_done": row["subtask_done"] or 0,
             })
@@ -425,7 +428,7 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
     """Aufgabe aktualisieren."""
     with db_transaction() as db:
         existing = db.execute(
-            "SELECT id, created_by, assigned_to FROM tasks WHERE id = ?", (task_id,)
+            "SELECT id, created_by, assigned_to, nextcloud_path, file_storage_type FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
@@ -447,6 +450,8 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
         can_full_edit = bool(user.get("is_admin")) or is_creator or is_legacy or has_team_edit or mcp_assignee_full
         if not can_full_edit and not is_assignee:
             raise HTTPException(status_code=403, detail="Keine Berechtigung zum Bearbeiten")
+        if not can_full_edit and (task.file_storage_type is not None or task.nextcloud_path is not None):
+            raise HTTPException(status_code=403, detail="Keine Berechtigung zum Aendern der Dateiablage")
 
         updates = []
         values = []
@@ -487,14 +492,26 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                     updates.append("assigned_to = ?")
                     values.append(task.assigned_to)
                     changes_diff["assigned_to"] = task.assigned_to
-            if task.nextcloud_path is not None:
-                if task.nextcloud_path == "":
-                    updates.append("nextcloud_path = NULL")
-                    changes_diff["nextcloud_path"] = None
-                else:
-                    updates.append("nextcloud_path = ?")
-                    values.append(task.nextcloud_path)
-                    changes_diff["nextcloud_path"] = task.nextcloud_path
+            if task.file_storage_type is not None or task.nextcloud_path is not None:
+                kind = task.file_storage_type or ("webdav" if task.nextcloud_path else "none")
+                nc_path = None
+                if kind == "webdav":
+                    nc_path = safe_rel_path(task.nextcloud_path if task.nextcloud_path is not None
+                                            else existing["nextcloud_path"] or "", allow_empty=False)
+                elif task.nextcloud_path:
+                    raise HTTPException(status_code=400, detail="WebDAV-Pfad passt nicht zur gewaehlten Ablageart")
+                if kind == "local":
+                    try:
+                        await asyncio.to_thread(ensure_local_directory, task_id)
+                    except OSError:
+                        logger.exception("Lokale Dateiablage konnte nicht angelegt werden")
+                        raise HTTPException(status_code=500, detail="Lokale Dateiablage konnte nicht angelegt werden")
+                updates.extend(["file_storage_type = ?", "nextcloud_path = ?"])
+                values.extend([kind if kind != "none" else None, nc_path])
+                changes_diff.update(file_storage_type=kind, nextcloud_path=nc_path)
+                if kind != storage_type(existing) or nc_path != existing["nextcloud_path"]:
+                    # Offene Editoren duerfen nach einem Wechsel nicht in die neue Ablage schreiben.
+                    db.execute("DELETE FROM wopi_tokens WHERE task_id = ?", (task_id,))
 
         # Status darf auch der Zugewiesene aendern
         if task.status is not None:

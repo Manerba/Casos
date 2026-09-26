@@ -9,7 +9,7 @@ A self-hosted task and project management tool built with **FastAPI** and **Vani
 - **Interactive Network Diagram** - Visualize project dependencies as an interactive graph (vis-network)
 - **Team Collaboration** - Assign tasks, manage team permissions (read/edit/create), notes system. Admins can edit all projects, tasks, notes and handoffs regardless of ownership.
 - **Markdown Descriptions & Notes** - Formatted reading view with source editing, lists, tables, and code blocks
-- **File Storage** - Nextcloud/WebDAV integration with tree view, drag & drop upload, context menus
+- **File Storage** - Dedicated local storage per task/project or a Nextcloud/WebDAV directory, with tree view, drag & drop upload and context menus
 - **ONLYOFFICE Integration** - Edit Office documents (docx, xlsx, pptx) directly in the browser via WOPI
 - **LDAP/Active Directory** - Authenticate users against AD, automatic sync, group-based access
 - **Email Notifications** - SMTP integration with configurable templates for assignments, status changes, deadlines
@@ -87,6 +87,27 @@ All configuration is managed through the **Admin Panel** at `http://localhost:85
 | Mail | Mail | SMTP settings and notification templates |
 | TLS | TLS | HTTPS certificate paths |
 | MCP | MCP | Server status, API tokens, audit log, global kill switch |
+
+### File storage
+
+Open a task or project and choose **Dateiablage**. Select **Lokale Dateiablage**
+to create its own directory on the Tareas server, or **WebDAV-Verzeichnis** to
+select an existing directory from the configured Nextcloud share. Local storage
+works without a Nextcloud configuration. Both options support the file browser
+and ONLYOFFICE editing when ONLYOFFICE is configured.
+
+Local files are stored in `data/files/task-<ID>/` relative to the installation
+directory (`/opt/tareas/data/files/` for the Debian package). Directory names stay
+stable when tasks are renamed. Files are served through authenticated APIs using
+the task/project permissions. Include `data/files/` along with the database in
+backups; this directory is excluded from Git and fits the existing systemd write
+permissions.
+
+Switching storage or removing its assignment keeps files in their original
+location. Reassigning local storage reuses that task's directory. Deleting a task
+also retains its local directory on disk for manual recovery or cleanup; the
+deleted task's files are no longer accessible through the API. Switching storage
+requires reopening active Office editors.
 
 ### MCP Server
 

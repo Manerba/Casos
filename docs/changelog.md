@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+26.09.2026 17:28;0.0.1+119;Feature;Dateiablage pro Aufgabe/Projekt wahlweise lokal unter data/files/task-<ID>/ oder als WebDAV-Verzeichnis. Lokale Ablagen funktionieren ohne Nextcloud, nutzen den vorhandenen Dateibrowser und bleiben bei Zuordnungswechsel oder Aufgabenloeschung erhalten
+26.09.2026 17:28;0.0.1+119;Security;Gemeinsame Dateioperationen pruefen Projekt-Lese-/Schreibrechte und blockieren Pfadwechsel sowie lokale Symlinks. ONLYOFFICE liest und speichert beide Ablagearten, Ablagewechsel widerrufen offene Editor-Tokens. Regressionstests fuer Dateioperationen, Migration, Rechte und Browserdialog ergaenzt
 26.09.2026 17:12;0.0.1+118;Feature;Markdown als Standard fuer Beschreibungen, Notizen und Handoffs mit formatierter Ansicht und Bearbeiten-/Speichern-/Abbrechen-Buttons. Listen, Tabellen und Codebloecke werden sicher dargestellt, Entwuerfe bleiben beim Zuklappen erhalten
 26.09.2026 17:12;0.0.1+118;Aenderung;WYSIWYG-Funktionen in der Oberflaeche ausgeblendet, vorhandener Editor-Code bleibt erhalten. Bestehende HTML-Inhalte werden unveraendert als Legacy markiert und erst beim Bearbeiten in Markdown uebernommen. Sprachdateien und Agent-Dokumentation aktualisiert
 26.09.2026 17:12;0.0.1+118;Feature;Admins koennen alle Aufgaben und Projekte unabhaengig von Ersteller, Zuweisung oder Teamrechten bearbeiten, einschliesslich Beschreibungen, Teilaufgaben, Abhaengigkeiten, Reihenfolge, Netzplan, Teams und Dateiablagen
