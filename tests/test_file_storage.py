@@ -1,5 +1,7 @@
 """Dateiablagen mit temporaerer Datenbank/Dateien und gemocktem WebDAV/Office."""
 
+import json
+import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
@@ -117,12 +119,91 @@ class FileStorageTests(unittest.TestCase):
         self.assign("webdav", nextcloud_path="projects/example")
         self.assertEqual(self.row()["file_storage_type"], "webdav")
         self.assertIsNone(api_onlyoffice._validate_wopi_token(editor["access_token"]))
-        self.assign("none")
+        with patch.object(api_tasks, "remove_local_directory") as remove_local, patch.object(webdav, "delete_item") as delete_remote:
+            self.assign("none")
+            remove_local.assert_not_called()
+            delete_remote.assert_not_called()
         self.assertEqual(self.client.get(self.url + "/files").status_code, 400)
         self.assign()
         self.assertEqual(self.ok("GET", self.url + "/files/download", params={"path": "Plan.txt"}).content, b"original")
         self.ok("PUT", self.url, json={"name": "Renamed"})
         self.assertTrue((self.root / "files" / f"task-{self.task_id}" / "Plan.txt").exists())
+
+    def test_removing_local_storage_deletes_only_its_directory_and_revokes_tokens(self):
+        self.assign()
+        self.upload()
+        self.ok("POST", self.url + "/files/mkdir", json={"name": "nested"})
+        self.upload("child.txt", path="nested")
+        root = self.root / "files" / f"task-{self.task_id}"
+        (root / ".hidden").write_text("remove me")
+        file_storage.ensure_local_directory(self.other_id)
+        other_root = self.root / "files" / f"task-{self.other_id}"
+        (other_root / "keep.txt").write_text("keep me")
+        (root / "other-project").symlink_to(other_root, target_is_directory=True)
+        editor = self.open_editor()
+
+        self.assign("none")
+
+        self.assertFalse(root.exists())
+        self.assertEqual((other_root / "keep.txt").read_text(), "keep me")
+        self.assertEqual(self.row()["file_storage_type"], "none")
+        self.assertIsNone(api_onlyoffice._validate_wopi_token(editor["access_token"]))
+        with closing(database.get_db()) as db:
+            audit = db.execute("SELECT changes_json FROM audit_log ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertTrue(json.loads(audit[0])["local_directory_deleted"])
+        self.assign()
+        self.assertEqual(self.ok("GET", self.url + "/files").json()["items"], [])
+
+    def test_failed_local_removal_keeps_mapping_files_and_office_tokens(self):
+        self.assign()
+        self.upload()
+        editor = self.open_editor()
+        with patch.object(file_storage.shutil, "rmtree", side_effect=PermissionError("read only")):
+            with self.assertLogs("dashboard.api_tasks", level="ERROR"):
+                response = self.client.put(self.url, json={"file_storage_type": "none"})
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(self.row()["file_storage_type"], "local")
+        self.assertEqual(self.ok("GET", self.url + "/files/download", params={"path": "Plan.txt"}).content, b"original")
+        self.assertIsNotNone(api_onlyoffice._validate_wopi_token(editor["access_token"]))
+        self.assign("none")
+        self.assertFalse((self.root / "files" / f"task-{self.task_id}").exists())
+
+    def test_failed_database_update_does_not_delete_local_storage(self):
+        self.assign()
+        self.upload()
+        with patch.object(api_tasks, "remove_local_directory") as remove_local:
+            with self.assertRaises(sqlite3.IntegrityError):
+                self.client.put(self.url, json={"file_storage_type": "none", "assigned_to": 999999})
+            remove_local.assert_not_called()
+        self.assertEqual(self.row()["file_storage_type"], "local")
+        self.assertEqual(self.ok("GET", self.url + "/files/download", params={"path": "Plan.txt"}).content, b"original")
+
+    def test_local_removal_rejects_a_symlink_as_project_root(self):
+        self.assign()
+        root = self.root / "files" / f"task-{self.task_id}"
+        root.rmdir()
+        external = self.root / "external"
+        external.mkdir()
+        (external / "keep.txt").write_text("keep me")
+        root.symlink_to(external, target_is_directory=True)
+        response = self.client.put(self.url, json={"file_storage_type": "none"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual((external / "keep.txt").read_text(), "keep me")
+        self.assertTrue(root.is_symlink())
+        self.assertEqual(self.row()["file_storage_type"], "local")
+
+    def test_removing_missing_local_directory_and_legacy_mapping_request(self):
+        self.assign()
+        root = self.root / "files" / f"task-{self.task_id}"
+        root.rmdir()
+        self.assign("none")
+        self.assign("none")
+        self.assertEqual(self.row()["file_storage_type"], "none")
+        self.assign()
+        self.upload()
+        self.ok("PUT", self.url, json={"nextcloud_path": ""})
+        self.assertFalse(root.exists())
+        self.assertEqual(self.row()["file_storage_type"], "none")
 
     def test_each_task_owns_its_directory_and_deleted_files_are_retained(self):
         self.assign()

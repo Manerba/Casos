@@ -6,7 +6,6 @@
 
 let aufgabenTable = null;
 let aufgabenConfig = null;
-let allExpanded = false;
 let cachedAreas = null;
 let cachedUsers = [];
 let ncConfigured = false;
@@ -60,8 +59,9 @@ async function initAufgabenTab() {
         // Tabelle erstellen
         aufgabenTable = new ExpandableTable(aufgabenConfig, 'aufgabenTableContainer', {
             onRowExpanded: onTaskRowExpanded,
-            onRowCollapsed: (rowId) => deactivateInlineEditing(rowId),
+            onRowCollapsed: onTaskRowCollapsed,
             onDataLoaded: () => buildCategoryButtons(),
+            onRendered: updateExpandAllButton,
         });
 
         // Custom Renderer registrieren
@@ -137,13 +137,24 @@ function applySearchFilter(value) {
 
 function toggleAllExpand() {
     if (!aufgabenTable) return;
-    allExpanded = !allExpanded;
-    aufgabenTable.toggleAllRows(allExpanded);
+    aufgabenTable.toggleAllRows(!taskRowsExpanded());
+    updateExpandAllButton();
+}
 
+function taskRowsExpanded() {
+    const container = document.getElementById(aufgabenTable?.containerId);
+    if (!container) return false;
+    if (container.querySelector('.table-row-wrapper.project-focus.expanded')) return true;
+    const rows = [...container.querySelectorAll(':scope > .table-body > .table-row-wrapper')];
+    return rows.length > 0 && rows.every(row => row.classList.contains('expanded'));
+}
+
+function updateExpandAllButton() {
     const btn = document.getElementById('toggleAllBtn');
     if (btn) {
-        btn.textContent = allExpanded ? t('tasks.collapseAll') : t('tasks.expandAll');
-        btn.classList.toggle('active', allExpanded);
+        const expanded = taskRowsExpanded();
+        btn.textContent = expanded ? t('tasks.collapseAll') : t('tasks.expandAll');
+        btn.classList.toggle('active', expanded);
     }
 }
 
@@ -528,8 +539,21 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
     // Zugewiesene Subtask-Ansicht (negative ID = Pseudo-Task fuer zugewiesene Subtask)
     if (row._type === 'assigned_subtask' || row.id < 0) {
+        updateExpandAllButton();
         return onSubtaskViewExpanded(row, detailElement);
     }
+
+    if (row.task_type === 'projekt') {
+        const wrapper = detailElement.closest('.table-row-wrapper');
+        // Auch bei gesammelt geoeffneten Zeilen bleibt genau ein Projekt sichtbar.
+        wrapper.parentElement.querySelectorAll(':scope > .project-focus').forEach(other => {
+            if (other === wrapper) return;
+            other.classList.remove('project-focus', 'expanded');
+            deactivateInlineEditing(other.dataset.rowId);
+        });
+        wrapper.classList.add('project-focus');
+    }
+    updateExpandAllButton();
 
     const perm = getTaskPermissions(row);
 
@@ -597,7 +621,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     </div>`;
 
     // Dateiablage-Button fuer Aufgaben (nicht-Projekte)
-    if (row.task_type !== 'projekt' && canManageStorage) {
+    if (row.task_type !== 'projekt' && canManageStorage && !hasStorage) {
         html += `<div class="subtask-section-actions" style="margin-top:8px;display:flex;justify-content:flex-end">
             ${storageButton}
         </div>`;
@@ -611,7 +635,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <div class="subtask-section-actions">
                     <button class="control-btn" onclick="event.stopPropagation(); openNetzplan(${row.id})">${t('netzplan.title')}</button>
                     ${(perm.isAdmin || perm.isCreator) ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">${t('team.title')}</button>` : ''}
-                    ${canManageStorage ? storageButton : ''}
+                    ${canManageStorage && !hasStorage ? storageButton : ''}
                 </div>
             </div>
             <div id="subtaskContainer_${row.id}">
@@ -689,7 +713,9 @@ async function onTaskRowExpanded(rowId, detailElement) {
     if (hasStorage) {
         const fbContainer = document.getElementById(`fileBrowserContainer_${row.id}`);
         if (fbContainer) {
-            new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
+            new FileBrowser(`fileBrowserContainer_${row.id}`, row.id, {
+                onConfigure: canManageStorage ? () => openFileStorageDialog(row.id) : null,
+            });
         }
     }
     initColumnResize(row.id);
@@ -700,6 +726,10 @@ async function onTaskRowExpanded(rowId, detailElement) {
     }
 }
 
+function onTaskRowCollapsed(rowId) {
+    deactivateInlineEditing(rowId);
+    updateExpandAllButton();
+}
 
 /**
  * Hoehe der Beschreibung und bei Dateiablage auch die Spaltenbreiten anpassen.
@@ -3423,7 +3453,7 @@ function openFileStorageDialog(taskId) {
                 <div id="ncDirList"></div>
             </div>`,
         footer: `<button class="action-btn primary" id="localStorageSave">${t('files.useLocalStorage')}</button>` +
-            (currentType !== 'none' ? `<button class="action-btn danger" id="storageRemove">${t('nc.removeMapping')}</button>` : '') +
+            (currentType !== 'none' ? `<button class="action-btn danger" id="storageRemove">${t(currentType === 'local' ? 'files.removeLocalStorage' : 'nc.removeMapping')}</button>` : '') +
             `<button class="action-btn" onclick="closeModal()">${t('common.cancel')}</button>`,
         onOpen: () => {
             const footer = document.querySelector('.modal-overlay .modal-footer');
@@ -3439,8 +3469,23 @@ function openFileStorageDialog(taskId) {
             };
             selector.addEventListener('change', updateChoice);
             document.getElementById('localStorageSave').onclick = () => saveFileStorage(taskId, 'local');
-            document.getElementById('storageRemove')?.addEventListener('click', () => saveFileStorage(taskId, 'none'));
+            document.getElementById('storageRemove')?.addEventListener('click', () => removeFileStorage(taskId, currentType));
             updateChoice();
+        },
+    });
+}
+
+function removeFileStorage(taskId, currentType) {
+    if (currentType !== 'local') return saveFileStorage(taskId, 'none');
+    createModal({
+        title: t('files.removeLocalStorage'),
+        body: `<p>${escapeHtml(t('files.removeLocalConfirm'))}</p>`,
+        footer: `<button class="action-btn" id="storageDeleteCancel">${t('common.cancel')}</button>
+            <button class="action-btn danger" id="storageDeleteConfirm">${t('files.removeLocalStorage')}</button>`,
+        onOpen: () => {
+            document.getElementById('storageDeleteCancel').onclick = () => openFileStorageDialog(taskId);
+            document.getElementById('storageDeleteConfirm').onclick = () => saveFileStorage(taskId, 'none');
+            document.getElementById('storageDeleteCancel').focus();
         },
     });
 }

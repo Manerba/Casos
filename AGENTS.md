@@ -37,6 +37,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 ## Wichtige Features
 
 - Aufgaben und Projekte mit Teilaufgaben, Positionen, Prioritaet, Deadline und Status.
+- Beim Aufklappen eines Projekts werden die anderen Listenzeilen und der Tabellenkopf ausgeblendet. Zuklappen stellt die gefilterte/sortierte Liste wieder her, der Teilaufgaben-Tabellenkopf bleibt sichtbar.
 - Abhaengigkeiten zwischen Teilaufgaben und optional vom Projektknoten.
 - Interaktiver Netzplan mit `vis-network`.
 - Teammitglieder pro Projekt mit `can_read`, `can_edit`, `can_create`.
@@ -44,7 +45,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - WYSIWYG-Beschreibungen mit zentralem HTML-Sanitizer in `app_core.js`.
 - Nextcloud/WebDAV-Dateiablage ueber `dashboard/webdav.py` und `api_nextcloud.py`.
 - Alternativ lokale Dateiablage pro Aufgabe/Projekt unter `data/files/task-<ID>/`, gemeinsame Dateischnittstelle in `dashboard/file_storage.py`. Auswahl ueber `file_storage_type` (`local`, `webdav`, `none` in der API), bestehende `nextcloud_path`-Zuordnungen bleiben kompatibel. Lokale Dateien bei Backups einschliessen.
-- Beim Wechseln/Entfernen der Ablagezuordnung und beim Loeschen einer Aufgabe bleiben lokale Dateien zur manuellen Wiederherstellung/Bereinigung erhalten. Datei-Schreibzugriffe brauchen Bearbeitungsrechte, ONLYOFFICE unterstuetzt beide Ablagearten.
+- Die Dateiablage wird im Header des Dateibrowsers konfiguriert. Beim expliziten Entfernen einer lokalen Ablage wird nach Bestaetigung auch `data/files/task-<ID>/` samt Inhalt geloescht. Beim Entfernen einer WebDAV-Zuordnung bleibt das Remote-Verzeichnis erhalten. Ein Wechsel der Ablageart und das Loeschen einer Aufgabe behalten lokale Dateien zur manuellen Wiederherstellung/Bereinigung bei. Datei-Schreibzugriffe brauchen Bearbeitungsrechte, ONLYOFFICE unterstuetzt beide Ablagearten.
 - ONLYOFFICE/WOPI-Integration ueber `api_onlyoffice.py` und `/editor`.
 - LDAP/Active Directory Login und Sync ueber `api_ldap.py`, `ldap_utils.py`, `ldap_sync.py`.
 - Mail-Benachrichtigungen mit SMTP-Konfig, Templates und User-Prefs.

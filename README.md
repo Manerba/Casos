@@ -88,6 +88,12 @@ All configuration is managed through the **Admin Panel** at `http://localhost:85
 | TLS | TLS | HTTPS certificate paths |
 | MCP | MCP | Server status, API tokens, audit log, global kill switch |
 
+### Project view
+
+Expanding a project shows its row and details while hiding the other list rows
+and the main table header. Collapsing it restores the list with its current
+filters and sort order. The subtask table header stays visible within the project.
+
 ### File storage
 
 Open a task or project and choose **Dateiablage**. Select **Lokale Dateiablage**
@@ -103,11 +109,16 @@ the task/project permissions. Include `data/files/` along with the database in
 backups; this directory is excluded from Git and fits the existing systemd write
 permissions.
 
-Switching storage or removing its assignment keeps files in their original
-location. Reassigning local storage reuses that task's directory. Deleting a task
-also retains its local directory on disk for manual recovery or cleanup; the
-deleted task's files are no longer accessible through the API. Switching storage
-requires reopening active Office editors.
+Use the configuration button in the file browser header to change or remove its
+storage. Removing local storage requires confirmation and deletes that task's
+directory, including all files and subfolders. Removing a WebDAV assignment keeps
+the remote directory and its contents.
+
+Switching storage keeps files in their original location. Reassigning local
+storage reuses that task's directory if it still exists. Deleting a task retains
+its local directory on disk for manual recovery or cleanup; the deleted task's
+files are no longer accessible through the API. Switching storage requires
+reopening active Office editors.
 
 ### MCP Server
 

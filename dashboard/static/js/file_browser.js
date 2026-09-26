@@ -14,6 +14,7 @@ class FileBrowser {
         this.treeCache = {}; // Pfad -> Items (Lazy-Load Cache)
         this._contextMenu = null;
         this.canWrite = false;
+        this.onConfigure = typeof options.onConfigure === 'function' ? options.onConfigure : null;
 
         this.render();
         this.loadDirectory('');
@@ -45,6 +46,10 @@ class FileBrowser {
                         <button class="fb-action-btn" id="fb-mkdir-${this.taskId}" title="${t('files.folder')}" hidden>
                             ${this._iconNewFolder()} ${t('files.folder')}
                         </button>
+                        ${this.onConfigure ? `<button class="fb-action-btn" id="fb-configure-${this.taskId}"
+                            title="${escapeAttr(t('files.configureStorage'))}" aria-label="${escapeAttr(t('files.configureStorage'))}">
+                            ${this._iconSettings()}
+                        </button>` : ''}
                     </div>
                 </div>
                 <div class="fb-content fb-drop-zone" id="fb-content-${this.taskId}">
@@ -67,6 +72,8 @@ class FileBrowser {
 
         const mkdirBtn = document.getElementById(`fb-mkdir-${this.taskId}`);
         mkdirBtn?.addEventListener('click', () => this.onMkdirClick());
+
+        document.getElementById(`fb-configure-${this.taskId}`)?.addEventListener('click', () => this.onConfigure());
 
         const fileInput = document.getElementById(`fb-file-input-${this.taskId}`);
         fileInput?.addEventListener('change', (e) => this.handleFileSelect(e));
@@ -722,6 +729,9 @@ class FileBrowser {
     }
     _iconNewFolder() {
         return '<svg viewBox="0 0 24 24" class="fb-icon-btn"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z" fill="currentColor"/></svg>';
+    }
+    _iconSettings() {
+        return '<svg viewBox="0 0 24 24" class="fb-icon-btn" aria-hidden="true"><path d="M4 7h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="4" width="4" height="6" rx="1" fill="currentColor"/><rect x="13" y="14" width="4" height="6" rx="1" fill="currentColor"/></svg>';
     }
     _iconTree() {
         return '<svg viewBox="0 0 24 24" class="fb-icon-btn"><path d="M3 3h6v2H3zm8 0h10v2H11zM3 7h6v2H3zm8 0h10v2H11zM3 11h6v2H3zm8 0h10v2H11zM3 15h6v2H3zm8 0h10v2H11zM3 19h6v2H3zm8 0h10v2H11z" fill="currentColor"/></svg>';

@@ -543,6 +543,7 @@ class ExpandableTable {
                 html += this.renderPagination();
             }
             container.innerHTML = html;
+            this.options.onRendered?.();
             return;
         }
 
@@ -566,6 +567,7 @@ class ExpandableTable {
         }
 
         container.innerHTML = html;
+        this.options.onRendered?.();
     }
 
     renderHeader() {

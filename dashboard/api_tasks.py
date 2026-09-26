@@ -19,7 +19,7 @@ from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
 from dashboard.mail_service import notify_event
 from dashboard.note_service import update_note_as_admin
-from dashboard.file_storage import ensure_local_directory, safe_rel_path, storage_type
+from dashboard.file_storage import ensure_local_directory, remove_local_directory, safe_rel_path, storage_type
 
 logger = logging.getLogger(__name__)
 
@@ -423,10 +423,11 @@ async def create_task(task: TaskCreate, user=Depends(get_current_user)):
     return {"id": new_id, "message": "Aufgabe erstellt"}
 
 
-@router.put("/api/tasks/{task_id}")
-async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_user)):
-    """Aufgabe aktualisieren."""
+def _update_task_record(task_id: int, task: TaskUpdate, user: dict):
+    """DB- und lokale Dateioperationen zusammen in einem Worker ausfuehren."""
     with db_transaction() as db:
+        # Die Ablage darf waehrend einer lokalen Loeschung nicht parallel wechseln.
+        db.execute("BEGIN IMMEDIATE")
         existing = db.execute(
             "SELECT id, created_by, assigned_to, nextcloud_path, file_storage_type FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
@@ -456,6 +457,7 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
         updates = []
         values = []
         changes_diff: dict = {}
+        remove_local = False
 
         # Zugewiesene duerfen nur Status aendern
         if can_full_edit:
@@ -502,10 +504,11 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                     raise HTTPException(status_code=400, detail="WebDAV-Pfad passt nicht zur gewaehlten Ablageart")
                 if kind == "local":
                     try:
-                        await asyncio.to_thread(ensure_local_directory, task_id)
+                        ensure_local_directory(task_id)
                     except OSError:
                         logger.exception("Lokale Dateiablage konnte nicht angelegt werden")
                         raise HTTPException(status_code=500, detail="Lokale Dateiablage konnte nicht angelegt werden")
+                remove_local = kind == "none" and storage_type(existing) == "local"
                 updates.extend(["file_storage_type = ?", "nextcloud_path = ?"])
                 values.extend([kind if kind != "none" else None, nc_path])
                 changes_diff.update(file_storage_type=kind, nextcloud_path=nc_path)
@@ -526,9 +529,26 @@ async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_u
                 values,
             )
 
-        # Mail-Benachrichtigungen (non-blocking)
-        actor_name = get_display_name(user)
         task_row = db.execute("SELECT name, deadline, priority, assigned_to, status FROM tasks WHERE id = ?", (task_id,)).fetchone()
+
+        if remove_local:
+            try:
+                # Erst nach erfolgreicher SQL-Validierung loeschen. Bei einem
+                # Dateisystemfehler bleibt die Zuordnung durch Rollback bestehen.
+                remove_local_directory(task_id)
+            except OSError:
+                logger.exception("Lokale Dateiablage konnte nicht geloescht werden")
+                raise HTTPException(status_code=500, detail="Lokale Dateiablage konnte nicht geloescht werden")
+            changes_diff["local_directory_deleted"] = True
+
+    return existing, task_row, changes_diff
+
+
+@router.put("/api/tasks/{task_id}")
+async def update_task(task_id: int, task: TaskUpdate, user=Depends(get_current_user)):
+    """Aufgabe aktualisieren."""
+    existing, task_row, changes_diff = await asyncio.to_thread(_update_task_record, task_id, task, user)
+    actor_name = get_display_name(user)
 
     # Mail-Versand ausserhalb der Transaktion (non-blocking)
     if task_row:

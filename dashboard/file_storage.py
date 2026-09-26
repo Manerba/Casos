@@ -81,6 +81,14 @@ def ensure_local_directory(task_id: int):
     root.mkdir(mode=0o700, exist_ok=True)
 
 
+def remove_local_directory(task_id: int):
+    """Nur das serverseitig bestimmte Projektverzeichnis samt Inhalt entfernen."""
+    root = local_path(task_id)
+    if root.exists():
+        # rmtree entfernt enthaltene Symlinks, ohne deren Ziele zu verfolgen.
+        shutil.rmtree(root)
+
+
 def get_task_storage(task_id: int, user: dict, *, write: bool = False):
     """Ablage mit den aktuellen Rechten des Session- oder WOPI-Benutzers laden."""
     with db_query() as db:

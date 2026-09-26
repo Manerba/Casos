@@ -15,6 +15,7 @@ def main():
                 status="offen", deadline="", priority=50, can_edit_status=True,
                 file_storage_type="none", nextcloud_path="")
     saved = []
+    extra_tasks = []
     state = {"can_write": True, "fail_next": False}
     directory_name = "Team's <documents>"
 
@@ -24,7 +25,7 @@ def main():
         status = 200
         data = {"items": []}
         if path == "/":
-            route.fulfill(content_type="text/html", body='<html><body data-admin-mode="true"><div id="table"></div></body></html>')
+            route.fulfill(content_type="text/html", body='<html><body data-admin-mode="true"><button id="toggleAllBtn" onclick="toggleAllExpand()"></button><div id="table"></div></body></html>')
             return
         if path == "/api/tasks/1" and route.request.method == "PUT":
             data = route.request.post_data_json
@@ -38,7 +39,7 @@ def main():
                 if data.get("file_storage_type") != "webdav":
                     task["nextcloud_path"] = ""
         elif path == "/api/tasks":
-            data = {"items": [task]}
+            data = {"items": [task, *extra_tasks]}
         elif path == "/api/nextcloud/directories":
             current = parse_qs(url.query).get("path", [""])[0]
             data = {"directories": [] if current else [{"name": directory_name, "path": directory_name}]}
@@ -69,12 +70,17 @@ def main():
         page.evaluate("""async () => {
             currentUser = {id: 1, is_admin: false};
             cachedAreas = []; cachedUsers = [];
-            aufgabenTable = new ExpandableTable({id: 'filesTest', apiEndpoint: '/api/tasks', expandable: true,
+            aufgabenTable = new ExpandableTable({id: 'filesTest', apiEndpoint: '/api/tasks', expandable: true, showHeader: true,
                 gridTemplate: '30px 330px 60px 130px 90px 150px 160px', columns: [
-                    {field: 'name', align: 'left'}, {field: 'id', align: 'left'},
-                    {field: 'status'}, {field: 'priority'}, {field: 'assigned_to_name'}, {field: 'deadline'}
-                ], detailFields: []}, 'table', {
-                    onRowExpanded: onTaskRowExpanded, onRowCollapsed: deactivateInlineEditing,
+                    {field: 'name', label: 'Name', sortable: true, align: 'left'}, {field: 'id', label: 'ID', align: 'left'},
+                    {field: 'status', label: 'Status'}, {field: 'priority', label: 'Priority'},
+                    {field: 'assigned_to_name', label: 'Assigned to'}, {field: 'deadline', label: 'Deadline'}
+                ], detailFields: [], filters: [
+                    {id: 'typeFilter', type: 'select', field: 'task_type'},
+                    {id: 'searchFilter', type: 'input', field: 'name', wildcard: true},
+                ]}, 'table', {
+                    onRowExpanded: onTaskRowExpanded, onRowCollapsed: onTaskRowCollapsed,
+                    onRendered: updateExpandAllButton,
                 });
             tables.filesTest = aufgabenTable;
             await aufgabenTable.loadData();
@@ -131,6 +137,8 @@ def main():
         expand()
         expect(page.locator("#fileBrowserContainer_1")).to_be_visible()
         expect(page.locator("#fb-upload-1")).to_be_visible()
+        expect(page.locator('.fb-header #fb-configure-1')).to_be_visible()
+        expect(page.locator('button.nc-active')).to_have_count(0)
         expect(page.locator(".fb-tree-name")).to_have_text("Plan.txt")
 
         # The divider changes both widths; both panes still share the same height.
@@ -162,7 +170,14 @@ def main():
 
         # WebDAV browsing handles names containing quotes and HTML as plain text.
         page.evaluate("ncConfigured = true")
-        page.get_by_role("button", name="📂 Local file storage", exact=True).click()
+        page.locator('.fb-header').get_by_role('button', name='Configure file storage').click()
+        before_remove = len(saved)
+        page.locator('#storageRemove').click()
+        expect(page.locator('.modal-body')).to_contain_text('including all files and subfolders')
+        assert len(saved) == before_remove
+        page.locator('#storageDeleteCancel').click()
+        expect(page.locator('#fileStorageType')).to_have_value('local')
+        assert len(saved) == before_remove
         page.locator("#fileStorageType").select_option("webdav")
         expect(page.locator("#localStorageSave")).to_be_hidden()
         page.locator(".nc-dir-name").click()
@@ -176,7 +191,7 @@ def main():
         assert saved[-1] == {"file_storage_type": "webdav", "nextcloud_path": directory_name}
         expand()
         expect(page.locator("#fileBrowserContainer_1")).to_be_visible()
-        page.get_by_role("button", name="📂 " + directory_name, exact=True).click()
+        page.locator('.fb-header').get_by_role('button', name='Configure file storage').click()
         page.locator("#storageRemove").click()
         expect(page.locator(".modal-overlay")).to_have_count(0)
         assert saved[-1] == {"file_storage_type": "none"}
@@ -193,6 +208,22 @@ def main():
         expand()
         expect(page.locator("#fileBrowserContainer_1")).to_be_visible()
 
+        # Local removal requires an explicit confirmation and supports retrying errors.
+        page.locator('.fb-header').get_by_role('button', name='Configure file storage').click()
+        page.locator('#storageRemove').click()
+        state['fail_next'] = True
+        page.locator('#storageDeleteConfirm').click()
+        expect(page.locator('#storageDeleteConfirm')).to_be_enabled()
+        expect(page.locator('.modal-overlay')).to_be_visible()
+        page.locator('#storageDeleteConfirm').click()
+        expect(page.locator('.modal-overlay')).to_have_count(0)
+        assert saved[-1] == {'file_storage_type': 'none'}
+        expand()
+        expect(page.locator('#fileBrowserContainer_1')).to_have_count(0)
+        page.get_by_role('button', name='File Storage', exact=True).click()
+        page.locator('#localStorageSave').click()
+        expect(page.locator('.modal-overlay')).to_have_count(0)
+
         # Read-only users see files, but no upload, rename, delete or mapping actions.
         state["can_write"] = False
         task.update(created_by=2, is_team_member=True, can_edit_status=False)
@@ -201,14 +232,90 @@ def main():
         expect(page.locator(".fb-tree-name")).to_have_text("Plan.txt")
         expect(page.locator("#fb-upload-1")).to_be_hidden()
         expect(page.locator("#fb-mkdir-1")).to_be_hidden()
+        expect(page.locator('#fb-configure-1')).to_have_count(0)
         expect(page.locator("button.nc-active")).to_have_count(0)
         page.locator(".fb-tree-name").click(button="right")
         expect(page.locator('.fb-ctx-item[data-action="download"]')).to_be_visible()
         expect(page.locator('.fb-ctx-item[data-action="rename"]')).to_have_count(0)
         expect(page.locator('.fb-ctx-item[data-action="delete"]')).to_have_count(0)
+        page.mouse.click(5, 5)
+
+        # An open project shows only its own row/details, retaining its subtask header.
+        task.update(task_type='projekt', created_by=1, is_team_member=False, can_edit_status=True)
+        extra_tasks.extend([
+            dict(task, id=2, name='Second project', file_storage_type='none'),
+            dict(task, id=3, name='Ordinary task', task_type='aufgabe', file_storage_type='none'),
+        ])
+        page.evaluate('async () => { await aufgabenTable.loadData(); }')
+        header = page.locator('#table > .table-header')
+        visible_rows = page.locator('#table > .table-body > .table-row-wrapper:visible')
+        toggle_all = page.locator('#toggleAllBtn')
+
+        def toggle_row(task_id):
+            page.locator(f'#table [data-row-id="{task_id}"] > .table-row > .expand-icon').click()
+
+        expect(header).to_be_visible()
+        expect(visible_rows).to_have_count(3)
+        toggle_row(1)
+        expect(header).to_be_hidden()
+        expect(visible_rows).to_have_count(1)
+        expect(visible_rows).to_have_attribute('data-row-id', '1')
+        expect(page.locator('#subtaskContainer_1 thead')).to_be_visible()
+        expect(page.locator('#fileBrowserContainer_1')).to_be_visible()
+        expect(toggle_all).to_have_text('Collapse all')
+        toggle_row(1)
+        expect(header).to_be_visible()
+        expect(visible_rows).to_have_count(3)
+        expect(toggle_all).to_have_text('Expand all')
+
+        # Ordinary tasks leave the list visible; another project can then be opened.
+        toggle_row(3)
+        expect(header).to_be_visible()
+        expect(visible_rows).to_have_count(3)
+        toggle_row(3)
+        toggle_row(2)
+        expect(visible_rows).to_have_count(1)
+        expect(visible_rows).to_have_attribute('data-row-id', '2')
+        expect(header).to_be_hidden()
+        toggle_row(2)
+
+        # Returning to the list preserves filtering and sorting.
+        page.evaluate("() => { aufgabenTable.setFilter('typeFilter', 'projekt'); aufgabenTable.sortBy('name'); aufgabenTable.sortBy('name'); }")
+        assert visible_rows.evaluate_all('(rows) => rows.map(row => row.dataset.rowId)') == ['2', '1']
+        toggle_row(1)
+        toggle_row(1)
+        expect(header).to_be_visible()
+        assert visible_rows.evaluate_all('(rows) => rows.map(row => row.dataset.rowId)') == ['2', '1']
+
+        # Filtering, empty results and reloads clear the focused view and toolbar state.
+        toggle_row(2)
+        page.evaluate("applySearchFilter('no matching task')")
+        expect(visible_rows).to_have_count(0)
+        expect(page.locator('.table-no-data')).to_be_visible()
+        expect(toggle_all).to_have_text('Expand all')
+        page.evaluate("applySearchFilter('File storage')")
+        expect(header).to_be_visible()
+        expect(visible_rows).to_have_count(1)
+        toggle_row(1)
+        page.evaluate('async () => { await aufgabenTable.loadData(); }')
+        expect(header).to_be_visible()
+        expect(toggle_all).to_have_text('Expand all')
+        page.evaluate("() => { applySearchFilter(''); aufgabenTable.setFilter('typeFilter', ''); }")
+
+        # Bulk expansion also shows exactly one project; collapsing restores all rows.
+        toggle_all.click()
+        expect(visible_rows).to_have_count(1)
+        expect(header).to_be_hidden()
+        expect(page.locator('.project-focus.expanded')).to_have_count(1)
+        expect(toggle_all).to_have_text('Collapse all')
+        toggle_all.click()
+        expect(header).to_be_visible()
+        expect(visible_rows).to_have_count(3)
+        expect(page.locator('#table .table-row-wrapper.expanded')).to_have_count(0)
+        expect(toggle_all).to_have_text('Expand all')
         assert errors == [], errors
         browser.close()
-    print("File storage browser checks passed: tasks/projects, local without Nextcloud, creation retry, WebDAV selection, switching, unlinking, reader permissions, height/width resizing and narrow screens.")
+    print("File storage browser checks passed: local/WebDAV configuration, deletion confirmation/cancel/retry, permissions, resizing, narrow screens and project focus with list restoration, filters, sorting, reloads and bulk expansion.")
 
 
 if __name__ == "__main__":
