@@ -465,6 +465,13 @@ class ExpandableTable {
             let aVal = a[this.sortColumn];
             let bVal = b[this.sortColumn];
 
+            // Pseudozeilen zugewiesener Teilaufgaben haben intern negative IDs.
+            // Sortieren nach derselben positiven ID, die die Spalte anzeigt.
+            if (col?.renderer === 'taskId') {
+                aVal = a._type === 'assigned_subtask' ? a._subtask_id : aVal;
+                bVal = b._type === 'assigned_subtask' ? b._subtask_id : bVal;
+            }
+
             // Spezielle Sortierung für bestimmte Renderer
             if (col?.renderer === 'icon' && col?.rendererOptions?.type === 'stance') {
                 const order = {'bullish': 1, 'bearish': 2, 'neutral': 3, 'unclear': 4, 'none': 5};

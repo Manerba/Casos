@@ -117,7 +117,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 ## Frontend-Konventionen
 
-- Haupt-App hat aktuell einen sichtbaren Tab `aufgaben` in `dashboard/templates/index.html`.
+- Haupt-App zeigt die Aufgabenliste ohne Tab-Leiste in `dashboard/templates/index.html`. Der kompakte Header ist 44px hoch, der Titel `Tareas` verlinkt zur Aufgabenliste. Standardsortierung: angezeigte ID absteigend, inklusive positiver Teilaufgaben-IDs bei Pseudozeilen.
 - Admin-App hat Tabs `allgemein`, `benutzer`, `ldap`, `nextcloud`, `onlyoffice`, `mail`, `tls`, `mcp`.
 - `dashboard/static/js/app_core.js` enthaelt Theme, Settings, 401-Interceptor, CSRF-Header, Routing, DOM-Caching, Notifications, Modal- und Sanitizer-Helfer.
 - `showNotification(message, type)` unterstuetzt `info`, `success`, `error`.
@@ -156,7 +156,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 1. JS-Datei erstellen, z.B. `dashboard/static/js/tab_example.js`.
 2. Init-Funktion definieren: `async function initExampleTab() { ... }`.
 3. In `app_core.js` `parseRoute()`, `buildPath()` und `switchTab()` erweitern.
-4. In `dashboard/templates/index.html` Tab-Link in `<nav class="tabs">` und Script-Include hinzufuegen.
+4. In `dashboard/templates/index.html` Navigation und Script-Include hinzufuegen. Aktuell gibt es keine Tab-Leiste, der Header-Titel verlinkt zur Aufgabenliste.
 5. Optional neuen API-Router `dashboard/api_example.py` erstellen und in `dashboard/app.py` einbinden.
 6. Optional Tabellen-Config mit `ExpandableTable` definieren.
 

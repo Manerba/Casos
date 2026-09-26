@@ -135,6 +135,14 @@ function initEventListeners() {
         buildColorSchemeMenu();
     }
 
+    // Der Titel fuehrt zurueck zur Aufgabenliste; neue Tabs bleiben per Modifier moeglich.
+    document.querySelector('.header-home')?.addEventListener('click', (e) => {
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+        e.preventDefault();
+        navigateTo('aufgaben');
+        window.scrollTo(0, 0);
+    });
+
     // Tabs
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function(e) {

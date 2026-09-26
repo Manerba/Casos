@@ -1377,7 +1377,7 @@ async def get_tasks_config():
             Column("", "_actions", width=36, sortable=False, renderer="deleteAction", align="center"),
         ],
         detail_fields=[],
-        default_sort=("priority", "asc"),
+        default_sort=("id", "desc"),
         filters=[
             Filter(
                 id="typeFilter",
