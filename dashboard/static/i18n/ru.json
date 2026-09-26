@@ -134,6 +134,8 @@
   "subtask.predExists": "Предшественник уже существует",
   "subtask.predRemoveConfirm": "Действительно удалить предшественника?",
   "subtask.info": "Подзадача проекта: {name}",
+  "detail.resizeHeight": "Изменить высоту описания",
+  "detail.resizeWidth": "Изменить ширину описания и файлового хранилища",
   "detail.description": "Описание",
   "detail.descriptionFrom": "Описание от {name}",
   "detail.noDescription": "Нет описания",

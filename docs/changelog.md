@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+26.09.2026 18:47;0.0.1+120;Bugfix;Projekt-/Aufgabenbeschreibung auch ohne Dateiablage in der Hoehe verstellbar. Mit Dateiablage erlaubt ein zusaetzlicher Ziehgriff die horizontale Aufteilung beider Spalten, auch per Pfeiltasten. Abmessungen bleiben beim Zu-/Aufklappen innerhalb der Seite erhalten, schmale Ansichten stapeln beide Bereiche. Browserpruefungen fuer Hoehe, Breite, Bearbeitungsmodus und responsive Darstellung erfolgreich
 26.09.2026 17:28;0.0.1+119;Feature;Dateiablage pro Aufgabe/Projekt wahlweise lokal unter data/files/task-<ID>/ oder als WebDAV-Verzeichnis. Lokale Ablagen funktionieren ohne Nextcloud, nutzen den vorhandenen Dateibrowser und bleiben bei Zuordnungswechsel oder Aufgabenloeschung erhalten
 26.09.2026 17:28;0.0.1+119;Security;Gemeinsame Dateioperationen pruefen Projekt-Lese-/Schreibrechte und blockieren Pfadwechsel sowie lokale Symlinks. ONLYOFFICE liest und speichert beide Ablagearten, Ablagewechsel widerrufen offene Editor-Tokens. Regressionstests fuer Dateioperationen, Migration, Rechte und Browserdialog ergaenzt
 26.09.2026 17:12;0.0.1+118;Feature;Markdown als Standard fuer Beschreibungen, Notizen und Handoffs mit formatierter Ansicht und Bearbeiten-/Speichern-/Abbrechen-Buttons. Listen, Tabellen und Codebloecke werden sicher dargestellt, Entwuerfe bleiben beim Zuklappen erhalten

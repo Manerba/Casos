@@ -134,6 +134,8 @@
   "subtask.predExists": "Predecesorul exista deja",
   "subtask.predRemoveConfirm": "Eliminati predecesorul?",
   "subtask.info": "Subsarcina din proiectul: {name}",
+  "detail.resizeHeight": "Modifică înălțimea descrierii",
+  "detail.resizeWidth": "Modifică lățimea descrierii și a fișierelor",
   "detail.description": "Descriere",
   "detail.descriptionFrom": "Descriere de {name}",
   "detail.noDescription": "Fara descriere",

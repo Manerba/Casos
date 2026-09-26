@@ -134,6 +134,8 @@
   "subtask.predExists": "Попередник вже існує",
   "subtask.predRemoveConfirm": "Дійсно видалити попередника?",
   "subtask.info": "Підзавдання з проєкту: {name}",
+  "detail.resizeHeight": "Змінити висоту опису",
+  "detail.resizeWidth": "Змінити ширину опису та файлового сховища",
   "detail.description": "Опис",
   "detail.descriptionFrom": "Опис від {name}",
   "detail.noDescription": "Немає опису",

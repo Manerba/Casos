@@ -84,8 +84,38 @@ def main():
             page.locator(".table-row > .expand-icon").click()
             expect(page.locator(".detail-edit")).to_be_visible()
 
+        def drag(selector, dx=0, dy=0):
+            handle = page.locator(selector)
+            handle.scroll_into_view_if_needed()
+            box = handle.bounding_box()
+            x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            page.mouse.move(x, y)
+            page.mouse.down()
+            page.mouse.move(x + dx, y + dy, steps=8)
+            page.mouse.up()
+            assert page.evaluate('document.body.style.userSelect') == ''
+            assert page.evaluate('document.body.style.cursor') == ''
+
         # Local creation is offered when Nextcloud is not configured.
         expand()
+        # Description height changes in both reading/editing modes without storage.
+        columns = page.locator("#pdColumns_1")
+        initial_height = columns.bounding_box()["height"]
+        expect(page.locator("#pdSplit_1")).to_have_count(0)
+        drag("#pdResize_1", dy=100)
+        assert abs(columns.bounding_box()["height"] - initial_height - 100) < 2
+        editor = page.locator("#wysiwygEditor_1")
+        assert abs(editor.bounding_box()["height"] - columns.bounding_box()["height"]) < 2
+        editor.get_by_role("button", name="Edit", exact=True).click()
+        source_height = editor.locator("textarea").bounding_box()["height"]
+        drag("#pdResize_1", dy=60)
+        assert abs(editor.locator("textarea").bounding_box()["height"] - source_height - 60) < 2
+        editor.get_by_role("button", name="Cancel", exact=True).click()
+        saved_height = columns.bounding_box()["height"]
+        page.locator(".table-row > .expand-icon").click()
+        expand()
+        assert abs(columns.bounding_box()["height"] - saved_height) < 2
+
         page.get_by_role("button", name="File Storage", exact=True).click()
         expect(page.locator("#fileStorageType")).to_have_value("local")
         expect(page.locator('#fileStorageType option[value="webdav"]')).to_be_disabled()
@@ -102,6 +132,33 @@ def main():
         expect(page.locator("#fileBrowserContainer_1")).to_be_visible()
         expect(page.locator("#fb-upload-1")).to_be_visible()
         expect(page.locator(".fb-tree-name")).to_have_text("Plan.txt")
+
+        # The divider changes both widths; both panes still share the same height.
+        left = page.locator(".project-detail-left")
+        right = page.locator(".project-detail-right")
+        before_left, before_right = left.bounding_box(), right.bounding_box()
+        drag("#pdSplit_1", dx=120)
+        assert abs(left.bounding_box()["width"] - before_left["width"] - 120) < 2
+        assert abs(right.bounding_box()["width"] - before_right["width"] + 120) < 2
+        saved_width = left.bounding_box()["width"]
+        page.locator(".table-row > .expand-icon").click()
+        expand()
+        assert abs(left.bounding_box()["width"] - saved_width) < 2
+        drag("#pdResize_1", dy=-80)
+        assert abs(columns.bounding_box()["height"] - saved_height + 80) < 2
+        assert abs(left.bounding_box()["height"] - right.bounding_box()["height"]) < 2
+        page.locator("#pdSplit_1").focus()
+        page.keyboard.press("ArrowLeft")
+        assert left.bounding_box()["width"] < saved_width
+
+        # Narrow screens stack the panes and retain a working height handle.
+        page.set_viewport_size({"width": 800, "height": 1000})
+        expect(page.locator("#pdSplit_1")).to_be_hidden()
+        assert right.bounding_box()["y"] > left.bounding_box()["y"]
+        before_height = columns.bounding_box()["height"]
+        drag("#pdResize_1", dy=50)
+        assert abs(columns.bounding_box()["height"] - before_height - 50) < 2
+        page.set_viewport_size({"width": 1440, "height": 1000})
 
         # WebDAV browsing handles names containing quotes and HTML as plain text.
         page.evaluate("ncConfigured = true")
@@ -151,7 +208,7 @@ def main():
         expect(page.locator('.fb-ctx-item[data-action="delete"]')).to_have_count(0)
         assert errors == [], errors
         browser.close()
-    print("File storage browser checks passed: tasks/projects, local without Nextcloud, creation retry, WebDAV selection, switching, unlinking and reader permissions.")
+    print("File storage browser checks passed: tasks/projects, local without Nextcloud, creation retry, WebDAV selection, switching, unlinking, reader permissions, height/width resizing and narrow screens.")
 
 
 if __name__ == "__main__":

@@ -134,6 +134,8 @@
   "subtask.predExists": "El predecesor ya existe",
   "subtask.predRemoveConfirm": "Eliminar predecesor realmente?",
   "subtask.info": "Subtarea del proyecto: {name}",
+  "detail.resizeHeight": "Cambiar la altura de la descripción",
+  "detail.resizeWidth": "Cambiar el ancho de la descripción y los archivos",
   "detail.description": "Descripcion",
   "detail.descriptionFrom": "Descripcion de {name}",
   "detail.noDescription": "Sin descripcion",

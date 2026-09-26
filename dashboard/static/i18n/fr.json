@@ -134,6 +134,8 @@
   "subtask.predExists": "Le predecesseur existe deja",
   "subtask.predRemoveConfirm": "Vraiment supprimer le predecesseur ?",
   "subtask.info": "Sous-tache du projet : {name}",
+  "detail.resizeHeight": "Redimensionner la hauteur de la description",
+  "detail.resizeWidth": "Redimensionner la largeur de la description et des fichiers",
   "detail.description": "Description",
   "detail.descriptionFrom": "Description par {name}",
   "detail.noDescription": "Aucune description",

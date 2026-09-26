@@ -10,6 +10,7 @@ let allExpanded = false;
 let cachedAreas = null;
 let cachedUsers = [];
 let ncConfigured = false;
+const projectDetailSizes = new Map();
 
 // Auto-Save: Debounce-Timer pro Feld
 const _autoSaveTimers = {};
@@ -544,10 +545,8 @@ async function onTaskRowExpanded(rowId, detailElement) {
     const storageLabel = storageType === 'local' ? t('files.localStorage') : row.nextcloud_path;
     const storageButton = `<button class="control-btn${storageType !== 'none' ? ' nc-active' : ''}" onclick="event.stopPropagation(); openFileStorageDialog(${row.id})">${storageLabel ? '&#128194; ' + escapeHtml(storageLabel) : t('nc.fileStorage')}</button>`;
 
-    if (hasStorage) {
-        html += `<div class="project-detail-columns">`;
-        html += `<div class="project-detail-left">`;
-    }
+    html += `<div class="project-detail-columns${hasStorage ? ' has-file-storage' : ''}" id="pdColumns_${row.id}">`;
+    html += `<div class="project-detail-left" id="pdDescription_${row.id}">`;
 
     // Beschreibung: Markdown-Ansicht, Bearbeiten nach bestehenden Berechtigungen
     if (!perm.isAdmin && perm.isAssignee && !perm.isCreator) {
@@ -572,14 +571,18 @@ async function onTaskRowExpanded(rowId, detailElement) {
         html += `<div id="wysiwygEditor_${row.id}"></div>`;
     }
 
+    html += `</div>`; // project-detail-left
     if (hasStorage) {
-        html += `</div>`; // project-detail-left
+        html += `<div class="project-detail-split" id="pdSplit_${row.id}" role="separator" tabindex="0"
+            aria-orientation="vertical" aria-controls="pdDescription_${row.id}"
+            aria-valuemin="20" aria-valuemax="80" aria-valuenow="50"
+            aria-label="${escapeAttr(t('detail.resizeWidth'))}" title="${escapeAttr(t('detail.resizeWidth'))}"></div>`;
         html += `<div class="project-detail-right">
             <div id="fileBrowserContainer_${row.id}"></div>
         </div>`;
-        html += `</div>`; // project-detail-columns
-        html += `<div class="project-detail-resize" id="pdResize_${row.id}"></div>`;
     }
+    html += `</div>`; // project-detail-columns
+    html += `<div class="project-detail-resize" id="pdResize_${row.id}" title="${escapeAttr(t('detail.resizeHeight'))}"></div>`;
 
     if (perm.isAdmin) {
         html += `<div class="notes-section subtask-notes-list">
@@ -688,8 +691,8 @@ async function onTaskRowExpanded(rowId, detailElement) {
         if (fbContainer) {
             new FileBrowser(`fileBrowserContainer_${row.id}`, row.id);
         }
-        initColumnResize(row.id);
     }
+    initColumnResize(row.id);
 
     // SubTasks laden wenn Projekt
     if (row.task_type === 'projekt') {
@@ -699,36 +702,83 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
 
 /**
- * Resize-Handle fuer Zwei-Spalten-Layout (Editor + Dateiablage).
- * Zieht man den Handle nach unten/oben, aendert sich die Hoehe beider Spalten synchron.
+ * Hoehe der Beschreibung und bei Dateiablage auch die Spaltenbreiten anpassen.
+ * Abmessungen bleiben beim erneuten Aufklappen innerhalb der Seite erhalten.
  */
 function initColumnResize(taskId) {
-    const handle = document.getElementById(`pdResize_${taskId}`);
-    if (!handle) return;
-    const columns = handle.previousElementSibling;
-    if (!columns || !columns.classList.contains('project-detail-columns')) return;
+    const columns = document.getElementById(`pdColumns_${taskId}`);
+    const heightHandle = document.getElementById(`pdResize_${taskId}`);
+    const splitHandle = document.getElementById(`pdSplit_${taskId}`);
+    if (!columns || !heightHandle) return;
+    const sizes = projectDetailSizes.get(taskId) || {};
+    projectDetailSizes.set(taskId, sizes);
 
-    let startY = 0;
-    let startH = 0;
+    function setHeight(height) {
+        sizes.height = Math.max(200, height);
+        columns.style.setProperty('--project-detail-height', `${sizes.height}px`);
+    }
+    function setSplit(percent) {
+        sizes.split = Math.max(20, Math.min(80, percent));
+        columns.style.setProperty('--project-description-width', `${sizes.split}fr`);
+        columns.style.setProperty('--project-files-width', `${100 - sizes.split}fr`);
+        splitHandle?.setAttribute('aria-valuenow', Math.round(sizes.split));
+    }
+    if (sizes.height) setHeight(sizes.height);
+    if (sizes.split) setSplit(sizes.split);
 
-    function onMouseMove(e) {
-        const newH = Math.max(200, startH + (e.clientY - startY));
-        columns.style.height = newH + 'px';
+    function bindDrag(handle, cursor, startDrag) {
+        if (!handle) return;
+        handle.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || !event.isPrimary) return;
+            event.preventDefault();
+            const pointerId = event.pointerId;
+            const update = startDrag(event);
+            const oldCursor = document.body.style.cursor;
+            const oldUserSelect = document.body.style.userSelect;
+            document.body.style.cursor = cursor;
+            document.body.style.userSelect = 'none';
+            handle.setPointerCapture(pointerId);
+
+            const move = event => {
+                if (!columns.isConnected) return stop();
+                if (event.pointerId === pointerId) update(event);
+            };
+            const stop = event => {
+                if (event?.pointerId !== undefined && event.pointerId !== pointerId) return;
+                document.removeEventListener('pointermove', move);
+                document.removeEventListener('pointerup', stop);
+                document.removeEventListener('pointercancel', stop);
+                handle.removeEventListener('lostpointercapture', stop);
+                window.removeEventListener('blur', stop);
+                document.body.style.cursor = oldCursor;
+                document.body.style.userSelect = oldUserSelect;
+                if (handle.hasPointerCapture(pointerId)) handle.releasePointerCapture(pointerId);
+            };
+            document.addEventListener('pointermove', move);
+            document.addEventListener('pointerup', stop);
+            document.addEventListener('pointercancel', stop);
+            handle.addEventListener('lostpointercapture', stop);
+            window.addEventListener('blur', stop);
+        });
     }
-    function onMouseUp() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        document.body.style.userSelect = '';
-        document.body.style.cursor = '';
-    }
-    handle.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        startY = e.clientY;
-        startH = columns.offsetHeight;
-        document.body.style.userSelect = 'none';
-        document.body.style.cursor = 'ns-resize';
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+
+    bindDrag(heightHandle, 'ns-resize', event => {
+        const startY = event.clientY;
+        const startHeight = columns.getBoundingClientRect().height;
+        return event => setHeight(startHeight + event.clientY - startY);
+    });
+    bindDrag(splitHandle, 'ew-resize', event => {
+        const startX = event.clientX;
+        const startWidth = columns.querySelector('.project-detail-left').getBoundingClientRect().width;
+        const availableWidth = columns.clientWidth - splitHandle.offsetWidth;
+        return event => setSplit((startWidth + event.clientX - startX) / availableWidth * 100);
+    });
+    splitHandle?.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        if (event.key === 'Home') setSplit(20);
+        else if (event.key === 'End') setSplit(80);
+        else setSplit((sizes.split || 50) + (event.key === 'ArrowRight' ? 5 : -5));
     });
 }
 

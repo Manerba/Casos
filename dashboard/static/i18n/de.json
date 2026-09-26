@@ -134,6 +134,8 @@
   "subtask.predExists": "Vorgaenger bereits vorhanden",
   "subtask.predRemoveConfirm": "Vorgaenger wirklich entfernen?",
   "subtask.info": "Teilaufgabe aus Projekt: {name}",
+  "detail.resizeHeight": "Höhe der Beschreibung ändern",
+  "detail.resizeWidth": "Breite von Beschreibung und Dateiablage ändern",
   "detail.description": "Beschreibung",
   "detail.descriptionFrom": "Beschreibung von {name}",
   "detail.noDescription": "Keine Beschreibung",
