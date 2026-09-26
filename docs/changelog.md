@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+26.09.2026 20:42;0.0.1+123;Aenderung;Filterleiste bei aufgeklapptem Projekt ausblenden. Zuklappen zeigt die Filterleiste mit unveraenderten Filtern wieder an, der Tareas-Link fuehrt weiterhin zur Aufgabenliste. Desktop- und schmale Ansichten im Browser geprueft
 26.09.2026 20:39;0.0.1+122;Aenderung;Aufgaben-Tab-Leiste entfernt und Haupt-App-Header von 60 auf 44px verkleinert, Zahnrad entsprechend angepasst. Tareas-Titel verlinkt zur Aufgabenliste, die Filterleiste bleibt direkt unter dem Header. Aufgaben standardmaessig nach angezeigter ID absteigend sortiert, einschliesslich zugewiesener Teilaufgaben. Browserpruefungen fuer Navigation, Entwuerfe, Sortierung, Einstellungen und schmale Ansichten erfolgreich
 26.09.2026 19:29;0.0.1+121;Feature;Dateiablage im Header des Dateibrowsers konfigurieren, wechseln oder entfernen. Entfernen einer lokalen Ablage loescht nach Bestaetigung das Projektverzeichnis samt Inhalt, WebDAV-Verzeichnisse bleiben erhalten. Rechte, Pfadbegrenzung, Token-Widerruf und Fehlerbehandlung durch Backend- und Browsertests geprueft
 26.09.2026 19:29;0.0.1+121;Aenderung;Aufgeklappte Projekte blenden die anderen Listenzeilen und den Haupttabellenkopf aus. Zuklappen stellt die gefilterte und sortierte Liste wieder her, der Teilaufgaben-Tabellenkopf bleibt sichtbar. Auf-/Zuklapp-Button folgt dem sichtbaren Zustand, Browsertests decken Filter, Sortierung, Neuladen und gesammeltes Auf-/Zuklappen ab

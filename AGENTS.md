@@ -37,7 +37,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 ## Wichtige Features
 
 - Aufgaben und Projekte mit Teilaufgaben, Positionen, Prioritaet, Deadline und Status.
-- Beim Aufklappen eines Projekts werden die anderen Listenzeilen und der Tabellenkopf ausgeblendet. Zuklappen stellt die gefilterte/sortierte Liste wieder her, der Teilaufgaben-Tabellenkopf bleibt sichtbar.
+- Beim Aufklappen eines Projekts werden die anderen Listenzeilen, der Tabellenkopf und die Filterleiste ausgeblendet. Zuklappen stellt die gefilterte/sortierte Liste samt Filterleiste wieder her, der Teilaufgaben-Tabellenkopf bleibt sichtbar.
 - Abhaengigkeiten zwischen Teilaufgaben und optional vom Projektknoten.
 - Interaktiver Netzplan mit `vis-network`.
 - Teammitglieder pro Projekt mit `can_read`, `can_edit`, `can_create`.

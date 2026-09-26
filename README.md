@@ -94,8 +94,9 @@ The task list defaults to descending ID order. The **Tareas** link in the compac
 header returns to the task list.
 
 Expanding a project shows its row and details while hiding the other list rows
-and the main table header. Collapsing it restores the list with its current
-filters and sort order. The subtask table header stays visible within the project.
+and the main table header and filter bar. Collapsing it restores the list and
+filter bar with the current filters and sort order. The subtask table header
+stays visible within the project.
 
 ### File storage
 

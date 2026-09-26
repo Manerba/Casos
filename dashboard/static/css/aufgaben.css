@@ -8,6 +8,11 @@
     display: none;
 }
 
+.main-app:has(#aufgabenTableContainer > .table-body > .project-focus.expanded) > .filter-bar {
+    /* Der Router setzt die Sichtbarkeit der Filterleiste als Inline-Style. */
+    display: none !important;
+}
+
 /* ----------------------------------------
    Control Bar
    ---------------------------------------- */
