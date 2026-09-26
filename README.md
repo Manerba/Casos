@@ -91,7 +91,9 @@ All configuration is managed through the **Admin Panel** at `http://localhost:85
 ### Project view
 
 The task list defaults to descending ID order. The **Tareas** link in the compact
-header returns to the task list.
+header returns to the task list. The column headings stay visible below the
+header and filter bar while scrolling, including when the filters wrap onto
+multiple lines.
 
 Expanding a project shows its row and details while hiding the other list rows
 and the main table header and filter bar. Collapsing it restores the list and

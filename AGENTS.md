@@ -118,6 +118,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 ## Frontend-Konventionen
 
 - Haupt-App zeigt die Aufgabenliste ohne Tab-Leiste in `dashboard/templates/index.html`. Der kompakte Header ist 44px hoch, der Titel `Tareas` verlinkt zur Aufgabenliste. Standardsortierung: angezeigte ID absteigend, inklusive positiver Teilaufgaben-IDs bei Pseudozeilen.
+- Der Haupttabellenkopf bleibt beim Scrollen unter Header und Filterleiste angeheftet. `app_core.js` misst deren Hoehe per `ResizeObserver` und setzt `--task-table-header-top`, damit auch umgebrochene oder ausgeblendete Filterleisten beruecksichtigt werden.
 - Admin-App hat Tabs `allgemein`, `benutzer`, `ldap`, `nextcloud`, `onlyoffice`, `mail`, `tls`, `mcp`.
 - `dashboard/static/js/app_core.js` enthaelt Theme, Settings, 401-Interceptor, CSRF-Header, Routing, DOM-Caching, Notifications, Modal- und Sanitizer-Helfer.
 - `showNotification(message, type)` unterstuetzt `info`, `success`, `error`.

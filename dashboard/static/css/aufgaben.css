@@ -2,6 +2,10 @@
    Aufgaben Tab - Styles
    ======================================== */
 
+.main-app #aufgabenTableContainer > .table-header {
+    top: var(--task-table-header-top, calc(var(--header-height) + var(--filter-bar-height)));
+}
+
 /* Projektansicht: Beim Zuklappen oder Neuladen erscheint die Liste wieder. */
 .table-header:has(+ .table-body > .project-focus.expanded),
 .table-body:has(> .project-focus.expanded) > .table-row-wrapper:not(.project-focus.expanded) {
