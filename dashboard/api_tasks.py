@@ -4,7 +4,6 @@ Tareas - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
 
 import asyncio
 import logging
-from collections import defaultdict
 from datetime import datetime
 from typing import Literal, Optional
 
@@ -20,6 +19,7 @@ from dashboard.components import Column, Filter, ExpandableTable
 from dashboard.mail_service import notify_event
 from dashboard.note_service import update_note_as_admin
 from dashboard.file_storage import ensure_local_directory, remove_local_directory, safe_rel_path, storage_type
+from dashboard.dependency_service import add_subtask_dependency, set_subtask_predecessors
 
 logger = logging.getLogger(__name__)
 
@@ -740,12 +740,7 @@ async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_
         )
         new_id = cursor.lastrowid
 
-        # Vorgaenger eintragen
-        for pred_id in subtask.predecessor_ids:
-            db.execute(
-                "INSERT OR IGNORE INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
-                (new_id, pred_id),
-            )
+        set_subtask_predecessors(db, new_id, subtask.predecessor_ids)
 
     log_change(user, "sub_task", new_id, "create", {
         "project_id": task_id, "name": subtask.name, "priority": subtask.priority,
@@ -830,22 +825,7 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(g
 
         # Vorgaenger aktualisieren (komplett ersetzen)
         if subtask.predecessor_ids is not None:
-            db.execute(
-                "DELETE FROM sub_task_dependencies WHERE sub_task_id = ?", (subtask_id,)
-            )
-            # depends_on_project aus predecessor_ids extrahieren
-            has_project_dep = 0 in subtask.predecessor_ids
-            db.execute(
-                "UPDATE sub_tasks SET depends_on_project = ? WHERE id = ?",
-                (1 if has_project_dep else 0, subtask_id),
-            )
-            for pred_id in subtask.predecessor_ids:
-                if pred_id == 0:
-                    continue  # Projektknoten wird ueber depends_on_project behandelt
-                db.execute(
-                    "INSERT OR IGNORE INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
-                    (subtask_id, pred_id),
-                )
+            set_subtask_predecessors(db, subtask_id, subtask.predecessor_ids)
 
     sub_changes: dict = {}
     for f in ("name", "area_id", "deadline", "priority", "status_percent",
@@ -970,96 +950,16 @@ async def add_dependency(task_id: int, dep: DependencyAction, user=Depends(get_c
         if not is_creator and not is_legacy and not user.get("is_admin"):
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
-        # Spezialfall: Projektknoten als Vorgaenger
-        if dep.from_id == 0:
-            to_st = db.execute(
-                "SELECT id, depends_on_project FROM sub_tasks WHERE id = ? AND project_id = ?",
-                (dep.to_id, task_id),
-            ).fetchone()
-            if not to_st:
-                raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
-            # Nur erlaubt wenn Ziel keine Vorgaenger hat
-            has_preds = db.execute(
-                "SELECT 1 FROM sub_task_dependencies WHERE sub_task_id = ?", (dep.to_id,)
-            ).fetchone()
-            if has_preds or to_st["depends_on_project"]:
-                raise HTTPException(status_code=400, detail="Nur erlaubt wenn keine Vorgaenger vorhanden")
-            db.execute(
-                "UPDATE sub_tasks SET depends_on_project = 1 WHERE id = ?", (dep.to_id,)
-            )
-            return {"message": "Projekt-Abhaengigkeit hinzugefuegt", "new_positions": {}}
-
-        # Beide Subtasks muessen zum Projekt gehoeren
-        from_st = db.execute(
-            "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?", (dep.from_id, task_id)
-        ).fetchone()
         to_st = db.execute(
             "SELECT id FROM sub_tasks WHERE id = ? AND project_id = ?", (dep.to_id, task_id)
         ).fetchone()
-        if not from_st or not to_st:
+        if not to_st:
             raise HTTPException(status_code=404, detail="Teilaufgabe nicht gefunden")
-
-        # Keine Self-Loops
-        if dep.from_id == dep.to_id:
-            raise HTTPException(status_code=400, detail="Self-Loop nicht erlaubt")
-
-        # Keine Duplikate
-        existing = db.execute(
-            "SELECT 1 FROM sub_task_dependencies WHERE sub_task_id = ? AND depends_on_id = ?",
-            (dep.to_id, dep.from_id),
-        ).fetchone()
-        if existing:
-            raise HTTPException(status_code=400, detail="Abhaengigkeit existiert bereits")
-
-        # Zykluserkennung: from_id darf nicht transitiv von to_id abhaengen
-        # BFS von from_id entlang depends_on_id-Kanten
-        all_deps = db.execute(
-            "SELECT d.sub_task_id, d.depends_on_id FROM sub_task_dependencies d "
-            "JOIN sub_tasks s ON d.sub_task_id = s.id WHERE s.project_id = ?", (task_id,)
-        ).fetchall()
-        adj = defaultdict(set)  # sub_task_id -> set of depends_on_ids (Vorgaenger)
-        adj_fwd = defaultdict(set)  # depends_on_id -> set of sub_task_ids (Nachfolger)
-        for d in all_deps:
-            adj[d["sub_task_id"]].add(d["depends_on_id"])
-            adj_fwd[d["depends_on_id"]].add(d["sub_task_id"])
-
-        # Pruefen ob to_id transitiv from_id erreichen kann (= Zyklus)
-        visited = set()
-        queue = [dep.to_id]
-        while queue:
-            nid = queue.pop(0)
-            if nid == dep.from_id:
-                raise HTTPException(status_code=400, detail="Zirkulaere Abhaengigkeit nicht erlaubt")
-            if nid in visited:
-                continue
-            visited.add(nid)
-            for succ in adj_fwd.get(nid, set()):
-                queue.append(succ)
-
-        # Transitive Redundanz: Pruefen ob from_id bereits transitiver Vorgaenger von to_id ist
-        visited_pred = set()
-        queue_pred = list(adj.get(dep.to_id, set()))
-        while queue_pred:
-            nid = queue_pred.pop(0)
-            if nid == dep.from_id:
-                raise HTTPException(status_code=400, detail="Transitiv redundante Abhaengigkeit")
-            if nid in visited_pred:
-                continue
-            visited_pred.add(nid)
-            for pred in adj.get(nid, set()):
-                queue_pred.append(pred)
-
-        # Dependency einfuegen
-        db.execute(
-            "INSERT INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
-            (dep.to_id, dep.from_id),
-        )
-
-        new_positions = {}
+        add_subtask_dependency(db, dep.to_id, dep.from_id)
 
     log_change(user, "dependency", dep.to_id, "create",
                {"depends_on_id": dep.from_id, "project_id": task_id})
-    return {"message": "Abhaengigkeit hinzugefuegt", "new_positions": new_positions}
+    return {"message": "Abhaengigkeit hinzugefuegt", "new_positions": {}}
 
 
 @router.post("/api/tasks/{task_id}/subtasks/remove-dependency")

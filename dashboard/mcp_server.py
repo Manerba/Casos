@@ -24,6 +24,7 @@ from dashboard.audit_log import log_change, diff_fields
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.task_types import normalize_task_type
 from dashboard.note_service import update_note_as_admin
+from dashboard.dependency_service import add_subtask_dependency, set_subtask_predecessors
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,13 @@ def _user() -> dict:
     if not u:
         raise ToolError("MCP-User-Kontext fehlt (Bearer-Token nicht akzeptiert?)")
     return u
+
+
+def _change_dependencies(operation, *args, **kwargs):
+    try:
+        return operation(*args, **kwargs)
+    except HTTPException as exc:
+        raise ToolError(exc.detail) from exc
 
 
 # ============================================================
@@ -341,11 +349,14 @@ def create_subtask(
     assigned_to: int | None = None,
     depends_on_project: bool = False,
 ) -> dict:
-    """Legt eine Teilaufgabe an. predecessor_ids = Liste der Vorgaenger-Subtask-IDs."""
+    """Legt eine Teilaufgabe an. Vorgaenger muessen zum Projekt gehoeren.
+    Keine Zyklen oder transitiv redundanten Abhaengigkeiten."""
     user = _user()
     if not name.strip():
         raise ToolError("name darf nicht leer sein")
-    predecessor_ids = predecessor_ids or []
+    predecessor_ids = list(predecessor_ids or [])
+    if depends_on_project and 0 not in predecessor_ids:
+        predecessor_ids.append(0)
     with db_transaction() as db:
         if not db.execute("SELECT id FROM tasks WHERE id = ?", (project_id,)).fetchone():
             raise ToolError(f"Projekt {project_id} nicht gefunden")
@@ -364,13 +375,7 @@ def create_subtask(
              next_pos, user["id"], assigned, 1 if depends_on_project else 0),
         )
         subtask_id = cursor.lastrowid
-        for pid in predecessor_ids:
-            if pid == 0:
-                continue
-            db.execute(
-                "INSERT OR IGNORE INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
-                (subtask_id, pid),
-            )
+        _change_dependencies(set_subtask_predecessors, db, subtask_id, predecessor_ids)
         row = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
     log_change(user, "sub_task", subtask_id, "create", {
         "project_id": project_id, "name": name, "description": description,
@@ -395,7 +400,8 @@ def update_subtask(
     predecessor_ids: list[int] | None = None,
 ) -> dict:
     """Aktualisiert eine Teilaufgabe. Nur uebergebene Felder werden geaendert.
-    predecessor_ids ersetzt KOMPLETT die bestehenden Vorgaenger."""
+    predecessor_ids ersetzt KOMPLETT die bestehenden Vorgaenger.
+    Keine Zyklen oder transitiv redundanten Abhaengigkeiten, auch nicht an anderen Teilaufgaben."""
     user = _user()
     with db_transaction() as db:
         before = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
@@ -425,19 +431,7 @@ def update_subtask(
             values.append(subtask_id)
             db.execute(f"UPDATE sub_tasks SET {', '.join(updates)} WHERE id = ?", values)
         if predecessor_ids is not None:
-            db.execute("DELETE FROM sub_task_dependencies WHERE sub_task_id = ?", (subtask_id,))
-            has_project_dep = 0 in predecessor_ids
-            db.execute(
-                "UPDATE sub_tasks SET depends_on_project = ? WHERE id = ?",
-                (1 if has_project_dep else 0, subtask_id),
-            )
-            for pid in predecessor_ids:
-                if pid == 0:
-                    continue
-                db.execute(
-                    "INSERT OR IGNORE INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
-                    (subtask_id, pid),
-                )
+            _change_dependencies(set_subtask_predecessors, db, subtask_id, predecessor_ids)
             new_vals["predecessor_ids"] = predecessor_ids
         after = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
         preds = db.execute(
@@ -589,23 +583,11 @@ def set_subtask_position(subtask_id: int, position_number: int) -> dict:
 @mcp.tool
 def add_dependency(subtask_id: int, depends_on_id: int) -> dict:
     """Fuegt eine Abhaengigkeit hinzu: subtask_id wartet auf depends_on_id.
-    depends_on_id=0 bedeutet 'haengt vom Projektknoten ab'."""
+    depends_on_id=0 bedeutet 'haengt vom Projektknoten ab'.
+    Zyklen und transitiv redundante Verbindungen werden abgewiesen."""
     user = _user()
     with db_transaction() as db:
-        if not db.execute("SELECT id FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone():
-            raise ToolError(f"Teilaufgabe {subtask_id} nicht gefunden")
-        if depends_on_id == 0:
-            db.execute(
-                "UPDATE sub_tasks SET depends_on_project = 1 WHERE id = ?",
-                (subtask_id,),
-            )
-        else:
-            if not db.execute("SELECT id FROM sub_tasks WHERE id = ?", (depends_on_id,)).fetchone():
-                raise ToolError(f"Vorgaenger {depends_on_id} nicht gefunden")
-            db.execute(
-                "INSERT OR IGNORE INTO sub_task_dependencies (sub_task_id, depends_on_id) VALUES (?, ?)",
-                (subtask_id, depends_on_id),
-            )
+        _change_dependencies(add_subtask_dependency, db, subtask_id, depends_on_id, allow_existing=True)
     log_change(user, "dependency", subtask_id, "create", {"depends_on_id": depends_on_id})
     return {"added": True, "subtask_id": subtask_id, "depends_on_id": depends_on_id}
 

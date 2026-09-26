@@ -100,6 +100,12 @@ and the main table header and filter bar. Collapsing it restores the list and
 filter bar with the current filters and sort order. The subtask table header
 stays visible within the project.
 
+Dependencies must belong to the same project and cannot form cycles or redundant
+direct links. If C depends on B and B depends on A, C only needs B as a direct
+predecessor. This is enforced in the UI, REST API and MCP tools, including when
+a new indirect path would make an existing direct link redundant. Replace the
+predecessor list or remove the redundant link before adding the new connection.
+
 ### File storage
 
 Open a task or project and choose **Dateiablage**. Select **Lokale Dateiablage**

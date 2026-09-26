@@ -126,6 +126,7 @@ def build_agent_metadata(request: Request | None = None) -> dict[str, Any]:
             "handoff.add creates a separate history item; handoff.delete removes a handoff by handoff_id.",
             "handoff_id is typed, e.g. task:123 or subtask:456; never pass a bare numeric entry id.",
             "Treat predecessor_ids as dependency edges; position_number is display order only.",
+            "Dependencies must stay within one project, without cycles or redundant direct edges. If C depends on B and B on A, C must not also depend directly on A.",
         ],
     }
 
@@ -164,6 +165,10 @@ Arbeitsregeln:
 - `note.list` liest editierbare User-Notizen; `note.delete` loescht nur die
   eine aktuelle Notiz des aufrufenden Users.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
+- Nur notwendige direkte Vorgaenger im selben Projekt angeben. Wenn C von B
+  und B von A abhaengt, darf C nicht zusaetzlich direkt von A abhaengen.
+  Das gilt auch, wenn eine neue Verbindung eine vorhandene direkte Kante
+  ueberfluessig machen wuerde. Vorgaengerlisten bei Bedarf komplett ersetzen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.
 - `assign_self` nutzen, wenn eine Session konkrete Bearbeitung uebernimmt.

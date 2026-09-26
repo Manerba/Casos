@@ -1129,6 +1129,7 @@ function renderSubTasks(taskId, subtasks) {
 
     const areasOptions = buildAreaOptions();
     const colCount = 12;
+    const canAddDependency = createDependencyValidator(subtasks);
 
     let html = `<table class="subtask-table">
         <thead>
@@ -1171,20 +1172,14 @@ function renderSubTasks(taskId, subtasks) {
         const dlISO = convertToISO(st.deadline);
 
         // Vorgaenger-Optionen und Chips (positionsunabhaengig, aber ohne Zyklen/Redundanz)
-        const transitivePreds = getTransitivePredecessors(st.id, subtasks);
-        const transitiveSuccessors = getTransitiveSuccessors(st.id, subtasks);
         let predOptions = '';
         // "Pos 0: Projekt" nur anbieten wenn keine Vorgaenger vorhanden
-        if (predIds.length === 0) {
+        if (canAddDependency(0, st.id)) {
             const projName = parentRow ? parentRow.name : 'Projekt';
             predOptions += `<option value="0">Pos. 0: ${escapeHtml(projName)}</option>`;
         }
         predOptions += subtasks
-            .filter(other =>
-                other.id !== st.id &&
-                !transitivePreds.has(other.id) &&
-                !transitiveSuccessors.has(other.id)
-            )
+            .filter(other => canAddDependency(other.id, st.id))
             .map(other => `<option value="${other.id}">Pos. ${other.position_number}: ${escapeHtml(other.name)}</option>`)
             .join('');
 
@@ -1545,7 +1540,7 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!resp.ok) throw new Error(t('common.saveError'));
+        await checkDependencyResponse(resp, 'common.saveError');
 
         if (!silent) {
             showNotification(t('subtask.saved'), 'success');
@@ -1592,7 +1587,7 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
         }
     } catch (error) {
         console.error('SubTask speichern fehlgeschlagen:', error);
-        showNotification(t('common.saveError'), 'error');
+        showNotification(error.message || t('common.saveError'), 'error');
     }
 }
 
@@ -1715,19 +1710,41 @@ function getTransitivePredecessors(subtaskId, subtasks) {
     return visited;
 }
 
-function getTransitiveSuccessors(subtaskId, subtasks) {
-    const visited = new Set();
-    const queue = [subtaskId];
-    while (queue.length > 0) {
-        const id = queue.shift();
-        subtasks.forEach(st => {
-            if ((st.predecessor_ids || []).includes(id) && !visited.has(st.id)) {
-                visited.add(st.id);
-                queue.push(st.id);
+function createDependencyValidator(subtasks) {
+    const byId = new Map(subtasks.map(st => [st.id, st]));
+    const ancestors = new Map(subtasks.map(st => [st.id, getTransitivePredecessors(st.id, subtasks)]));
+    ancestors.set(0, new Set());
+    // Nur bisher notwendige Kanten betrachten; Altfehler bleiben einzeln behebbar.
+    const requiredEdges = [];
+    for (const st of subtasks) {
+        const predecessors = st.predecessor_ids || [];
+        for (const predecessor of predecessors) {
+            if (!predecessors.some(other => other !== predecessor && ancestors.get(other)?.has(predecessor))) {
+                requiredEdges.push([st.id, predecessor]);
             }
-        });
+        }
     }
-    return visited;
+    return (predecessorId, subtaskId) => {
+        const target = byId.get(subtaskId);
+        if (!target || (predecessorId !== 0 && !byId.has(predecessorId)) || predecessorId === subtaskId) return false;
+        const predecessors = target.predecessor_ids || [];
+        if ((predecessorId === 0 && predecessors.length > 0) || predecessors.includes(0)) return false;
+        if (ancestors.get(subtaskId).has(predecessorId)) return false;
+        const sourceAncestors = ancestors.get(predecessorId);
+        if (sourceAncestors.has(subtaskId)) return false;
+        // Eine neue Verbindung kann auch eine bestehende direkte Kante an
+        // einer anderen Teilaufgabe durch einen laengeren Weg ersetzen.
+        return !requiredEdges.some(([child, parent]) =>
+            (child === subtaskId || ancestors.get(child).has(subtaskId)) &&
+            (parent === predecessorId || sourceAncestors.has(parent))
+        );
+    };
+}
+
+async function checkDependencyResponse(response, fallbackKey) {
+    if (response.ok) return;
+    const error = await response.json().catch(() => ({}));
+    throw new Error(typeof error.detail === 'string' ? error.detail : t(fallbackKey));
 }
 
 async function addPredecessor(taskId, subtaskId) {
@@ -1754,13 +1771,13 @@ async function addPredecessor(taskId, subtaskId) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ predecessor_ids: predIds }),
         });
-        if (!resp.ok) throw new Error(t('common.error'));
+        await checkDependencyResponse(resp, 'team.addError');
 
         // Tabelle neu laden
         await loadSubTasks(taskId);
     } catch (error) {
         console.error('Vorgaenger hinzufuegen fehlgeschlagen:', error);
-        showNotification(t('team.addError'), 'error');
+        showNotification(error.message || t('team.addError'), 'error');
     }
 }
 
@@ -1791,13 +1808,13 @@ async function addPredecessorDirect(taskId, subtaskId, selectEl) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ predecessor_ids: predIds }),
         });
-        if (!resp.ok) throw new Error(t('common.error'));
+        await checkDependencyResponse(resp, 'team.addError');
 
         // Tabelle neu laden
         await loadSubTasks(taskId);
     } catch (error) {
         console.error('Vorgaenger hinzufuegen fehlgeschlagen:', error);
-        showNotification(t('team.addError'), 'error');
+        showNotification(error.message || t('team.addError'), 'error');
     }
 }
 
@@ -1817,13 +1834,13 @@ async function removePredecessor(taskId, subtaskId, predIdToRemove) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ predecessor_ids: predIds }),
         });
-        if (!resp.ok) throw new Error(t('common.error'));
+        await checkDependencyResponse(resp, 'team.removeError');
 
         // Tabelle neu laden
         await loadSubTasks(taskId);
     } catch (error) {
         console.error('Vorgaenger entfernen fehlgeschlagen:', error);
-        showNotification(t('team.removeError'), 'error');
+        showNotification(error.message || t('team.removeError'), 'error');
     }
 }
 
@@ -2264,56 +2281,8 @@ function _getNetzplanEdgeDirection(fromId, toId, positionMap) {
 }
 
 function _computeValidNetzplanTargets(sourceId, subtasks) {
-    // Spezialfall: Projektknoten (Node 0) - nur Nodes ohne Vorgaenger sind gueltig
-    if (sourceId === 0) {
-        const valid = new Set();
-        subtasks.forEach(target => {
-            const predIds = target.predecessor_ids || [];
-            if (predIds.length === 0) {
-                valid.add(target.id);
-            }
-        });
-        return valid;
-    }
-
-    const st = subtasks.find(s => s.id === sourceId);
-    if (!st) return new Set();
-
-    // Bereits direkte Nachfolger (sourceId ist Vorgaenger von diesen)
-    const directSuccessors = new Set();
-    subtasks.forEach(s => {
-        if ((s.predecessor_ids || []).includes(sourceId)) directSuccessors.add(s.id);
-    });
-
-    // Transitive Nachfolger von sourceId (wuerde Zyklus erzeugen)
-    const transitiveSuccessors = new Set();
-    const queue = [sourceId];
-    while (queue.length > 0) {
-        const nid = queue.shift();
-        subtasks.forEach(s => {
-            if ((s.predecessor_ids || []).includes(nid) && !transitiveSuccessors.has(s.id)) {
-                transitiveSuccessors.add(s.id);
-                queue.push(s.id);
-            }
-        });
-    }
-
-    // Transitive Vorgaenger von potentiellem Ziel: Wenn sourceId bereits transitiver
-    // Vorgaenger eines Ziels ist, waere die direkte Kante redundant
-    const valid = new Set();
-    subtasks.forEach(target => {
-        if (target.id === sourceId) return; // sich selbst
-        if (directSuccessors.has(target.id)) return; // bereits direkte Abhaengigkeit
-        if (transitiveSuccessors.has(target.id)) return; // wuerde Zyklus erzeugen
-
-        // Pruefen auf transitive Redundanz: ist sourceId bereits transitiver Vorgaenger von target?
-        const transitivePreds = getTransitivePredecessors(target.id, subtasks);
-        if (transitivePreds.has(sourceId)) return; // transitiv redundant
-
-        valid.add(target.id);
-    });
-
-    return valid;
+    const canAddDependency = createDependencyValidator(subtasks);
+    return new Set(subtasks.filter(target => canAddDependency(sourceId, target.id)).map(target => target.id));
 }
 
 function _netzplanValue(value) {
@@ -3320,26 +3289,32 @@ function openNetzplan(taskId) {
         } else if (entry.type === 'dependency-add') {
             // Undo: Dependency wieder entfernen
             try {
-                await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
+                const resp = await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
                 });
+                await checkDependencyResponse(resp, 'netzplan.undoFailed');
                 await _rebuildNetzplanWithPositions(entry.positionsBefore);
             } catch (e) {
-                showNotification(t('netzplan.undoFailed'), 'error');
+                netzplanHistoryPointer++;
+                _updateUndoRedoButtons();
+                showNotification(e.message || t('netzplan.undoFailed'), 'error');
             }
         } else if (entry.type === 'dependency-remove') {
             // Undo: Dependency wieder hinzufuegen
             try {
-                await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
+                const resp = await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
                 });
+                await checkDependencyResponse(resp, 'netzplan.undoFailed');
                 await _rebuildNetzplanWithPositions(entry.positionsBefore);
             } catch (e) {
-                showNotification(t('netzplan.undoFailed'), 'error');
+                netzplanHistoryPointer++;
+                _updateUndoRedoButtons();
+                showNotification(e.message || t('netzplan.undoFailed'), 'error');
             }
         }
     }
@@ -3359,26 +3334,32 @@ function openNetzplan(taskId) {
         } else if (entry.type === 'dependency-add') {
             // Redo: Dependency wieder hinzufuegen
             try {
-                await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
+                const resp = await fetch(`/api/tasks/${taskId}/subtasks/add-dependency`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
                 });
+                await checkDependencyResponse(resp, 'netzplan.redoFailed');
                 await _rebuildNetzplanWithPositions(entry.positionsAfter);
             } catch (e) {
-                showNotification(t('netzplan.redoFailed'), 'error');
+                netzplanHistoryPointer--;
+                _updateUndoRedoButtons();
+                showNotification(e.message || t('netzplan.redoFailed'), 'error');
             }
         } else if (entry.type === 'dependency-remove') {
             // Redo: Dependency wieder entfernen
             try {
-                await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
+                const resp = await fetch(`/api/tasks/${taskId}/subtasks/remove-dependency`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ from_id: entry.fromId, to_id: entry.toId }),
                 });
+                await checkDependencyResponse(resp, 'netzplan.redoFailed');
                 await _rebuildNetzplanWithPositions(entry.positionsAfter);
             } catch (e) {
-                showNotification(t('netzplan.redoFailed'), 'error');
+                netzplanHistoryPointer--;
+                _updateUndoRedoButtons();
+                showNotification(e.message || t('netzplan.redoFailed'), 'error');
             }
         }
     }

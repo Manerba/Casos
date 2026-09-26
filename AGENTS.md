@@ -39,6 +39,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Aufgaben und Projekte mit Teilaufgaben, Positionen, Prioritaet, Deadline und Status.
 - Beim Aufklappen eines Projekts werden die anderen Listenzeilen, der Tabellenkopf und die Filterleiste ausgeblendet. Zuklappen stellt die gefilterte/sortierte Liste samt Filterleiste wieder her, der Teilaufgaben-Tabellenkopf bleibt sichtbar.
 - Abhaengigkeiten zwischen Teilaufgaben und optional vom Projektknoten.
+- `dashboard/dependency_service.py` prueft Vorgaenger-Aenderungen aus REST und MCP gemeinsam: gleiches Projekt, keine Selbstbezuege/Zyklen und keine neuen transitiv redundanten Kanten, auch nicht an anderen Teilaufgaben. Pruefung und Schreiben laufen unter einer DB-Schreibsperre. Bestehende Alt-Redundanzen koennen schrittweise entfernt werden. Projektknoten `0` ist nur als alleiniger Vorgaenger erlaubt. UI-Auswahl und Netzplan verwenden dieselben Regeln.
 - Interaktiver Netzplan mit `vis-network`.
 - Teammitglieder pro Projekt mit `can_read`, `can_edit`, `can_create`.
 - Aufgaben-/Teilaufgaben-Zuweisung und Notizen fuer Zugewiesene.
