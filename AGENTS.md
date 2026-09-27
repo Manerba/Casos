@@ -38,6 +38,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 - Aufgaben und Projekte mit Teilaufgaben, Positionen, Prioritaet, Deadline und Status.
 - Beim Aufklappen eines Projekts werden die anderen Listenzeilen, der Tabellenkopf und die Filterleiste ausgeblendet. Zuklappen stellt die gefilterte/sortierte Liste samt Filterleiste wieder her, der Teilaufgaben-Tabellenkopf bleibt sichtbar.
+- Beim Zuklappen eines Projekts beruecksichtigt die Scrollkorrektur die aktuell gemessenen Hoehen von App-Header, Filterleiste und Tabellenkopf. Die Projektzeile bleibt mit 4px Abstand darunter sichtbar, soweit die natuerlichen Scrollgrenzen dies erlauben.
 - Beim Zuklappen einer Teilaufgabe bleibt deren Tabellenzeile an derselben Bildschirmposition. `--project-scroll-min-height` reserviert bei Bedarf Leerraum ausserhalb des Projektrahmens, der beim Zurueckscrollen abgebaut wird und nur in der Projektansicht gilt.
 - Teilaufgaben oeffnen/schliessen mit einer 240-ms-Animation fuer Hoehe und Deckkraft. CSS Grid beruecksichtigt wechselnde Inhaltshoehen, schnelle Klicks kehren die laufende Animation um. Beim Wiederherstellen nach einem Daten-Reload und bei `prefers-reduced-motion` erfolgt der Wechsel ohne Animation.
 - Abhaengigkeiten zwischen Teilaufgaben und optional vom Projektknoten.

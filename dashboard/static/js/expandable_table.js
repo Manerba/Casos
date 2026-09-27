@@ -827,8 +827,20 @@ class ExpandableTable {
                 if (this.options.onRowCollapsed) {
                     this.options.onRowCollapsed(rowId, wrapper);
                 }
+                let targetTop = rowTop;
+                if (wrapper.classList.contains('project-focus')) {
+                    // Filter und Tabellenkopf sind jetzt wieder sichtbar. Ihre Hoehen
+                    // direkt messen; der ResizeObserver aktualisiert den Sticky-Abstand erst spaeter.
+                    const header = document.querySelector('.main-app > .header');
+                    const filterBar = document.getElementById('filterBar');
+                    const tableHeader = document.getElementById(this.containerId)?.querySelector(':scope > .table-header');
+                    const visibleTop = [header, filterBar, tableHeader].reduce(
+                        (height, element) => height + (element?.getBoundingClientRect().height || 0), 0,
+                    );
+                    targetTop = Math.max(rowTop, visibleTop + 4);
+                }
                 const newRowTop = wrapper.getBoundingClientRect().top;
-                window.scrollBy(0, newRowTop - rowTop);
+                window.scrollTo({ top: window.scrollY + newRowTop - targetTop, left: window.scrollX, behavior: 'instant' });
             }
         }
     }
