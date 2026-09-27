@@ -1,4 +1,4 @@
-"""Browserpruefung: Teilaufgaben zuklappen, ohne die Zeile zu verschieben.
+"""Browserpruefung: Teilaufgaben animieren, ohne die Zeile zu verschieben.
 
 Nutzt lokale Assets, gemockte APIs und die optionale Playwright-Installation.
 """
@@ -64,8 +64,12 @@ def main():
             expect(page.locator('.subtask-row')).to_have_count(len(subtasks))
 
             def settle():
-                page.evaluate('''() => new Promise(resolve =>
-                    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve))))''')
+                page.evaluate('''async () => {
+                    await Promise.all([...document.querySelectorAll('.subtask-detail-reveal')]
+                        .flatMap(el => el.getAnimations()).map(animation => animation.finished.catch(() => {})));
+                    await new Promise(resolve => requestAnimationFrame(() =>
+                        requestAnimationFrame(() => requestAnimationFrame(resolve))));
+                }''')
 
             def row(subtask_id):
                 return page.locator(f'tr[data-subtask-id="{subtask_id}"]')
@@ -84,12 +88,45 @@ def main():
                 row(subtask_id).evaluate('(el, top) => window.scrollBy(0, el.getBoundingClientRect().top - top)', top)
                 settle()
                 before = row(subtask_id).bounding_box()['y']
+                initial_height = page.locator(f'tr[data-subtask-detail-id="{subtask_id}"]').bounding_box()['height']
                 icon = row(subtask_id).locator('.subtask-expand-icon').bounding_box()
+                page.evaluate('''id => {
+                    const row = document.querySelector(`tr[data-subtask-id="${id}"]`);
+                    const detail = document.querySelector(`tr[data-subtask-detail-id="${id}"]`);
+                    window.collapseSamples = new Promise(resolve => {
+                        const samples = [];
+                        const sample = () => {
+                            samples.push({top: row.getBoundingClientRect().top, height: detail.getBoundingClientRect().height});
+                            if (!detail.classList.contains('visible') || samples.length >= 120) resolve(samples);
+                            else requestAnimationFrame(sample);
+                        };
+                        requestAnimationFrame(sample);
+                    });
+                }''', subtask_id)
                 page.mouse.click(icon['x'] + icon['width'] / 2, icon['y'] + icon['height'] / 2)
                 expect(page.locator(f'tr[data-subtask-detail-id="{subtask_id}"]')).to_be_hidden()
                 settle()
                 after = row(subtask_id).bounding_box()['y']
                 assert abs(after - before) < 1, (width, subtask_id, before, after)
+                samples = page.evaluate('collapseSamples')
+                assert any(2 < sample['height'] < initial_height - 2 for sample in samples), samples
+                assert all(abs(sample['top'] - before) < 1 for sample in samples), (width, before, samples)
+
+            # Opening grows through intermediate heights, including on the first lazy load.
+            opening_heights = page.evaluate('''async () => {
+                toggleSubTaskDetail(1, 101);
+                const reveal = document.querySelector('[data-subtask-detail-id="101"] .subtask-detail-reveal');
+                const heights = [reveal.getBoundingClientRect().height];
+                let done = false;
+                Promise.all(reveal.getAnimations().map(animation => animation.finished)).then(() => done = true);
+                do {
+                    await new Promise(requestAnimationFrame);
+                    heights.push(reveal.getBoundingClientRect().height);
+                } while (!done && heights.length < 120);
+                return heights;
+            }''')
+            assert any(2 < value < opening_heights[-1] - 2 for value in opening_heights), opening_heights
+            collapse_at(101)
 
             # Near the end, the viewport needs space below the project after collapse.
             expand(128)
@@ -118,6 +155,46 @@ def main():
             collapse_at(101)
             assert abs(body.bounding_box()['height'] - project_row.bounding_box()['height']) < 2
 
+            # Fast repeated clicks reverse the current animation and keep the final intent.
+            page.evaluate('''async () => {
+                toggleSubTaskDetail(1, 128);
+                await new Promise(resolve => setTimeout(resolve, 70));
+                toggleSubTaskDetail(1, 128);
+                await new Promise(resolve => setTimeout(resolve, 40));
+                toggleSubTaskDetail(1, 128);
+            }''')
+            settle()
+            expect(row(128)).to_have_class('subtask-row expanded')
+            expect(page.locator('[data-subtask-detail-id="128"]')).to_be_visible()
+            collapse_at(128)
+
+            # Rebuilding data preserves open rows directly; reduced motion disables transitions.
+            expand(128)
+            page.evaluate('loadSubTasks(1)')
+            expect(row(128)).to_have_class('subtask-row expanded')
+            assert page.locator('.subtask-detail-reveal').evaluate_all('(items) => items.flatMap(el => el.getAnimations()).length') == 0
+            page.emulate_media(reduced_motion='reduce')
+            page.evaluate('toggleSubTaskDetail(1, 128)')
+            expect(page.locator('[data-subtask-detail-id="128"]')).to_be_hidden()
+            page.evaluate('toggleSubTaskDetail(1, 128)')
+            expect(page.locator('[data-subtask-detail-id="128"]')).to_be_visible()
+            assert page.locator('.subtask-detail-reveal').evaluate_all('(items) => items.flatMap(el => el.getAnimations()).length') == 0
+            page.evaluate('toggleSubTaskDetail(1, 128)')
+            page.emulate_media(reduced_motion='no-preference')
+
+            # Leaving the project during a subtask animation must not restore stale positions.
+            expand(128)
+            page.evaluate('''() => {
+                toggleSubTaskDetail(1, 128);
+                aufgabenTable.toggleRow('1');
+                window.scrollTo(0, 0);
+            }''')
+            settle()
+            assert page.evaluate('window.scrollY') == 0
+            assert page.evaluate('document.documentElement.scrollHeight') == height
+            project_row.locator(':scope > .table-row > .expand-icon').click()
+            expect(page.locator('.subtask-row')).to_have_count(len(subtasks))
+
             # Closing the project and navigating home both restore the ordinary list height.
             expand(128)
             collapse_at(128)
@@ -137,7 +214,7 @@ def main():
             assert errors == [], errors
             page.close()
         browser.close()
-    print('Subtask scroll checks passed: stable rows, space below the frame, repeated toggles, scrolling up and project/list navigation at two viewport sizes.')
+    print('Subtask animation/scroll checks passed: intermediate heights, stable rows throughout collapse, fast reversals, reduced motion, reloads and project/list navigation at two viewport sizes.')
 
 
 if __name__ == '__main__':

@@ -1110,7 +1110,7 @@ async function loadSubTasks(taskId) {
         }
 
         // Expanded-State wiederherstellen
-        expandedIds.forEach(id => toggleSubTaskDetail(taskId, id));
+        expandedIds.forEach(id => toggleSubTaskDetail(taskId, id, false));
     } catch (error) {
         console.error('SubTasks laden fehlgeschlagen:', error);
         container.innerHTML = `<div class="table-error">${t('common.loadError')}</div>`;
@@ -1255,7 +1255,8 @@ function renderSubTasks(taskId, subtasks) {
         // Detail-Zeile (versteckt): nur noch Beschreibung/WYSIWYG
         html += `<tr class="subtask-detail-row" data-subtask-detail-id="${st.id}">
             <td colspan="${colCount}">
-                <div class="subtask-detail-content">`;
+                <div class="subtask-detail-reveal"><div class="subtask-detail-clip">
+                    <div class="subtask-detail-content">`;
 
         // WYSIWYG oder Readonly-Beschreibung
         if (!parentPerm.isAdmin && isSubCreator && isSubAssigned) {
@@ -1276,7 +1277,7 @@ function renderSubTasks(taskId, subtasks) {
             <div class="subtask-notes-content" id="stNoteEntriesContent_${st.id}"><em>${t('common.loading')}</em></div>
         </div>`;
 
-        html += `</div>
+        html += `</div></div></div>
             </td>
         </tr>`;
     });
@@ -1434,7 +1435,46 @@ window.addEventListener('scroll', () => {
     if (neededHeight < reservedHeight) reserveProjectScrollSpace(tableBody);
 }, { passive: true });
 
-async function toggleSubTaskDetail(taskId, subtaskId) {
+function restoreSubtaskRowPosition(dataRow, rowTop) {
+    const rowShift = dataRow.getBoundingClientRect().top - rowTop;
+    // Auch das Anpassen des Leerraums kann scrollY begrenzen: absolutes Ziel merken.
+    const scrollTop = window.scrollY + rowShift;
+    reserveProjectScrollSpace(dataRow.closest('.table-body'), rowShift);
+    window.scrollTo({ top: scrollTop, left: window.scrollX, behavior: 'instant' });
+}
+
+function animateSubtaskDetail(dataRow, detailRow, isExpanding, animate) {
+    const reveal = detailRow.querySelector('.subtask-detail-reveal');
+    const token = {};
+    detailRow._transitionToken = token;
+    detailRow.classList.toggle('no-transition', !animate);
+    // Den Startzustand nach display:none berechnen, bevor die Animation beginnt.
+    reveal.getBoundingClientRect();
+    detailRow.classList.toggle('open', isExpanding);
+
+    const finish = () => {
+        // Ein erneuter Klick darf von der vorherigen Animation nicht ueberschrieben werden.
+        if (detailRow._transitionToken !== token) return;
+        detailRow._transitionToken = null;
+        if (!isExpanding) {
+            const rowTop = dataRow.getBoundingClientRect().top;
+            detailRow.classList.remove('visible');
+            const project = dataRow.closest('.table-row-wrapper.expanded');
+            if (dataRow.isConnected && project?.getClientRects().length) {
+                restoreSubtaskRowPosition(dataRow, rowTop);
+            }
+        }
+        detailRow.classList.remove('no-transition');
+    };
+    const transitions = reveal.getAnimations();
+    if (transitions.length) {
+        Promise.all(transitions.map(transition => transition.finished.catch(() => {}))).then(finish);
+    } else {
+        finish();
+    }
+}
+
+async function toggleSubTaskDetail(taskId, subtaskId, animate = true) {
     const dataRow = document.querySelector(`tr.subtask-row[data-subtask-id="${subtaskId}"]`);
     const detailRow = document.querySelector(`tr.subtask-detail-row[data-subtask-detail-id="${subtaskId}"]`);
     if (!dataRow || !detailRow) return;
@@ -1446,19 +1486,11 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
     // Vor dem Verkuerzen Platz sichern, sonst begrenzt der Browser scrollY sofort.
     if (!isExpanding) reserveProjectScrollSpace(tableBody);
 
-    dataRow.classList.toggle('expanded');
-    detailRow.classList.toggle('visible');
+    dataRow.classList.toggle('expanded', isExpanding);
+    // Erst nach der Schliessanimation verstecken, damit die Tabellenhoehe weich abnimmt.
+    detailRow.classList.add('visible');
 
-    // Beim Zuklappen: Scroll-Position korrigieren
-    if (!isExpanding) {
-        const rowShift = dataRow.getBoundingClientRect().top - rowTop;
-        // Auch das Anpassen des Leerraums kann scrollY begrenzen: absolutes Ziel merken.
-        const scrollTop = window.scrollY + rowShift;
-        reserveProjectScrollSpace(tableBody, rowShift);
-        window.scrollTo({ top: scrollTop, left: window.scrollX, behavior: 'instant' });
-    }
-
-    // Beim Aufklappen: Editoren initialisieren + Notizen laden
+    // Editor vor dem Animationsstart aufbauen; CSS Grid folgt auch spaeter geladenen Notizen.
     if (isExpanding) {
         const editorContainer = document.getElementById(`stWysiwyg_${subtaskId}`);
         if (editorContainer && !editorContainer._editorInit) {
@@ -1473,7 +1505,11 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
             }
             editorContainer._editorInit = true;
         }
+    }
+    animateSubtaskDetail(dataRow, detailRow, isExpanding, animate);
+    if (!isExpanding) restoreSubtaskRowPosition(dataRow, rowTop);
 
+    if (isExpanding) {
         // Alle Teilaufgaben-Notizen lazy laden, inkl. MCP-/Agent-Notizen.
         const notesContent = document.getElementById(`stAllNotesContent_${subtaskId}`);
         if (notesContent && !notesContent._loaded) {
