@@ -1,4 +1,4 @@
-"""Browserpruefung: Projektzeilen bleiben beim Zuklappen unter den Sticky-Leisten sichtbar.
+"""Browserpruefung: Fester Tabellenkopf und sichtbare Projektzeilen beim Zuklappen.
 
 Nutzt lokale Assets, gemockte APIs und die optionale Playwright-Installation.
 """
@@ -64,6 +64,22 @@ def main():
                 page.evaluate('''() => new Promise(resolve => requestAnimationFrame(() =>
                     requestAnimationFrame(() => requestAnimationFrame(resolve))))''')
 
+            def check_sticky_header():
+                samples = []
+                for scroll_y in (0, 5, 15, 60, 400, 100000, 15, 5, 0):
+                    page.evaluate('y => window.scrollTo({top: y, behavior: "instant"})', scroll_y)
+                    settle()
+                    samples.append(page.evaluate('''() => {
+                        const header = document.querySelector('#aufgabenTableContainer > .table-header').getBoundingClientRect();
+                        const filter = document.getElementById('filterBar').getBoundingClientRect();
+                        return {top: header.top, filterBottom: filter.bottom, scrollY};
+                    }'''))
+                assert max(sample['scrollY'] for sample in samples) > 400, (width, samples)
+                assert max(sample['top'] for sample in samples) - min(sample['top'] for sample in samples) < 1, (width, samples)
+                assert all(abs(sample['top'] - sample['filterBottom']) < 1 for sample in samples), (width, samples)
+
+            check_sticky_header()
+
             def check_collapse(task_id):
                 icon = page.locator(f'[data-row-id="{task_id}"] > .table-row > .expand-icon')
                 icon.click()
@@ -103,6 +119,13 @@ def main():
             check_collapse(25)
             assert page.locator('.table-row-wrapper').evaluate_all('(rows) => rows.map(row => Number(row.dataset.rowId))') == list(range(1, 51))
             assert page.evaluate("aufgabenTable.filterValues.typeFilter") == 'projekt'
+            check_sticky_header()
+
+            # Re-measure wrapped filters when the viewport changes while scrolled down.
+            page.evaluate('window.scrollTo(0, 400)')
+            page.set_viewport_size({'width': 640 if width == 1440 else 1440, 'height': height})
+            check_sticky_header()
+            page.set_viewport_size({'width': width, 'height': height})
 
             # At a short list's natural end the browser keeps the whole project row visible.
             page.evaluate("applySearchFilter('Projekt 25')")
@@ -111,7 +134,7 @@ def main():
             assert errors == [], errors
             page.close()
         browser.close()
-    print('Project scroll checks passed: first/middle/last rows, repeated collapse, wrapped filters, sorting, filtering and short lists at two viewport sizes.')
+    print('Project scroll checks passed: stationary header from the first scroll step, viewport resizing, first/middle/last rows, repeated collapse, wrapped filters, sorting, filtering and short lists at two viewport sizes.')
 
 
 if __name__ == '__main__':
