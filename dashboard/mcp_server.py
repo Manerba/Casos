@@ -655,7 +655,7 @@ def _subtask_readable(db, row, user: dict) -> bool:
         return True
     if row["task_created_by"] is None:
         return True
-    if row["task_created_by"] == user["id"] or row["subtask_assigned_to"] == user["id"]:
+    if user["id"] in (row["task_created_by"], row["task_assigned_to"], row["subtask_assigned_to"]):
         return True
 
     membership = db.execute(
@@ -668,7 +668,7 @@ def _subtask_readable(db, row, user: dict) -> bool:
 def _require_subtask_read_access(db, task_id: int, subtask_id: int, user: dict):
     row = db.execute(
         """SELECT st.id, st.project_id, st.assigned_to AS subtask_assigned_to,
-                  t.created_by AS task_created_by
+                  t.created_by AS task_created_by, t.assigned_to AS task_assigned_to
            FROM sub_tasks st
            JOIN tasks t ON t.id = st.project_id
            WHERE st.id = ? AND st.project_id = ?""",
@@ -684,7 +684,7 @@ def _require_subtask_read_access(db, task_id: int, subtask_id: int, user: dict):
 def _can_read_subtask(db, task_id: int, subtask_id: int, user: dict) -> bool:
     row = db.execute(
         """SELECT st.id, st.project_id, st.assigned_to AS subtask_assigned_to,
-                  t.created_by AS task_created_by
+                  t.created_by AS task_created_by, t.assigned_to AS task_assigned_to
            FROM sub_tasks st
            JOIN tasks t ON t.id = st.project_id
            WHERE st.id = ? AND st.project_id = ?""",
@@ -716,6 +716,7 @@ def _subtask_visibility_sql(task_alias: str, subtask_alias: str, user: dict) -> 
     return (
         f"({task_alias}.created_by IS NULL "
         f"OR {task_alias}.created_by = ? "
+        f"OR {task_alias}.assigned_to = ? "
         f"OR {subtask_alias}.assigned_to = ? "
         f"OR EXISTS ("
         f"SELECT 1 FROM project_members pm "
@@ -723,7 +724,7 @@ def _subtask_visibility_sql(task_alias: str, subtask_alias: str, user: dict) -> 
         f"AND pm.user_id = ? "
         f"AND pm.can_read = 1"
         f"))",
-        [user["id"], user["id"], user["id"]],
+        [user["id"], user["id"], user["id"], user["id"]],
     )
 
 
@@ -1030,7 +1031,7 @@ def handoff_delete(task_id: int, handoff_id: str, subtask_id: int | None = None)
                               st.id AS subtask_id,
                               st.project_id,
                               st.assigned_to AS subtask_assigned_to,
-                              t.created_by AS task_created_by
+                              t.created_by AS task_created_by, t.assigned_to AS task_assigned_to
                        FROM sub_task_note_entries sne
                        JOIN sub_tasks st ON st.id = sne.sub_task_id
                        JOIN tasks t ON t.id = st.project_id

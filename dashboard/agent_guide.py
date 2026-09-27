@@ -123,6 +123,7 @@ def build_agent_metadata(request: Request | None = None) -> dict[str, Any]:
             "note.write is an upsert for the current user's one editable note and overwrites that note on repeated calls.",
             "Admins can correct existing content with note.update and handoff.update; author and creation time are preserved.",
             "note.delete removes only the current user's editable note.",
+            "Project assignees can read notes and handoffs on all subtasks and write their own, without individual subtask assignments. For subtasks, task_id is the project ID and subtask_id is the subtask ID.",
             "handoff.add creates a separate history item; handoff.delete removes a handoff by handoff_id.",
             "handoff_id is typed, e.g. task:123 or subtask:456; never pass a bare numeric entry id.",
             "Treat predecessor_ids as dependency edges; position_number is display order only.",
@@ -164,6 +165,9 @@ Arbeitsregeln:
   wiederholte Aufrufe ueberschreiben diese Notiz.
 - `note.list` liest editierbare User-Notizen; `note.delete` loescht nur die
   eine aktuelle Notiz des aufrufenden Users.
+- Eine Projektzuweisung erlaubt Lesen der Notizen/Handoffs aller Teilaufgaben
+  und Schreiben eigener Beitraege, ohne Einzelzuweisung. Dabei ist `task_id`
+  die Projekt-ID und `subtask_id` die Teilaufgaben-ID.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Nur notwendige direkte Vorgaenger im selben Projekt angeben. Wenn C von B
   und B von A abhaengt, darf C nicht zusaetzlich direkt von A abhaengen.

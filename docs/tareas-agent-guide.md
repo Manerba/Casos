@@ -138,6 +138,9 @@ Arbeitsregeln:
   wiederholte Aufrufe ueberschreiben diese Notiz.
 - `note.list` liest editierbare User-Notizen; `note.delete` loescht nur die
   eine aktuelle Notiz des aufrufenden Users.
+- Eine Projektzuweisung erlaubt Lesen der Notizen/Handoffs aller Teilaufgaben
+  und Schreiben eigener Beitraege, ohne Einzelzuweisung. Dabei ist `task_id`
+  die Projekt-ID und `subtask_id` die Teilaufgaben-ID.
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.

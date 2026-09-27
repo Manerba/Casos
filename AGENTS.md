@@ -45,6 +45,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Interaktiver Netzplan mit `vis-network`.
 - Teammitglieder pro Projekt mit `can_read`, `can_edit`, `can_create`.
 - Aufgaben-/Teilaufgaben-Zuweisung und Notizen fuer Zugewiesene.
+- Projektzuweisungen vererben Leserechte auf alle Teilaufgaben samt Notizen/Handoffs in REST, MCP und MCP-Suche. Eigene Notizen und Handoffs sind damit ebenfalls erlaubt, ohne zusaetzliche Teilaufgaben-Zuweisung. Fremde Inhalte bleiben vor Aenderungen durch normale Nutzer geschuetzt. Die REST-Teilaufgabenliste gewaehrt durch die Projektzuweisung allein keine Bearbeitungs-/Erstellungsrechte.
 - WYSIWYG-Beschreibungen mit zentralem HTML-Sanitizer in `app_core.js`.
 - Nextcloud/WebDAV-Dateiablage ueber `dashboard/webdav.py` und `api_nextcloud.py`.
 - Alternativ lokale Dateiablage pro Aufgabe/Projekt unter `data/files/task-<ID>/`, gemeinsame Dateischnittstelle in `dashboard/file_storage.py`. Auswahl ueber `file_storage_type` (`local`, `webdav`, `none` in der API), bestehende `nextcloud_path`-Zuordnungen bleiben kompatibel. Lokale Dateien bei Backups einschliessen.

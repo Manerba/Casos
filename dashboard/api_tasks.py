@@ -199,7 +199,7 @@ def _require_subtask_read_access(db, task_id: int, subtask_id: int, user: dict):
     """Prueft Leserechte fuer eine Teilaufgabe und liefert die Zeile."""
     row = db.execute(
         """SELECT st.id, st.project_id, st.assigned_to AS subtask_assigned_to,
-                  t.created_by AS task_created_by
+                  t.created_by AS task_created_by, t.assigned_to AS task_assigned_to
            FROM sub_tasks st
            JOIN tasks t ON t.id = st.project_id
            WHERE st.id = ? AND st.project_id = ?""",
@@ -212,7 +212,7 @@ def _require_subtask_read_access(db, task_id: int, subtask_id: int, user: dict):
         return row
     if row["task_created_by"] is None:
         return row
-    if row["task_created_by"] == user["id"] or row["subtask_assigned_to"] == user["id"]:
+    if user["id"] in (row["task_created_by"], row["task_assigned_to"], row["subtask_assigned_to"]):
         return row
 
     membership = db.execute(
@@ -603,12 +603,13 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
     with db_query() as db:
         # Projekt pruefen
         task = db.execute(
-            "SELECT id, created_by, netzplan_project_x, netzplan_project_y FROM tasks WHERE id = ?", (task_id,)
+            "SELECT id, created_by, assigned_to, netzplan_project_x, netzplan_project_y FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
         if not task:
             raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
 
         is_creator = task["created_by"] == user["id"]
+        is_project_assignee = task["assigned_to"] == user["id"]
         is_legacy = task["created_by"] is None
         is_admin = bool(user.get("is_admin"))
 
@@ -655,17 +656,18 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
                 permissions = {"can_read": True, "can_edit": True, "can_create": True}
             elif membership:
                 permissions = {
-                    "can_read": bool(membership["can_read"]),
+                    "can_read": bool(membership["can_read"]) or is_project_assignee,
                     "can_edit": bool(membership["can_edit"]),
                     "can_create": bool(membership["can_create"]),
                 }
                 if not permissions["can_read"]:
                     continue
             else:
-                # Kein Zugriff (weder Ersteller, Legacy, noch Teammitglied)
-                # Zugewiesene sehen nur ihre zugewiesene Subtask
                 if row["assigned_to"] == user["id"]:
                     permissions = {"can_read": True, "can_edit": True, "can_create": False}
+                elif is_project_assignee:
+                    # Die Projektzuweisung vererbt Lesen und eigene Notizen, keine Bearbeitungsrechte.
+                    permissions = {"can_read": True, "can_edit": False, "can_create": False}
                 else:
                     continue
 

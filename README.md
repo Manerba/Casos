@@ -140,6 +140,7 @@ Tareas exposes a Model Context Protocol (MCP) server at `/mcp/` for AI agents an
 - MCP tokens are created in the Admin Panel under **MCP** and are shown only once.
 - Tokens are stored as SHA-256 hashes; revoked tokens stop working immediately.
 - Every token is mapped to its own `mcp` user in the database.
+- Assigning a project to a user grants access to notes and handoffs on all its subtasks, including writing their own notes and handoffs. Individual subtask assignments are not required for this access.
 - Write operations are recorded in the audit log and can be reviewed in the Admin Panel. Admin-only `note.update` and `handoff.update` correct existing content while preserving its author and creation time.
 - Available tools cover projects, subtasks, dependencies, editable notes (`note.*`), handoffs/progress history (`handoff.*`), users, areas, search, self-assignment, and `whoami`.
 
