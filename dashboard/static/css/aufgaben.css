@@ -12,6 +12,11 @@
     display: none;
 }
 
+/* Scrollraum ausserhalb des Projektrahmens, solange Teilaufgaben zugeklappt werden. */
+.table-body:has(> .project-focus.expanded) {
+    min-height: var(--project-scroll-min-height, 0px);
+}
+
 .main-app:has(#aufgabenTableContainer > .table-body > .project-focus.expanded) > .filter-bar {
     /* Der Router setzt die Sichtbarkeit der Filterleiste als Inline-Style. */
     display: none !important;

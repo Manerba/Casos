@@ -545,6 +545,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
 
     if (row.task_type === 'projekt') {
         const wrapper = detailElement.closest('.table-row-wrapper');
+        wrapper.parentElement.style.removeProperty('--project-scroll-min-height');
         // Auch bei gesammelt geoeffneten Zeilen bleibt genau ein Projekt sichtbar.
         wrapper.parentElement.querySelectorAll(':scope > .project-focus').forEach(other => {
             if (other === wrapper) return;
@@ -1418,6 +1419,21 @@ async function loadSubtaskNoteEntries(taskId, subtaskId, elementId) {
     }
 }
 
+function reserveProjectScrollSpace(tableBody, rowShift = 0) {
+    if (!tableBody) return;
+    const height = Math.max(0, Math.ceil(window.innerHeight - tableBody.getBoundingClientRect().top + rowShift));
+    tableBody.style.setProperty('--project-scroll-min-height', `${height}px`);
+}
+
+// Beim Zurueckscrollen nur noch den Platz bis zum aktuellen Viewport-Ende behalten.
+window.addEventListener('scroll', () => {
+    const tableBody = document.getElementById(aufgabenTable?.containerId)?.querySelector(':scope > .table-body');
+    const reservedHeight = parseFloat(tableBody?.style.getPropertyValue('--project-scroll-min-height'));
+    if (!reservedHeight || !tableBody.querySelector(':scope > .project-focus.expanded')) return;
+    const neededHeight = Math.max(0, Math.ceil(window.innerHeight - tableBody.getBoundingClientRect().top));
+    if (neededHeight < reservedHeight) reserveProjectScrollSpace(tableBody);
+}, { passive: true });
+
 async function toggleSubTaskDetail(taskId, subtaskId) {
     const dataRow = document.querySelector(`tr.subtask-row[data-subtask-id="${subtaskId}"]`);
     const detailRow = document.querySelector(`tr.subtask-detail-row[data-subtask-detail-id="${subtaskId}"]`);
@@ -1425,14 +1441,21 @@ async function toggleSubTaskDetail(taskId, subtaskId) {
 
     const isExpanding = !dataRow.classList.contains('expanded');
     const rowTop = dataRow.getBoundingClientRect().top;
+    const tableBody = dataRow.closest('.table-body');
+
+    // Vor dem Verkuerzen Platz sichern, sonst begrenzt der Browser scrollY sofort.
+    if (!isExpanding) reserveProjectScrollSpace(tableBody);
 
     dataRow.classList.toggle('expanded');
     detailRow.classList.toggle('visible');
 
     // Beim Zuklappen: Scroll-Position korrigieren
     if (!isExpanding) {
-        const newRowTop = dataRow.getBoundingClientRect().top;
-        window.scrollBy(0, newRowTop - rowTop);
+        const rowShift = dataRow.getBoundingClientRect().top - rowTop;
+        // Auch das Anpassen des Leerraums kann scrollY begrenzen: absolutes Ziel merken.
+        const scrollTop = window.scrollY + rowShift;
+        reserveProjectScrollSpace(tableBody, rowShift);
+        window.scrollTo({ top: scrollTop, left: window.scrollX, behavior: 'instant' });
     }
 
     // Beim Aufklappen: Editoren initialisieren + Notizen laden
