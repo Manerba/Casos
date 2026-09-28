@@ -53,7 +53,8 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Alternativ lokale Dateiablage pro Aufgabe/Projekt unter `data/files/task-<ID>/`, gemeinsame Dateischnittstelle in `dashboard/file_storage.py`. Auswahl ueber `file_storage_type` (`local`, `webdav`, `none` in der API), bestehende `nextcloud_path`-Zuordnungen bleiben kompatibel. Lokale Dateien bei Backups einschliessen.
 - Die Dateiablage wird im Header des Dateibrowsers konfiguriert. Beim expliziten Entfernen einer lokalen Ablage wird nach Bestaetigung auch `data/files/task-<ID>/` samt Inhalt geloescht. Beim Entfernen einer WebDAV-Zuordnung bleibt das Remote-Verzeichnis erhalten. Ein Wechsel der Ablageart und das Loeschen einer Aufgabe behalten lokale Dateien zur manuellen Wiederherstellung/Bereinigung bei. Datei-Schreibzugriffe brauchen Bearbeitungsrechte, ONLYOFFICE unterstuetzt beide Ablagearten.
 - ONLYOFFICE/WOPI-Integration ueber `api_onlyoffice.py` und `/editor`.
-- Die Editor-Seite laedt ihren Startcode extern aus `editor_page.js`, damit auch die strikte CSP ohne ONLYOFFICE-Konfiguration greift und API-Fehler sichtbar werden. Dateilisten liefern `onlyoffice_configured`, der Dateibrowser bietet Editoraktionen nur bei vorhandener Konfiguration an und nutzt sonst Inline-Anzeige fuer Bilder bzw. Downloads. ONLYOFFICE-Origin direkt aus der DB lesen, damit Aenderungen aus dem separaten Admin-Prozess sofort in neuen CSP-Antworten/Dateilisten ankommen.
+- Die Office-Editor-Seite laedt ihren Startcode extern aus `editor_page.js`, damit auch die strikte CSP ohne ONLYOFFICE-Konfiguration greift und API-Fehler sichtbar werden. Dateilisten liefern `onlyoffice_configured`, Office-Aktionen brauchen eine Konfiguration. ONLYOFFICE-Origin direkt aus der DB lesen, damit Aenderungen aus dem separaten Admin-Prozess sofort in neuen CSP-Antworten/Dateilisten ankommen.
+- Markdown-, Text- und Scriptdateien haben Vorrang vor ONLYOFFICE und oeffnen im nativen Dialog (`text_file_editor.js`) bzw. via Ausklappen unter `/text-editor`. `MarkdownEditor` liefert die formatierte Markdown-Vorschau oder mit `plainText` eine woertliche Codeansicht, standardmaessig lesen, dann Bearbeiten/Speichern/Abbrechen. Entwuerfe per origin-/fenstergeprueftem postMessage uebertragen, Dialog erst nach erfolgreicher Uebernahme schliessen. Kein Entwurf in URLs/localStorage. Dateilisten liefern `text_format` aus `text_files.py`, GET/PUT `/api/tasks/{id}/files/text` nutzt die aktuellen Dateirechte, Revision und Audit. Max. 2 MiB, UTF-8 oder UTF-16 mit BOM, Encoding/BOM/Zeilenenden erhalten. Bilder weiter inline, uebrige Dateien als Download.
 - LDAP/Active Directory Login und Sync ueber `api_ldap.py`, `ldap_utils.py`, `ldap_sync.py`.
 - Mail-Benachrichtigungen mit SMTP-Konfig, Templates und User-Prefs.
 - Optionales TLS inkl. Zertifikatspfaden und Verify-Flags pro Integration.
@@ -88,7 +89,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Bindet Router fuer Auth, Tasks, Teams, Nextcloud-Dateien, ONLYOFFICE WOPI/Editor und Mail-User ein.
 - `/api/dashboard/info` liefert Entwickler- und Komponenteninfos.
 - `/mcp/` ist als FastMCP-ASGI-App gemountet.
-- HTML-Routen: `/login`, `/`, `/editor`, Catch-All `/{path:path}`.
+- HTML-Routen: `/login`, `/`, `/editor`, `/text-editor`, Catch-All `/{path:path}`.
 - Mutierende `/api/`-Requests brauchen `X-Requested-With: XMLHttpRequest`, ausgenommen WOPI/ONLYOFFICE Callback.
 
 ### Admin-App `dashboard/admin_app.py`
@@ -117,7 +118,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 - `dashboard/mcp_server.py` definiert FastMCP mit Tools fuer Projekte, Subtasks, Dependencies, Notes, Suche, Users, Areas, Selbstzuweisung und `whoami`.
 - Auth laeuft per Bearer-Token ueber die Middleware `mcp_auth` in `dashboard/app.py`.
-- Die REST-Dateioperationen unter `/api/tasks/{task_id}/files` (Auflisten, Download, Upload, mkdir, move, delete) akzeptieren denselben MCP-Bearer ueber `get_file_user`. Ein expliziter Authorization-Header hat Vorrang vor einer Cookie-Session. Aufgabenrechte, Token-Widerruf und MCP-Kill-Switch gelten auch dort, Schreibzugriffe brauchen weiterhin `X-Requested-With: XMLHttpRequest`. Andere REST-Endpunkte und der Office-Editor bleiben Session-basiert.
+- Die REST-Dateioperationen unter `/api/tasks/{task_id}/files` (Auflisten, Download, Upload, mkdir, move, delete sowie GET/PUT text) akzeptieren denselben MCP-Bearer ueber `get_file_user`. Ein expliziter Authorization-Header hat Vorrang vor einer Cookie-Session. Aufgabenrechte, Token-Widerruf und MCP-Kill-Switch gelten auch dort, Schreibzugriffe brauchen weiterhin `X-Requested-With: XMLHttpRequest`. Andere REST-Endpunkte und der Office-Editor bleiben Session-basiert.
 - MCP-Tokens werden nur als SHA-256-Hash in `mcp_tokens` gespeichert; Plain-Token ist nur beim Erstellen sichtbar.
 - Jeder MCP-Token gehoert zu einem eigenen User mit `auth_source='mcp'`.
 - Schreiboperationen sollen `audit_log.log_change(...)` verwenden.
@@ -158,6 +159,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 - WYSIWYG: `dashboard/static/js/wysiwyg_editor.js`
 - Dateiablage: `file_browser.js` / `file_browser.css`
+- Nativer Datei-Editor: `text_file_editor.js` / `text_file_editor.css`, Backend `text_files.py`, geteilter `MarkdownEditor`
 - ONLYOFFICE: `onlyoffice_editor.js` / `onlyoffice.css`
 - Netzplan: lokale `vis-network.min.js` / `vis-network.min.css`
 
