@@ -119,6 +119,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - MCP-Tokens werden nur als SHA-256-Hash in `mcp_tokens` gespeichert; Plain-Token ist nur beim Erstellen sichtbar.
 - Jeder MCP-Token gehoert zu einem eigenen User mit `auth_source='mcp'`.
 - Schreiboperationen sollen `audit_log.log_change(...)` verwenden.
+- `file.list/read/write/mkdir/move/delete` nutzen `dashboard/file_storage.py` fuer lokale und WebDAV-Projektablagen mit aktuellen Projektrechten. `task_id` ist die Projekt-ID, Pfade sind relativ zur Ablage. Lesen/Schreiben maximal 1 MiB je Datei, UTF-8 oder Base64, Listen mit `offset`/`limit` (max. 500) und `next_offset`. `file.write` ersetzt die ganze Datei, `file.delete` loescht Ordner rekursiv, die Ablagewurzel ist geschuetzt. Audit ohne Dateiinhalte. `get_project`/`list_projects` liefern `file_storage_type`.
 - Der globale MCP-Kill-Switch liegt in `mcp_config.enabled`.
 
 ## Frontend-Konventionen
