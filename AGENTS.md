@@ -116,6 +116,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 - `dashboard/mcp_server.py` definiert FastMCP mit Tools fuer Projekte, Subtasks, Dependencies, Notes, Suche, Users, Areas, Selbstzuweisung und `whoami`.
 - Auth laeuft per Bearer-Token ueber die Middleware `mcp_auth` in `dashboard/app.py`.
+- Die REST-Dateioperationen unter `/api/tasks/{task_id}/files` (Auflisten, Download, Upload, mkdir, move, delete) akzeptieren denselben MCP-Bearer ueber `get_file_user`. Ein expliziter Authorization-Header hat Vorrang vor einer Cookie-Session. Aufgabenrechte, Token-Widerruf und MCP-Kill-Switch gelten auch dort, Schreibzugriffe brauchen weiterhin `X-Requested-With: XMLHttpRequest`. Andere REST-Endpunkte und der Office-Editor bleiben Session-basiert.
 - MCP-Tokens werden nur als SHA-256-Hash in `mcp_tokens` gespeichert; Plain-Token ist nur beim Erstellen sichtbar.
 - Jeder MCP-Token gehoert zu einem eigenen User mit `auth_source='mcp'`.
 - Schreiboperationen sollen `audit_log.log_change(...)` verwenden.
