@@ -14,6 +14,7 @@ from fastapi import HTTPException
 
 from dashboard import database, webdav
 from dashboard.db_utils import db_query
+from dashboard.permissions import require_task_access
 
 
 def safe_rel_path(value: str, *, allow_empty: bool = True) -> str:
@@ -92,18 +93,8 @@ def remove_local_directory(task_id: int):
 def get_task_storage(task_id: int, user: dict, *, write: bool = False):
     """Ablage mit den aktuellen Rechten des Session- oder WOPI-Benutzers laden."""
     with db_query() as db:
-        task = db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
-        if not task:
-            raise HTTPException(status_code=404, detail="Aufgabe nicht gefunden")
-        owner = bool(user.get("is_admin")) or task["created_by"] in (None, user["id"])
-        membership = db.execute(
-            "SELECT can_read, can_edit FROM project_members WHERE project_id = ? AND user_id = ?",
-            (task_id, user["id"]),
-        ).fetchone()
-        can_read = owner or task["assigned_to"] == user["id"] or bool(membership and membership["can_read"])
-        can_write = owner or bool(membership and membership["can_read"] and membership["can_edit"])
-        if not can_read or (write and not can_write):
-            raise HTTPException(status_code=403, detail="Keine Berechtigung fuer diese Dateiablage")
+        task, rights = require_task_access(db, task_id, user, "edit" if write else "read")
+        can_write = rights["can_edit"]
         kind = storage_type(task)
         if kind == "none":
             raise HTTPException(status_code=400, detail="Keine Dateiablage zugeordnet")

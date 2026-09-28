@@ -144,7 +144,12 @@ Arbeitsregeln:
 - `predecessor_ids` sind echte DAG-Abhaengigkeiten zwischen Sprintpaketen.
 - Positionsaenderungen sind nur Sortierung/Anzeige; sie aendern keine
   Abhaengigkeitsgueltigkeit.
-- `assign_self` nutzen, wenn eine Session konkrete Bearbeitung uebernimmt.
+- REST, MCP und Dateiablage pruefen dieselben Aufgabenrechte. Lesefreigaben
+  erlauben nur Lesen, Schreibfreigaben auch Inhalte und eigene Beitraege.
+  Projektfreigaben gelten fuer alle Teilaufgaben, Erstellen braucht ein eigenes Recht.
+- Zuweisungen, Loeschen und Freigaben verwalten nur Ersteller und Admins.
+  Das gilt auch fuer `assign_self`. Bei fremden Aufgaben muss der Ersteller
+  oder ein Admin die Session zuweisen oder freigeben.
 - Gitea-Issues enthalten konkrete Findings/Bugs; Tareas enthaelt
   Zusammenfassung und Issue-IDs/Links.
 - Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Tareas-Notizen,

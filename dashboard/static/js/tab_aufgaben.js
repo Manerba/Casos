@@ -264,7 +264,7 @@ function activateInlineEditing(rowId) {
 
     // Name
     const nameCell = cellForField('name');
-    if (nameCell && (perm.isAdmin || (!perm.isAssignee && !(perm.isCreator && perm.isAssigned)))) {
+    if (nameCell && perm.canEdit) {
         nameCell._originalHTML = nameCell.innerHTML;
         nameCell.innerHTML = `<input type="text" class="inline-edit-input" id="inlineName_${row.id}" value="${escapeAttr(row.name)}" onclick="event.stopPropagation()">`;
     }
@@ -272,7 +272,7 @@ function activateInlineEditing(rowId) {
     // Projekte koennen zwischen berechnetem Fortschritt und Abgebrochen wechseln.
     const statusCell = cellForField('status');
     if (statusCell) {
-        const canEditStatus = perm.isAdmin || (row.can_edit_status ?? (perm.isCreator || perm.isAssignee || perm.isLegacy));
+        const canEditStatus = perm.isAdmin || (row.permissions?.can_edit_status ?? row.can_edit_status ?? (perm.canEdit || perm.isAssignee));
         if (canEditStatus) {
             const isProject = row.task_type === 'projekt';
             const progressStatus = row.subtask_total > 0 && row.subtask_done >= row.subtask_total
@@ -293,14 +293,14 @@ function activateInlineEditing(rowId) {
 
     // Prioritaet
     const priorityCell = cellForField('priority');
-    if (priorityCell && (perm.isAdmin || !perm.isAssignee)) {
+    if (priorityCell && perm.canEdit) {
         priorityCell._originalHTML = priorityCell.innerHTML;
         priorityCell.innerHTML = `<input type="number" class="inline-edit-input" id="inlinePriority_${row.id}" value="${row.priority}" min="1" max="100" onclick="event.stopPropagation()">`;
     }
 
     // Zugewiesen an (Admin/Ersteller/Legacy)
     const assignedCell = cellForField('assigned_to_name');
-    if (assignedCell && (perm.isAdmin || perm.isCreator || perm.isOwnTask || perm.isLegacy)) {
+    if (assignedCell && perm.canManage) {
         assignedCell._originalHTML = assignedCell.innerHTML;
         assignedCell.innerHTML = `<select class="inline-edit-select" id="inlineAssigned_${row.id}" onclick="event.stopPropagation()">
             ${buildUserOptions(row.assigned_to)}
@@ -309,7 +309,7 @@ function activateInlineEditing(rowId) {
 
     // Deadline
     const deadlineCell = cellForField('deadline');
-    if (deadlineCell && (perm.isAdmin || !perm.isAssignee)) {
+    if (deadlineCell && perm.canEdit) {
         deadlineCell._originalHTML = deadlineCell.innerHTML;
         deadlineCell.innerHTML = `<input type="date" class="inline-edit-input" id="inlineDeadline_${row.id}" value="${deadlineISO}" onclick="event.stopPropagation()">`;
     }
@@ -466,10 +466,13 @@ function renderPriority(value, col, row) {
 }
 
 function renderDeleteAction(value, col, row) {
+    if (row._type === 'assigned_subtask' || row.id < 0) return '';
     const perm = getTaskPermissions(row);
-    if (!perm.isCreator && !perm.isOwnTask && !perm.isLegacy && !perm.isAdmin) return '';
-    const taskId = row.id;
-    return `<button class="row-delete-btn" onclick="event.stopPropagation(); deleteTask(${taskId})" title="${t('common.delete')}">&times;</button>`;
+    if (!perm.canManage) return '';
+    return `<span class="task-row-actions">
+        <button class="row-settings-btn" onclick="event.stopPropagation(); openTaskSettings(${row.id})" title="${t('taskSettings.title')}" aria-label="${t('taskSettings.title')}">&#9881;</button>
+        <button class="row-delete-btn" onclick="event.stopPropagation(); deleteTask(${row.id})" title="${t('common.delete')}">&times;</button>
+    </span>`;
 }
 
 // ========================================
@@ -488,7 +491,12 @@ function getTaskPermissions(row) {
     const isTeamMember = !!row.is_team_member;
     const isAdmin = !!(currentUser && currentUser.is_admin);
 
-    return { isCreator, isAssignee, isAssigned, isOwnTask, isLegacy, isTeamMember, isAdmin };
+    const canManage = isAdmin || (row.permissions?.can_manage ?? isCreator);
+    const canEdit = isAdmin || (row.permissions?.can_edit ?? (isCreator || isLegacy || (isTeamMember && row.can_edit_status)));
+    const canStructure = isAdmin || (row.permissions?.can_structure ?? canEdit);
+    const canCreate = row.permissions?.can_create ?? (isAdmin || isCreator || isLegacy);
+    return { isCreator, isAssignee, isAssigned, isOwnTask, isLegacy, isTeamMember, isAdmin,
+        canManage, canEdit, canStructure, canCreate };
 }
 
 // ========================================
@@ -566,7 +574,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     // Beschreibung und zugeordnete Dateiablage nebeneinander anzeigen.
     const storageType = row.file_storage_type || (row.nextcloud_path ? 'webdav' : 'none');
     const hasStorage = storageType === 'local' || (storageType === 'webdav' && ncConfigured);
-    const canManageStorage = perm.isAdmin || perm.isCreator || perm.isLegacy || (perm.isTeamMember && row.can_edit_status);
+    const canManageStorage = perm.canEdit;
     const storageLabel = storageType === 'local' ? t('files.localStorage') : row.nextcloud_path;
     const storageButton = `<button class="control-btn${storageType !== 'none' ? ' nc-active' : ''}" onclick="event.stopPropagation(); openFileStorageDialog(${row.id})">${storageLabel ? '&#128194; ' + escapeHtml(storageLabel) : t('nc.fileStorage')}</button>`;
 
@@ -574,7 +582,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     html += `<div class="project-detail-left" id="pdDescription_${row.id}">`;
 
     // Beschreibung: Markdown-Ansicht, Bearbeiten nach bestehenden Berechtigungen
-    if (!perm.isAdmin && perm.isAssignee && !perm.isCreator) {
+    if (!perm.canEdit && perm.isAssignee) {
         html += `<div class="notes-section">
             <h5>${t('detail.descriptionFrom', { name: escapeHtml(row.created_by_name || 'Ersteller') })}</h5>
             <div class="description-readonly markdown-body">${renderMarkdown(row.description, row.description_format) || `<em>${t('detail.noDescription')}</em>`}</div>
@@ -583,7 +591,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
             <h5>${t('detail.myNotes')}</h5>
             <div id="notesEditor_${row.id}"></div>
         </div>`;
-    } else if (!perm.isAdmin && perm.isCreator && perm.isAssigned && !perm.isOwnTask) {
+    } else if (!perm.canEdit && perm.isCreator && perm.isAssigned && !perm.isOwnTask) {
         html += `<div class="notes-section">
             <h5>${t('detail.description')}</h5>
             <div class="description-readonly markdown-body">${renderMarkdown(row.description, row.description_format) || `<em>${t('detail.noDescription')}</em>`}</div>
@@ -609,12 +617,10 @@ async function onTaskRowExpanded(rowId, detailElement) {
     html += `</div>`; // project-detail-columns
     html += `<div class="project-detail-resize" id="pdResize_${row.id}" title="${escapeAttr(t('detail.resizeHeight'))}"></div>`;
 
-    if (perm.isAdmin) {
-        html += `<div class="notes-section subtask-notes-list">
-            <h5>${t('detail.notes')}</h5>
-            <div class="subtask-notes-content" id="taskAllNotes_${row.id}"><em>${t('common.loading')}</em></div>
-        </div>`;
-    }
+    html += `<div class="notes-section subtask-notes-list">
+        <h5>${t('detail.notes')}</h5>
+        <div class="subtask-notes-content" id="taskAllNotes_${row.id}"><em>${t('common.loading')}</em></div>
+    </div>`;
 
     html += `<div class="notes-section note-entries-list">
         <h5>${t('detail.noteHistory')}</h5>
@@ -635,7 +641,6 @@ async function onTaskRowExpanded(rowId, detailElement) {
                 <h4>${t('subtask.title')}</h4>
                 <div class="subtask-section-actions">
                     <button class="control-btn" onclick="event.stopPropagation(); openNetzplan(${row.id})">${t('netzplan.title')}</button>
-                    ${(perm.isAdmin || perm.isCreator) ? `<button class="team-btn" onclick="event.stopPropagation(); openTeamDialog(${row.id})">${t('team.title')}</button>` : ''}
                     ${canManageStorage && !hasStorage ? storageButton : ''}
                 </div>
             </div>
@@ -650,7 +655,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
     detailElement.innerHTML = html;
 
     // Editoren initialisieren
-    if (!perm.isAdmin && perm.isAssignee && !perm.isCreator) {
+    if (!perm.canEdit && perm.isAssignee) {
         // Notizen-Editor fuer Zugewiesenen: Notiz laden und Editor initialisieren
         try {
             const notesResp = await fetch(`/api/tasks/${row.id}/notes`);
@@ -663,7 +668,7 @@ async function onTaskRowExpanded(rowId, detailElement) {
         } catch (e) {
             document.getElementById(`notesEditor_${row.id}`).textContent = t('detail.loadError');
         }
-    } else if (!perm.isAdmin && perm.isCreator && perm.isAssigned && !perm.isOwnTask) {
+    } else if (!perm.canEdit && perm.isCreator && perm.isAssigned && !perm.isOwnTask) {
         // Notizen des Zugewiesenen laden
         try {
             const notesResp = await fetch(`/api/tasks/${row.id}/notes`);
@@ -684,13 +689,12 @@ async function onTaskRowExpanded(rowId, detailElement) {
         // Markdown startet in der formatierten Ansicht
         createMarkdownField(`wysiwygEditor_${row.id}`, row.description || '', {
             url: `/api/tasks/${row.id}`, model: row,
-            readOnly: !(perm.isAdmin || perm.isOwnTask || perm.isLegacy || (perm.isTeamMember && row.can_edit_status)),
+            readOnly: !perm.canEdit,
         });
     }
 
-    if (perm.isAdmin) {
-        loadAdminNotes(`/api/tasks/${row.id}/notes`, `taskAllNotes_${row.id}`);
-    }
+    loadTaskNotes(`/api/tasks/${row.id}/notes`, `taskAllNotes_${row.id}`,
+        !perm.canEdit && perm.isAssignee ? currentUser.id : null);
 
     // Auto-Save: WYSIWYG-Editor mit Debounce
     const wysiwygContent = document.querySelector(`#wysiwygEditor_${row.id} .wysiwyg-content`);
@@ -865,7 +869,7 @@ async function saveTask(taskId, silent = false) {
         if (!resp.ok) throw new Error(t('common.saveError'));
 
         // Notizen separat speichern (fuer Zugewiesene)
-        if (!perm.isAdmin && perm.isAssignee && !perm.isCreator) {
+        if (!perm.canEdit && perm.isAssignee) {
             const notesContainer = document.getElementById(`notesEditor_${taskId}`);
             const notesContent = notesContainer?.querySelector('.wysiwyg-content');
             if (notesContent) {
@@ -896,7 +900,9 @@ async function onSubtaskViewExpanded(row, detailElement) {
     const projectId = row._project_id;
     const deadlineISO = convertToISO(row.deadline);
     const isAdmin = !!currentUser?.is_admin;
-    const fieldAccess = isAdmin ? '' : 'disabled class="field-readonly"';
+    const canEdit = isAdmin || !!row.permissions?.can_edit;
+    const canManage = isAdmin || !!row.permissions?.can_manage;
+    const fieldAccess = canEdit ? '' : 'disabled class="field-readonly"';
 
     let html = `<div class="detail-edit" data-task-id="${row.id}">`;
 
@@ -921,13 +927,13 @@ async function onSubtaskViewExpanded(row, detailElement) {
             <label>${t('subtask.col.status')}</label>
             <input type="number" id="stViewStatus_${stId}" value="${escapeAttr(row._status_percent ?? 0)}" min="0" max="100" step="1" required style="width:70px">
         </div>
-        ${isAdmin ? `<div class="detail-edit-field">
+        ${canManage ? `<div class="detail-edit-field">
             <label>${t('subtask.col.assignedTo')}</label>
             <select id="stViewAssigned_${stId}">${buildUserOptions(row.assigned_to)}</select>
         </div>` : ''}
     </div>`;
 
-    html += isAdmin ? `<div id="stViewDescription_${stId}"></div>` : `<div class="notes-section">
+    html += canEdit ? `<div id="stViewDescription_${stId}"></div>` : `<div class="notes-section">
         <h5>${t('detail.descriptionFrom', { name: escapeHtml(row.created_by_name || 'Ersteller') })}</h5>
         <div class="description-readonly markdown-body">${renderMarkdown(row.description, row.description_format) || `<em>${t('detail.noDescription')}</em>`}</div>
     </div>`;
@@ -953,11 +959,11 @@ async function onSubtaskViewExpanded(row, detailElement) {
     html += `</div>`;
     detailElement.innerHTML = html;
 
-    if (isAdmin) {
+    if (canEdit) {
         createMarkdownField(`stViewDescription_${stId}`, row.description || '', {
             url: `/api/subtasks/${stId}`, model: row,
         });
-        if (projectId) loadAdminNotes(`/api/tasks/${projectId}/subtasks/${stId}/notes`, `stViewAllNotes_${stId}`, currentUser.id);
+        if (projectId) loadTaskNotes(`/api/tasks/${projectId}/subtasks/${stId}/notes`, `stViewAllNotes_${stId}`, currentUser.id);
     }
 
     // Notizen laden und Editor initialisieren
@@ -1003,6 +1009,7 @@ async function saveSubtaskView(row, silent = false) {
     const stId = row._subtask_id || Math.abs(row.id);
     const projectId = row._project_id;
     const statusInput = document.getElementById(`stViewStatus_${stId}`);
+    const canEdit = !!currentUser?.is_admin || !!row.permissions?.can_edit;
     if (statusInput && !statusInput.reportValidity()) return;
 
     try {
@@ -1010,11 +1017,12 @@ async function saveSubtaskView(row, silent = false) {
         if (statusInput) {
             const statusPercent = statusInput.valueAsNumber;
             const body = { status_percent: statusPercent };
-            if (currentUser?.is_admin) {
+            if (canEdit) {
                 body.name = document.getElementById(`stViewName_${stId}`).value;
                 body.deadline = document.getElementById(`stViewDeadline_${stId}`).value;
                 body.priority = document.getElementById(`stViewPriority_${stId}`).valueAsNumber || 50;
-                body.assigned_to = Number(document.getElementById(`stViewAssigned_${stId}`).value) || 0;
+                const assigned = document.getElementById(`stViewAssigned_${stId}`);
+                if (assigned) body.assigned_to = Number(assigned.value) || 0;
             }
             const resp = await fetch(`/api/subtasks/${stId}`, {
                 method: 'PUT',
@@ -1022,11 +1030,11 @@ async function saveSubtaskView(row, silent = false) {
                 body: JSON.stringify(body),
             });
             if (!resp.ok) throw new Error(t('common.saveError'));
-            if (currentUser?.is_admin) {
+            if (canEdit) {
                 row.name = body.name;
                 row.priority = body.priority;
                 row.deadline = body.deadline ? body.deadline.split('-').reverse().join('.') : '';
-                row.assigned_to = body.assigned_to || null;
+                if (body.assigned_to !== undefined) row.assigned_to = body.assigned_to || null;
                 const assignee = cachedUsers.find(u => u.id === row.assigned_to);
                 row.assigned_to_name = assignee ? `${assignee.vorname} ${assignee.nachname}`.trim() : '';
             }
@@ -1035,7 +1043,7 @@ async function saveSubtaskView(row, silent = false) {
             const statusIndex = aufgabenTable.config.columns.findIndex(col => col.field === 'status');
             const cells = document.querySelector(`[data-row-id="${row.id}"] .table-row`)?.querySelectorAll('.table-cell');
             if (cells?.[statusIndex]) cells[statusIndex].innerHTML = renderSubtaskProgress(statusPercent);
-            if (currentUser?.is_admin && cells) {
+            if (canEdit && cells) {
                 aufgabenTable.config.columns.forEach((col, index) => {
                     if (cells[index] && ['name', 'priority', 'deadline', 'assigned_to_name'].includes(col.field)) {
                         cells[index].innerHTML = aufgabenTable.renderCell(row[col.field], col, row);
@@ -1099,6 +1107,7 @@ async function loadSubTasks(taskId) {
     try {
         const resp = await fetch(`/api/tasks/${taskId}/subtasks`);
         const data = await resp.json();
+        container._permissions = data.permissions;
         renderSubTasks(taskId, data.items || []);
 
         // Projektknoten-Position speichern
@@ -1157,11 +1166,9 @@ function renderSubTasks(taskId, subtasks) {
         const statusPct = st.status_percent || 0;
         const stPerms = st.permissions || { can_read: true, can_edit: true, can_create: true };
         const canEdit = parentPerm.isAdmin || stPerms.can_edit;
-        const isSubAssigned = !!st.assigned_to;
-        const isSubCreator = parentPerm.isCreator || parentPerm.isLegacy;
 
         // Readonly-Logik pro Feld
-        const stNameRO = (!canEdit || (!parentPerm.isAdmin && isSubCreator && isSubAssigned)) ? 'disabled' : '';
+        const stNameRO = !canEdit ? 'disabled' : '';
         const stNameROClass = stNameRO ? 'field-readonly' : '';
         const fieldRO = !canEdit ? 'disabled' : '';
         const fieldROClass = !canEdit ? 'field-readonly' : '';
@@ -1169,7 +1176,7 @@ function renderSubTasks(taskId, subtasks) {
         const stDeadlineROClass = stDeadlineRO ? 'field-readonly' : '';
         const stPrioRO = !canEdit ? 'disabled' : '';
         const stPrioROClass = stPrioRO ? 'field-readonly' : '';
-        const stStatusRO = (!canEdit || (!parentPerm.isAdmin && isSubCreator && isSubAssigned)) ? 'disabled' : '';
+        const stStatusRO = !canEdit ? 'disabled' : '';
         const dlISO = convertToISO(st.deadline);
 
         // Vorgaenger-Optionen und Chips (positionsunabhaengig, aber ohne Zyklen/Redundanz)
@@ -1192,13 +1199,13 @@ function renderSubTasks(taskId, subtasks) {
 
         // Daten-Zeile mit Dual-Content (Text + verstecktes Input)
         html += `<tr class="subtask-row" data-subtask-id="${st.id}" onpointerdown="ExpandableTable.trackRowPointerDown(event)" onclick="if (ExpandableTable.shouldToggleRow(event)) toggleSubTaskDetail(${taskId}, ${st.id})">
-            <td class="pos-cell"><span class="subtask-expand-icon">&#9654;</span><span class="pos-number">${st.position_number || ''}</span><span class="pos-arrows st-cell-edit"><button class="pos-arrow up" onclick="event.stopPropagation(); moveSubTask(${taskId}, ${st.id}, 'up')" title="Nach oben">&#9650;</button><button class="pos-arrow down" onclick="event.stopPropagation(); moveSubTask(${taskId}, ${st.id}, 'down')" title="Nach unten">&#9660;</button></span></td>
+            <td class="pos-cell"><span class="subtask-expand-icon">&#9654;</span><span class="pos-number">${st.position_number || ''}</span><span class="pos-arrows st-cell-edit" ${parentPerm.canStructure ? '' : 'hidden'}><button class="pos-arrow up" onclick="event.stopPropagation(); moveSubTask(${taskId}, ${st.id}, 'up')" title="Nach oben">&#9650;</button><button class="pos-arrow down" onclick="event.stopPropagation(); moveSubTask(${taskId}, ${st.id}, 'down')" title="Nach unten">&#9660;</button></span></td>
             <td class="subtask-id-cell">${st.id}</td>
             ${!stNameRO ? `<td>
                 <span class="st-cell-text">${escapeHtml(st.name)}</span>
                 <span class="st-cell-edit"><input type="text" id="stEditName_${st.id}" value="${escapeAttr(st.name)}" class="subtask-name-input" onclick="event.stopPropagation()"></span>
             </td>` : `<td>${escapeHtml(st.name)}</td>`}
-            ${canEdit ? `<td class="predecessor-cell">
+            ${parentPerm.canStructure ? `<td class="predecessor-cell">
                 <span class="st-cell-text">${predDisplay ? `<span class="predecessor-display">${escapeHtml(predDisplay)}</span>` : '-'}</span>
                 <span class="st-cell-edit">
                     <select id="predSelect_${st.id}" onclick="event.stopPropagation()" onchange="addPredecessorDirect(${taskId}, ${st.id}, this)">
@@ -1221,7 +1228,7 @@ function renderSubTasks(taskId, subtasks) {
                 </span>
             </td>` : `<td>${escapeHtml(st.area_name || '-')}</td>`}
             <td>${escapeHtml(st.created_by_name || '-')}</td>
-            ${(parentPerm.isAdmin || parentPerm.isCreator || parentPerm.isLegacy) ? `<td>
+            ${parentPerm.canManage ? `<td>
                 <span class="st-cell-text">${escapeHtml(st.assigned_to_name || '-')}</span>
                 <span class="st-cell-edit">
                     <select id="stEditAssigned_${st.id}" onclick="event.stopPropagation()">
@@ -1245,7 +1252,7 @@ function renderSubTasks(taskId, subtasks) {
 
         // Delete-Button (Ersteller, Legacy oder Admin)
         html += `<td>`;
-        if (parentPerm.isCreator || parentPerm.isLegacy || parentPerm.isAdmin) {
+        if (parentPerm.canManage) {
             html += `<div class="subtask-actions">
                     <button class="subtask-btn delete" onclick="event.stopPropagation(); deleteSubTask(${taskId}, ${st.id})">x</button>
                 </div>`;
@@ -1259,9 +1266,7 @@ function renderSubTasks(taskId, subtasks) {
                     <div class="subtask-detail-content">`;
 
         // WYSIWYG oder Readonly-Beschreibung
-        if (!parentPerm.isAdmin && isSubCreator && isSubAssigned) {
-            html += `<div class="description-readonly markdown-body">${renderMarkdown(st.description, st.description_format) || `<em>${t('detail.noDescription')}</em>`}</div>`;
-        } else if (canEdit) {
+        if (canEdit) {
             html += `<div id="stWysiwyg_${st.id}"></div>`;
         } else {
             html += `<div class="description-readonly markdown-body">${renderMarkdown(st.description, st.description_format) || `<em>${t('detail.noDescription')}</em>`}</div>`;
@@ -1286,8 +1291,8 @@ function renderSubTasks(taskId, subtasks) {
 
     // "+ Teilaufgabe"-Button: Admin, Ersteller, Legacy oder Teammitglieder mit can_create
     const firstSt = subtasks[0];
-    const canCreate = parentPerm.isAdmin || parentPerm.isCreator || parentPerm.isLegacy || (firstSt && firstSt.permissions && firstSt.permissions.can_create);
-    if (canCreate || subtasks.length === 0) {
+    const canCreate = container._permissions?.can_create ?? (parentPerm.canCreate || firstSt?.permissions?.can_create);
+    if (canCreate) {
         html += `<div class="subtask-add-row">
             <button class="control-btn" onclick="addSubTask(${taskId})">${t('subtask.add')}</button>
         </div>`;
@@ -1337,7 +1342,7 @@ function mountAdminNoteEditors(container, items, url, isHandoff = false) {
     });
 }
 
-async function loadAdminNotes(url, elementId, excludeUserId = null) {
+async function loadTaskNotes(url, elementId, excludeUserId = null) {
     const container = document.getElementById(elementId);
     if (!container) return;
     try {
@@ -1379,7 +1384,7 @@ function renderNoteEntriesList(entries) {
         return `<details class="subtask-note-item note-entry-item">
             <summary class="note-entry-summary">
                 <span class="subtask-note-meta">
-                    <strong>${escapeHtml(userName)}</strong>
+                    <span>#${escapeHtml(entry.id)} <strong>${escapeHtml(userName)}</strong></span>
                     <span class="note-entry-meta-end">
                         ${createdAt}
                         <span class="note-entry-toggle-icon" aria-hidden="true">&#9660;</span>
@@ -1584,7 +1589,7 @@ async function saveSubTask(taskId, subtaskId, silent = false) {
     // Aktuelle predecessor_ids sammeln
     const chipsContainer = document.getElementById(`predChips_${subtaskId}`);
     const currentChips = chipsContainer ? chipsContainer.querySelectorAll('.predecessor-chip') : [];
-    body.predecessor_ids = Array.from(currentChips).map(c => parseInt(c.dataset.predId));
+    if (chipsContainer) body.predecessor_ids = Array.from(currentChips).map(c => parseInt(c.dataset.predId));
 
     // Zuweisung
     const assignSelect = document.getElementById(`stEditAssigned_${subtaskId}`);
@@ -2009,153 +2014,6 @@ async function createNewTask() {
     } catch (error) {
         console.error('Erstellen fehlgeschlagen:', error);
         showNotification(t('common.createError'), 'error');
-    }
-}
-
-// ========================================
-// Team-Dialog (Sprint C)
-// ========================================
-
-async function openTeamDialog(projectId) {
-    createModal({
-        title: t('team.title'),
-        cssClass: 'modal-wide',
-        body: `
-            <div class="team-info-text">${t('team.creatorInfo')}</div>
-            <div class="team-add-row">
-                <select id="teamAddUserSelect">
-                    <option value="">${t('team.selectUser')}</option>
-                </select>
-                <button class="control-btn primary" onclick="addTeamMember(${projectId})">${t('team.addMember')}</button>
-            </div>
-            <div id="teamMembersContainer">
-                <div class="table-loading"><div class="spinner"></div></div>
-            </div>`,
-        footer: `<button class="action-btn" onclick="closeModal()">${t('common.close')}</button>`,
-    });
-
-    await loadTeamMembers(projectId);
-}
-
-async function loadTeamMembers(projectId) {
-    const container = document.getElementById('teamMembersContainer');
-    if (!container) return;
-
-    try {
-        const resp = await fetch(`/api/tasks/${projectId}/members`);
-        if (!resp.ok) throw new Error(t('common.loadError'));
-        const data = await resp.json();
-        const members = data.items || [];
-
-        // User-Dropdown aktualisieren (ohne Ersteller und bestehende Mitglieder)
-        const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(projectId));
-        const creatorId = parentRow ? parentRow.created_by : null;
-        const memberIds = members.map(m => m.user_id);
-
-        const select = document.getElementById('teamAddUserSelect');
-        if (select) {
-            select.innerHTML = `<option value="">${t('team.selectUser')}</option>`;
-            cachedUsers.forEach(u => {
-                if (u.id === creatorId || memberIds.includes(u.id)) return;
-                const name = `${u.vorname} ${u.nachname}`.trim() || `User ${u.id}`;
-                select.innerHTML += `<option value="${u.id}">${escapeHtml(name)}</option>`;
-            });
-        }
-
-        if (members.length === 0) {
-            container.innerHTML = `<div class="team-empty">${t('team.noMembers')}</div>`;
-            return;
-        }
-
-        let html = `<table class="team-table">
-            <thead>
-                <tr>
-                    <th>${t('team.col.lastName')}</th>
-                    <th>${t('team.col.firstName')}</th>
-                    <th>${t('team.col.email')}</th>
-                    <th style="text-align:center">${t('team.col.read')}</th>
-                    <th style="text-align:center">${t('team.col.edit')}</th>
-                    <th style="text-align:center">${t('team.col.create')}</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>`;
-
-        members.forEach(m => {
-            html += `<tr data-member-uid="${m.user_id}">
-                <td>${escapeHtml(m.nachname)}</td>
-                <td>${escapeHtml(m.vorname)}</td>
-                <td>${escapeHtml(m.email)}</td>
-                <td style="text-align:center"><input type="checkbox" ${m.can_read ? 'checked' : ''} onchange="updateTeamMember(${projectId}, ${m.user_id}, this.closest('tr'))"></td>
-                <td style="text-align:center"><input type="checkbox" ${m.can_edit ? 'checked' : ''} onchange="updateTeamMember(${projectId}, ${m.user_id}, this.closest('tr'))"></td>
-                <td style="text-align:center"><input type="checkbox" ${m.can_create ? 'checked' : ''} onchange="updateTeamMember(${projectId}, ${m.user_id}, this.closest('tr'))"></td>
-                <td><button class="team-remove-btn" onclick="removeTeamMember(${projectId}, ${m.user_id})">x</button></td>
-            </tr>`;
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Team laden fehlgeschlagen:', error);
-        container.innerHTML = `<div class="table-error">${t('common.loadError')}</div>`;
-    }
-}
-
-async function addTeamMember(projectId) {
-    const select = document.getElementById('teamAddUserSelect');
-    if (!select || !select.value) {
-        showNotification(t('team.selectRequired'), 'error');
-        return;
-    }
-
-    try {
-        const resp = await fetch(`/api/tasks/${projectId}/members`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: parseInt(select.value), can_read: true }),
-        });
-        if (!resp.ok) {
-            const err = await resp.json();
-            throw new Error(err.detail || t('common.error'));
-        }
-
-        showNotification(t('team.memberAdded'), 'success');
-        await loadTeamMembers(projectId);
-    } catch (error) {
-        showNotification(error.message || t('team.addError'), 'error');
-    }
-}
-
-async function updateTeamMember(projectId, userId, row) {
-    if (!row) return;
-    const checkboxes = row.querySelectorAll('input[type="checkbox"]');
-    const can_read = checkboxes[0]?.checked || false;
-    const can_edit = checkboxes[1]?.checked || false;
-    const can_create = checkboxes[2]?.checked || false;
-
-    try {
-        const resp = await fetch(`/api/tasks/${projectId}/members/${userId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ can_read, can_edit, can_create }),
-        });
-        if (!resp.ok) throw new Error(t('common.error'));
-    } catch (error) {
-        showNotification(t('team.updateError'), 'error');
-    }
-}
-
-async function removeTeamMember(projectId, userId) {
-    if (!await msgbox('cancel/yes', 'confirm', t('team.removeMemberConfirm'))) return;
-
-    try {
-        const resp = await fetch(`/api/tasks/${projectId}/members/${userId}`, { method: 'DELETE' });
-        if (!resp.ok) throw new Error(t('common.error'));
-
-        showNotification(t('team.memberRemoved'), 'success');
-        await loadTeamMembers(projectId);
-    } catch (error) {
-        showNotification(t('team.removeError'), 'error');
     }
 }
 
@@ -2730,6 +2588,7 @@ function _buildNetzplanGraphData(subtasks, colors, savedPositions, projectName, 
 function openNetzplan(taskId) {
     const parentRow = aufgabenTable.filteredData.find(r => String(r.id) === String(taskId));
     const projectName = parentRow ? parentRow.name : `Projekt #${taskId}`;
+    const canEditGraph = !!parentRow && getTaskPermissions(parentRow).canStructure;
 
     // SubTasks-Daten aus dem gespeicherten Container lesen
     const stContainer = document.getElementById(`subtaskContainer_${taskId}`);
@@ -2781,6 +2640,7 @@ function openNetzplan(taskId) {
     }
 
     async function _savePositionsToDb(positions) {
+        if (!canEditGraph) return;
         const posArr = Object.keys(positions).map(id => ({
             id: parseInt(id),
             x: positions[id].x,
@@ -2871,7 +2731,7 @@ function openNetzplan(taskId) {
             tooltipDelay: 200,
             zoomView: true,
             dragView: true,
-            dragNodes: true,
+            dragNodes: canEditGraph,
         },
         edges: {
             smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.5 },
@@ -2925,6 +2785,7 @@ function openNetzplan(taskId) {
     // Auto-Layout-Dropdown
     const autoLayoutDropdown = document.getElementById('netzplanAutoLayoutDropdown');
     const autoLayoutToggle = autoLayoutDropdown.querySelector('.netzplan-toolbar-btn');
+    autoLayoutDropdown.hidden = !canEditGraph;
     autoLayoutToggle.addEventListener('click', (e) => {
         e.stopPropagation();
         autoLayoutDropdown.classList.toggle('open');
@@ -2965,6 +2826,7 @@ function openNetzplan(taskId) {
     const _originalNodeStyles = {};
 
     function enterLinkingMode(nodeId) {
+        if (!canEditGraph) return;
         const validTargets = _computeValidNetzplanTargets(nodeId, subtasks);
         const positions = netzplanNetwork.getPositions([nodeId]);
         const sourcePos = positions[nodeId];
@@ -3187,6 +3049,7 @@ function openNetzplan(taskId) {
     const NETZPLAN_CLICK_DELAY_MS = 220;
 
     async function _handleNetzplanClick(params) {
+        if (!canEditGraph) return;
         if (_netzplanRebuilding) return;
 
         const clickedNodeId = params.nodes && params.nodes.length > 0 ? params.nodes[0] : null;
@@ -3334,6 +3197,7 @@ function openNetzplan(taskId) {
     }
 
     async function _netzplanUndo() {
+        if (!canEditGraph) return;
         if (netzplanHistoryPointer < 0) return;
         const entry = netzplanHistory[netzplanHistoryPointer];
         netzplanHistoryPointer--;
@@ -3379,6 +3243,7 @@ function openNetzplan(taskId) {
     }
 
     async function _netzplanRedo() {
+        if (!canEditGraph) return;
         if (netzplanHistoryPointer >= netzplanHistory.length - 1) return;
         netzplanHistoryPointer++;
         const entry = netzplanHistory[netzplanHistoryPointer];

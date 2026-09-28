@@ -7,7 +7,7 @@ A self-hosted task and project management tool built with **FastAPI** and **Vani
 - **Task & Project Management** - Create tasks, organize them into projects with subtasks, dependencies, and deadlines
 - **Cancellation** - Keep cancelled tasks and projects with their content, filter by status, and resume them when needed
 - **Interactive Network Diagram** - Visualize project dependencies as an interactive graph (vis-network)
-- **Team Collaboration** - Assign tasks, manage team permissions (read/edit/create), notes system. Admins can edit all projects, tasks, notes and handoffs regardless of ownership.
+- **Sharing & Permissions** - Creators and administrators share tasks and projects through Settings → Permissions. Read or edit access is separate from assignment; projects also offer permission to create subtasks. Changes are saved together or discarded with Cancel. Admins can edit all projects, tasks, notes and handoffs regardless of ownership.
 - **Markdown Descriptions & Notes** - Formatted reading view with source editing, lists, tables, and code blocks
 - **File Storage** - Dedicated local storage per task/project or a Nextcloud/WebDAV directory, with tree view, drag & drop upload and context menus
 - **ONLYOFFICE Integration** - Edit Office documents (docx, xlsx, pptx) directly in the browser via WOPI
