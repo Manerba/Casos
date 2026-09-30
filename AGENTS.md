@@ -48,7 +48,9 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - `dashboard/permissions.py` berechnet effektive Rechte fuer REST, MCP, Dateiablage und UI-Metadaten. Bestehende Tabelle `project_members` speichert Freigaben auch fuer normale Aufgaben. Bearbeiten schliesst Lesen ein, Projektfreigaben gelten fuer Teilaufgaben. Zuweisungen, Loeschen und Rechteverwaltung bleiben Ersteller/Admin vorbehalten. Reine Lesefreigaben erlauben keine eigenen Notizen/Handoffs, bestehende Zuweisungsrechte fuer eigene Beitraege bleiben bestehen. MCP `assign_self` braucht ebenfalls Verwaltungsrechte.
 - Aufgaben-/Teilaufgaben-Zuweisung und Notizen fuer Zugewiesene.
 - Projektzuweisungen vererben Leserechte auf alle Teilaufgaben samt Notizen/Handoffs in REST, MCP und MCP-Suche. Eigene Notizen und Handoffs sind damit ebenfalls erlaubt, ohne zusaetzliche Teilaufgaben-Zuweisung. Fremde Inhalte bleiben vor Aenderungen durch normale Nutzer geschuetzt. Die REST-Teilaufgabenliste gewaehrt durch die Projektzuweisung allein keine Bearbeitungs-/Erstellungsrechte.
-- WYSIWYG-Beschreibungen mit zentralem HTML-Sanitizer in `app_core.js`.
+- Markdown-Beschreibungen mit formatierter Leseansicht und Bearbeiten/Speichern/Abbrechen. WYSIWYG-Code bleibt erhalten, die Funktionen sind ausgeblendet. HTML-Ausgabe laeuft durch den zentralen Sanitizer in `app_core.js`. Beschreibungen behalten beim Moduswechsel ihre Abmessungen.
+- Teilaufgaben-Handoffs stehen als responsives Widget-Grid rechts neben der Beschreibung, mit ID, Autor, Zeitpunkt und Textvorschau. Gemeinsame Hoehe und Spaltenbreiten lassen sich wie bei Projektbeschreibung/Dateiablage verstellen. Einfachklick oeffnet den nativen Dialog, Doppelklick direkt ein Fenster unter `/handoff`. Ausklappen uebernimmt offene Entwuerfe. GET `/api/tasks/{id}/subtasks/{subtask_id}/note-entries/{entry_id}` prueft aktuelle Leserechte, Admin-PUT kann eine Revision gegen parallele Aenderungen mitsenden. Speichern aktualisiert die Widgets, Autor und Zeitpunkt bleiben erhalten.
+- Projekt-/Aufgaben-Handoffs nutzen dieselben Widgets und Dialoge in einem Grid mit natuerlicher Hoehe ohne Resize-Rahmen. Alle Widgets zeigen eine einzeilige Textvorschau und passen ihre Hoehe an den Inhalt an. Einzelzugriff per GET/PUT `/api/tasks/{id}/note-entries/{entry_id}`; `/handoff` ohne `subtaskId` adressiert Projekt-Handoffs. Fenster-Rueckmeldungen unterscheiden Projekt und Teilaufgabe auch bei identischen Handoff-IDs.
 - Nextcloud/WebDAV-Dateiablage ueber `dashboard/webdav.py` und `api_nextcloud.py`.
 - Alternativ lokale Dateiablage pro Aufgabe/Projekt unter `data/files/task-<ID>/`, gemeinsame Dateischnittstelle in `dashboard/file_storage.py`. Auswahl ueber `file_storage_type` (`local`, `webdav`, `none` in der API), bestehende `nextcloud_path`-Zuordnungen bleiben kompatibel. Lokale Dateien bei Backups einschliessen.
 - Die Dateiablage wird im Header des Dateibrowsers konfiguriert. Beim expliziten Entfernen einer lokalen Ablage wird nach Bestaetigung auch `data/files/task-<ID>/` samt Inhalt geloescht. Beim Entfernen einer WebDAV-Zuordnung bleibt das Remote-Verzeichnis erhalten. Ein Wechsel der Ablageart und das Loeschen einer Aufgabe behalten lokale Dateien zur manuellen Wiederherstellung/Bereinigung bei. Datei-Schreibzugriffe brauchen Bearbeitungsrechte, ONLYOFFICE unterstuetzt beide Ablagearten.
@@ -89,7 +91,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Bindet Router fuer Auth, Tasks, Teams, Nextcloud-Dateien, ONLYOFFICE WOPI/Editor und Mail-User ein.
 - `/api/dashboard/info` liefert Entwickler- und Komponenteninfos.
 - `/mcp/` ist als FastMCP-ASGI-App gemountet.
-- HTML-Routen: `/login`, `/`, `/editor`, `/text-editor`, Catch-All `/{path:path}`.
+- HTML-Routen: `/login`, `/`, `/editor`, `/text-editor`, `/handoff`, Catch-All `/{path:path}`.
 - Mutierende `/api/`-Requests brauchen `X-Requested-With: XMLHttpRequest`, ausgenommen WOPI/ONLYOFFICE Callback.
 
 ### Admin-App `dashboard/admin_app.py`
@@ -159,7 +161,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 - WYSIWYG: `dashboard/static/js/wysiwyg_editor.js`
 - Dateiablage: `file_browser.js` / `file_browser.css`
-- Nativer Datei-Editor: `text_file_editor.js` / `text_file_editor.css`, Backend `text_files.py`, geteilter `MarkdownEditor`
+- Nativer Datei-/Handoff-Dialog: `text_file_editor.js` / `text_file_editor.css`, Datei-Backend `text_files.py`, geteilter `MarkdownEditor`
 - ONLYOFFICE: `onlyoffice_editor.js` / `onlyoffice.css`
 - Netzplan: lokale `vis-network.min.js` / `vis-network.min.css`
 
