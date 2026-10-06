@@ -29,6 +29,7 @@ echo "Python-Dependencies installiert."
 # Service-Dateien kopieren
 cp "$APP_DIR/scripts/tareas.service" /etc/systemd/system/tareas.service
 cp "$APP_DIR/scripts/tareas-admin.service" /etc/systemd/system/tareas-admin.service
+cp "$APP_DIR/scripts/tareas-mcp.service" /etc/systemd/system/tareas-mcp.service
 cp "$APP_DIR/scripts/tareas-ldap-sync.service" /etc/systemd/system/tareas-ldap-sync.service
 cp "$APP_DIR/scripts/tareas-ldap-sync.timer" /etc/systemd/system/tareas-ldap-sync.timer
 
@@ -39,11 +40,13 @@ chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
 systemctl daemon-reload
 systemctl enable tareas.service
 systemctl enable tareas-admin.service
+systemctl enable tareas-mcp.service
 systemctl enable tareas-ldap-sync.timer
 
 # Services (neu)starten
 systemctl restart tareas.service
 systemctl restart tareas-admin.service
+systemctl restart tareas-mcp.service
 systemctl restart tareas-ldap-sync.timer
 
 # Docker-Daemon sicherstellen (wurde als Dependency installiert)
@@ -61,4 +64,5 @@ echo ""
 echo "=== Tareas Installation abgeschlossen ==="
 echo "  App:   http://$(hostname -I | awk '{print $1}'):8504/"
 echo "  Admin: http://$(hostname -I | awk '{print $1}'):8505/"
+echo "  MCP:   http://$(hostname -I | awk '{print $1}'):8506/mcp/ (auch weiter auf Port 8504)"
 echo ""

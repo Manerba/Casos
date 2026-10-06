@@ -7,6 +7,7 @@ SERVICE_USER="tareas"
 # Service-Dateien entfernen
 rm -f /etc/systemd/system/tareas.service
 rm -f /etc/systemd/system/tareas-admin.service
+rm -f /etc/systemd/system/tareas-mcp.service
 rm -f /etc/systemd/system/tareas-ldap-sync.service
 rm -f /etc/systemd/system/tareas-ldap-sync.timer
 systemctl daemon-reload

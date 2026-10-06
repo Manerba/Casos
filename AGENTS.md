@@ -18,6 +18,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 | Credentials at rest | Fernet-Verschluesselung via `dashboard/crypto_utils.py` |
 | Haupt-App | `dashboard/app.py`, Port 8504 |
 | Admin-App | `dashboard/admin_app.py`, Port 8505 |
+| MCP-App | `dashboard/mcp_app.py`, Port 8506, bestehendes `/mcp/` auf 8504 bleibt |
 | Routing | SPA mit History API + Backend-Catch-All |
 | OS | Ubuntu 24.04 LTS |
 
@@ -27,6 +28,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 |------------|---------|
 | Haupt-Service | `tareas.service`, startet `dashboard/app.py` |
 | Admin-Service | `tareas-admin.service`, startet `dashboard/admin_app.py` |
+| MCP-Service | `tareas-mcp.service`, startet `dashboard/mcp_app.py`, Betriebslogs im Journal |
 | Mail-Scheduler | `tareas-mail-scheduler.timer`, taeglich 00:01 |
 | LDAP-Sync | `tareas-ldap-sync.timer`, 5 Min. nach Boot, danach alle 15 Min. |
 | Lokale Services | `scripts/*.service`, Pfad `/sdb1/nextcloud/data/mir/files/Dev/Tareas` |
@@ -52,6 +54,8 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Teilaufgaben-Handoffs stehen als responsives Widget-Grid rechts neben der Beschreibung, mit ID, Autor, Zeitpunkt und Textvorschau. Gemeinsame Hoehe und Spaltenbreiten lassen sich wie bei Projektbeschreibung/Dateiablage verstellen. Einfachklick oeffnet den nativen Dialog, Doppelklick direkt ein Fenster unter `/handoff`. Ausklappen uebernimmt offene Entwuerfe. GET `/api/tasks/{id}/subtasks/{subtask_id}/note-entries/{entry_id}` prueft aktuelle Leserechte, Admin-PUT kann eine Revision gegen parallele Aenderungen mitsenden. Speichern aktualisiert die Widgets, Autor und Zeitpunkt bleiben erhalten.
 - Projekt-/Aufgaben-Handoffs nutzen dieselben Widgets und Dialoge in einem Grid mit natuerlicher Hoehe ohne Resize-Rahmen. Alle Widgets zeigen eine einzeilige Textvorschau und passen ihre Hoehe an den Inhalt an. Einzelzugriff per GET/PUT `/api/tasks/{id}/note-entries/{entry_id}`; `/handoff` ohne `subtaskId` adressiert Projekt-Handoffs. Fenster-Rueckmeldungen unterscheiden Projekt und Teilaufgabe auch bei identischen Handoff-IDs.
 - Nextcloud/WebDAV-Dateiablage ueber `dashboard/webdav.py` und `api_nextcloud.py`.
+- WebDAV-Transportfehler in der Datei-REST-API liefern JSON mit `files.webdavConnectionError` (503) bzw. `files.webdavTimeout` (504). Dateibrowser und nativer Texteditor uebersetzen die Meldungen, technische Ursachen bleiben im Serverlog. Fehlgeschlagene Unterordner-Aufrufe im Dateibaum zeigen einen Fehler und lassen sich erneut aufklappen.
+- Native Textdateien pruefen beim Speichern die Revision vom Oeffnen. `TaskStorage.update_file` haelt eine prozessuebergreifende `flock`-Sperre ueber Lesen, Pruefen und Schreiben; `upload_file` nutzt dieselbe Sperre auch fuer MCP-, REST- und Office-Schreibzugriffe. Gemeinsame Lockdateien unter `data/.file-locks/` identifizieren den Ablagepfad, einschliesslich geteilter WebDAV-Pfade. HTTP 409 laesst den Editor mit Entwurf im Bearbeitungsmodus. Keine Bearbeitungsreservierungen oder zusaetzlichen Agenten-Aufrufe; die Sperre gilt nur waehrend des Speichervorgangs. Lockdateien im laufenden Betrieb nicht entfernen.
 - Alternativ lokale Dateiablage pro Aufgabe/Projekt unter `data/files/task-<ID>/`, gemeinsame Dateischnittstelle in `dashboard/file_storage.py`. Auswahl ueber `file_storage_type` (`local`, `webdav`, `none` in der API), bestehende `nextcloud_path`-Zuordnungen bleiben kompatibel. Lokale Dateien bei Backups einschliessen.
 - Die Dateiablage wird im Header des Dateibrowsers konfiguriert. Beim expliziten Entfernen einer lokalen Ablage wird nach Bestaetigung auch `data/files/task-<ID>/` samt Inhalt geloescht. Beim Entfernen einer WebDAV-Zuordnung bleibt das Remote-Verzeichnis erhalten. Ein Wechsel der Ablageart und das Loeschen einer Aufgabe behalten lokale Dateien zur manuellen Wiederherstellung/Bereinigung bei. Datei-Schreibzugriffe brauchen Bearbeitungsrechte, ONLYOFFICE unterstuetzt beide Ablagearten.
 - ONLYOFFICE/WOPI-Integration ueber `api_onlyoffice.py` und `/editor`.
@@ -66,8 +70,8 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 ## Import- und App-Pattern
 
-- Services starten `dashboard/app.py` und `dashboard/admin_app.py` als Script, nicht als Modul.
-- Beide Apps setzen `sys.path.insert(0, str(Path(__file__).parent.parent))`, damit `dashboard` als Package importierbar ist.
+- Services starten `dashboard/app.py`, `dashboard/admin_app.py` und `dashboard/mcp_app.py` als Script, nicht als Modul.
+- Alle drei Apps setzen `sys.path.insert(0, str(Path(__file__).parent.parent))`, damit `dashboard` als Package importierbar ist.
 - In App-/Router-Code absolute Imports verwenden, z.B. `from dashboard.database import ...`.
 - Keine relativen Imports wie `from .database` in App-/Router-Dateien verwenden.
 - `dashboard/__init__.py` macht `dashboard` zum Package.
@@ -97,7 +101,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 ### Admin-App `dashboard/admin_app.py`
 
 - Bindet Admin-Router fuer Benutzer, LDAP, Nextcloud, ONLYOFFICE, Mail, App-Config, TLS und MCP ein.
-- `/api/dashboard/restart` startet `tareas.service` und `tareas-admin.service` neu und ist nur fuer Admins.
+- `/api/dashboard/restart` startet `tareas.service`, `tareas-admin.service` und `tareas-mcp.service` neu und ist nur fuer Admins.
 - HTML-Routen: `/login`, `/`, Catch-All.
 
 ### Router-Dateien
@@ -118,8 +122,12 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 ## MCP
 
+- Port 8506 stellt denselben MCP-Endpunkt `/mcp/` wie Port 8504 bereit. Werkzeuge bleiben ausschliesslich in `mcp_server.py`, HTTP-Mount, Lifespan und Bearer-Auth liegen gemeinsam in `mcp_transport.py`. Beide Dienste greifen direkt auf dieselbe DB zu, brauchen keine Weiterleitung ueber 8504 und nutzen dieselbe TLS-Konfiguration. Bestehende Clients auf 8504 bleiben kompatibel.
+- `mcp_app.py` bietet nur MCP, Datei-REST und tokenfreie Bootstrap-Endpunkte. `file_operations_router` in `api_nextcloud.py` wird mit der Haupt-App geteilt. Auf 8506 prueft `MCPAuthMiddleware` den Datei-REST-Bearer vor dem Einlesen des Request-Bodys, die Dependency `get_mcp_user` prueft danach erneut. Browser-Cookies reichen dort nicht aus. Datei-Uploads auf beiden Ports akzeptieren genau ein Multipart-Dateifeld bis 500 MiB, begrenzen die Dateibytes waehrend des Empfangs ohne Content-Length-Vorabpruefung und schliessen temporaere Dateien auch bei Abbruch/HTTP 413. Allgemeine REST-/Login-/Office-/Admin-/Static-Routen sind auf 8506 nicht eingebunden. Datei-Schreibzugriffe brauchen auf beiden Ports den bestehenden CSRF-Header.
+- Admin-MCP-Konfig behaelt `server_url` fuer 8504 und liefert zusaetzlich `dedicated_server_url` fuer 8506. Neue Kopiervorlagen nutzen 8506. Bootstrap und MCP-Guide verwenden auf dem dedizierten Zugang dessen Adresse auch fuer Datei-REST, ohne Web-/Admin-URLs umzubiegen. Laufende Transport-Sessions gelten jeweils nur fuer ihren Dienst.
 - `dashboard/mcp_server.py` definiert FastMCP mit Tools fuer Projekte, Subtasks, Dependencies, Notes, Suche, Users, Areas, Selbstzuweisung und `whoami`.
-- Auth laeuft per Bearer-Token ueber die Middleware `mcp_auth` in `dashboard/app.py`.
+- Auth laeuft per Bearer-Token ueber die gemeinsame `MCPAuthMiddleware` in `dashboard/mcp_transport.py`.
+- MCP-Werkzeuge lesen die aktuelle Identitaet aus `get_http_request().state.mcp_user`, damit Token- und Adminrechte-Wechsel auch in laufenden Transport-Sessions gelten. `current_mcp_user` bleibt nur fuer direkte Aufrufe ohne HTTP erhalten.
 - Die REST-Dateioperationen unter `/api/tasks/{task_id}/files` (Auflisten, Download, Upload, mkdir, move, delete sowie GET/PUT text) akzeptieren denselben MCP-Bearer ueber `get_file_user`. Ein expliziter Authorization-Header hat Vorrang vor einer Cookie-Session. Aufgabenrechte, Token-Widerruf und MCP-Kill-Switch gelten auch dort, Schreibzugriffe brauchen weiterhin `X-Requested-With: XMLHttpRequest`. Andere REST-Endpunkte und der Office-Editor bleiben Session-basiert.
 - MCP-Tokens werden nur als SHA-256-Hash in `mcp_tokens` gespeichert; Plain-Token ist nur beim Erstellen sichtbar.
 - Jeder MCP-Token gehoert zu einem eigenen User mit `auth_source='mcp'`.
