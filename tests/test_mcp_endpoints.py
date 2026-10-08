@@ -199,6 +199,33 @@ class MCPEndpointTests(unittest.TestCase):
                 resumed = self.call(client, headers, 'update_project', {'project_id': pid, 'status': 'offen'})
                 self.assertEqual(resumed['status'], 'in_arbeit')
 
+    def test_project_links_and_progress_lock_on_both_endpoints(self):
+        for app, port in ((legacy_app, 8504), (dedicated_app, 8506)):
+            with self.subTest(port=port), TestClient(app, base_url=f'http://tareas.test:{port}') as client:
+                headers = self.initialize(client)
+                parent = self.call(client, headers, 'create_project', {'name': f'Parent {port}'})
+                subtask = self.call(client, headers, 'create_subtask', {'project_id': parent['id'], 'name': 'Parent subtask'})
+                child = self.call(client, headers, 'create_project', {
+                    'name': 'Child', 'parent_subtask_id': subtask['id'],
+                })
+                self.assertEqual(child['parent_subtask_id'], subtask['id'])
+                self.call(client, headers, 'create_subtask', {
+                    'project_id': child['id'], 'name': 'Done', 'status_percent': 100,
+                })
+                self.call(client, headers, 'create_subtask', {'project_id': child['id'], 'name': 'Open'})
+                read = self.call(client, headers, 'get_subtask', {'subtask_id': subtask['id']})
+                self.assertEqual(read['status_percent'], 50)
+                self.assertEqual(read['child_project_id'], child['id'])
+                rejected = self.call(client, headers, 'update_subtask', {
+                    'subtask_id': subtask['id'], 'status_percent': 100,
+                }, error=True)
+                self.assertEqual(rejected['structuredContent']['code'], 'linked_project_progress_readonly')
+                self.assertEqual(rejected['structuredContent']['field'], 'status_percent')
+                self.call(client, headers, 'update_project', {'project_id': child['id'], 'parent_subtask_id': 0})
+                read = self.call(client, headers, 'update_subtask', {'subtask_id': subtask['id'], 'status_percent': 25})
+                self.assertEqual(read['status_percent'], 25)
+                self.assertFalse(read['progress_automatic'])
+
     def test_auth_revocation_kill_switch_and_read_only_rights_on_both(self):
         for app in (legacy_app, dedicated_app):
             auth.set_mcp_enabled(True)

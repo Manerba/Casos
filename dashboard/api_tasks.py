@@ -23,6 +23,9 @@ from dashboard.note_service import update_note_as_admin, handoff_revision
 from dashboard.permissions import require_task_access, require_subtask_access, task_permissions, subtask_permissions, task_visibility_sql
 from dashboard.file_storage import ensure_local_directory, remove_local_directory, safe_rel_path, storage_type
 from dashboard.dependency_service import add_subtask_dependency, set_subtask_predecessors
+from dashboard.project_links import (
+    ensure_manual_progress, ensure_project_type_change, refresh_parent_progress, set_parent_subtask,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,7 @@ class TaskCreate(BaseModel):
     task_type: str = "aufgabe"
     status: ProjectStatus = "offen"
     description: str = ""
+    parent_subtask_id: int | None = Field(default=None, strict=True, ge=0)
 
 
 class TaskUpdate(BaseModel):
@@ -52,6 +56,7 @@ class TaskUpdate(BaseModel):
     assigned_to: Optional[int] = None
     nextcloud_path: Optional[str] = None
     file_storage_type: Optional[Literal["local", "webdav", "none"]] = None
+    parent_subtask_id: int | None = Field(default=None, strict=True, ge=0)
 
 
 class SubTaskCreate(BaseModel):
@@ -261,6 +266,9 @@ async def get_tasks(user=Depends(get_current_user)):
             rights = task_permissions(db, row, user)
             items.append({
                 "id": row["id"],
+                "parent_subtask_id": row["parent_subtask_id"],
+                "parent_project_id": row["parent_project_id"],
+                "progress_percent": row["progress_percent"],
                 "_type": "task",
                 "_category": category,
                 "name": row["name"],
@@ -286,11 +294,12 @@ async def get_tasks(user=Depends(get_current_user)):
 
         # Zugewiesene Teilaufgaben als Aufgaben-Eintraege
         st_rows = db.execute(
-            """SELECT st.*, t.name AS project_name,
+            """SELECT st.*, t.name AS project_name, child.id AS child_project_id,
                       uc.vorname || ' ' || uc.nachname AS created_by_name,
                       ua.vorname || ' ' || ua.nachname AS assigned_to_name
                FROM sub_tasks st
                JOIN tasks t ON st.project_id = t.id
+               LEFT JOIN tasks child ON child.parent_subtask_id = st.id
                LEFT JOIN users uc ON st.created_by = uc.id
                LEFT JOIN users ua ON st.assigned_to = ua.id
                WHERE st.assigned_to = ?
@@ -315,6 +324,8 @@ async def get_tasks(user=Depends(get_current_user)):
                 "_project_id": st["project_id"],
                 "_project_name": st["project_name"],
                 "_status_percent": pct,
+                "child_project_id": st["child_project_id"],
+                "progress_automatic": st["child_project_id"] is not None,
                 "name": st["name"],
                 "created_at": _format_date(st["created_at"]),
                 "deadline": _format_date(st["deadline"]),
@@ -343,6 +354,7 @@ async def create_task(task: TaskCreate, user=Depends(get_current_user)):
         raise HTTPException(status_code=422, detail=str(exc))
 
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         deadline = _parse_date_input(task.deadline)
         cursor = db.execute(
             """INSERT INTO tasks (name, deadline, priority, task_type, status, description, created_by)
@@ -350,9 +362,12 @@ async def create_task(task: TaskCreate, user=Depends(get_current_user)):
             (task.name, deadline, task.priority, task_type, task.status, task.description, user["id"]),
         )
         new_id = cursor.lastrowid
+        if task.parent_subtask_id:
+            set_parent_subtask(db, new_id, task.parent_subtask_id, user)
     log_change(user, "task", new_id, "create", {
         "name": task.name, "priority": task.priority, "deadline": deadline,
         "task_type": task_type, "status": task.status,
+        "parent_subtask_id": task.parent_subtask_id or None,
     })
     return {"id": new_id, "message": "Aufgabe erstellt"}
 
@@ -364,6 +379,8 @@ def _update_task_record(task_id: int, task: TaskUpdate, user: dict):
         db.execute("BEGIN IMMEDIATE")
         existing, rights = require_task_access(db, task_id, user, "edit_status")
         can_full_edit = rights["can_edit"]
+        if "parent_subtask_id" in task.model_fields_set:
+            set_parent_subtask(db, task_id, task.parent_subtask_id, user)
         if task.assigned_to is not None and not rights["can_manage"]:
             raise HTTPException(status_code=403, detail="Nur Ersteller und Admins duerfen Zuweisungen aendern")
         if not can_full_edit and (task.file_storage_type is not None or task.nextcloud_path is not None):
@@ -372,6 +389,8 @@ def _update_task_record(task_id: int, task: TaskUpdate, user: dict):
         updates = []
         values = []
         changes_diff: dict = {}
+        if "parent_subtask_id" in task.model_fields_set:
+            changes_diff["parent_subtask_id"] = task.parent_subtask_id or None
         remove_local = False
 
         # Zugewiesene duerfen nur Status aendern
@@ -393,6 +412,7 @@ def _update_task_record(task_id: int, task: TaskUpdate, user: dict):
                     task_type = normalize_task_type(task.task_type)
                 except ValueError as exc:
                     raise HTTPException(status_code=422, detail=str(exc))
+                ensure_project_type_change(db, task_id, task_type)
                 updates.append("task_type = ?")
                 values.append(task_type)
                 changes_diff["task_type"] = task_type
@@ -515,10 +535,11 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
             raise HTTPException(status_code=403, detail="Keine Leseberechtigung")
 
         rows = db.execute(
-            """SELECT st.*, a.name as area_name,
+            """SELECT st.*, a.name as area_name, child.id AS child_project_id,
                       uc.vorname || ' ' || uc.nachname AS created_by_name,
                       ua.vorname || ' ' || ua.nachname AS assigned_to_name
                FROM sub_tasks st
+               LEFT JOIN tasks child ON child.parent_subtask_id = st.id
                LEFT JOIN areas a ON st.area_id = a.id
                LEFT JOIN users uc ON st.created_by = uc.id
                LEFT JOIN users ua ON st.assigned_to = ua.id
@@ -564,6 +585,8 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
                 "deadline": _format_date(row["deadline"]),
                 "priority": row["priority"],
                 "status_percent": row["status_percent"],
+                "child_project_id": row["child_project_id"],
+                "progress_automatic": row["child_project_id"] is not None,
                 "predecessor_ids": pred_ids,
                 "predecessors_display": ", ".join(str(p) for p in pred_positions if p),
                 "description": row["description"] or "",
@@ -591,6 +614,7 @@ async def get_subtasks(task_id: int, user=Depends(get_current_user)):
 async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_current_user)):
     """Teilaufgabe anlegen."""
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         require_task_access(db, task_id, user, "create")
 
         # Naechste position_number ermitteln
@@ -609,6 +633,7 @@ async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_
         new_id = cursor.lastrowid
 
         set_subtask_predecessors(db, new_id, subtask.predecessor_ids)
+        refresh_parent_progress(db, task_id)
 
     log_change(user, "sub_task", new_id, "create", {
         "project_id": task_id, "name": subtask.name, "priority": subtask.priority,
@@ -621,7 +646,10 @@ async def create_subtask(task_id: int, subtask: SubTaskCreate, user=Depends(get_
 async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(get_current_user)):
     """Teilaufgabe aktualisieren."""
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         existing, rights = require_subtask_access(db, subtask_id, user, "edit")
+        if subtask.status_percent is not None:
+            ensure_manual_progress(db, subtask_id)
         if subtask.assigned_to is not None and not rights["can_manage"]:
             raise HTTPException(status_code=403, detail="Nur Ersteller und Admins duerfen Zuweisungen aendern")
         if subtask.position_number is not None or subtask.predecessor_ids is not None:
@@ -677,6 +705,8 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(g
         # Vorgaenger aktualisieren (komplett ersetzen)
         if subtask.predecessor_ids is not None:
             set_subtask_predecessors(db, subtask_id, subtask.predecessor_ids)
+        if subtask.status_percent is not None:
+            refresh_parent_progress(db, existing["project_id"])
 
     sub_changes: dict = {}
     for f in ("name", "area_id", "deadline", "priority", "status_percent",
@@ -697,11 +727,13 @@ async def update_subtask(subtask_id: int, subtask: SubTaskUpdate, user=Depends(g
 async def delete_subtask(subtask_id: int, user=Depends(get_current_user)):
     """Teilaufgabe loeschen (Projektersteller oder Admin)."""
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         existing, _ = require_subtask_access(db, subtask_id, user, "manage")
 
         sub_name = existing["name"]
         project_id = existing["project_id"]
         db.execute("DELETE FROM sub_tasks WHERE id = ?", (subtask_id,))
+        refresh_parent_progress(db, project_id)
     log_change(user, "sub_task", subtask_id, "delete", {"name": sub_name, "project_id": project_id})
     return {"message": "Teilaufgabe geloescht"}
 
@@ -1097,6 +1129,8 @@ async def get_tasks_config():
                 renderer="taskId", align="center", i18n_key="tasks.col.id",
             ),
             Column("Name", "name", width=0, sortable=True, i18n_key="tasks.col.name"),
+            Column("PID", "parent_subtask_id", width=60, sortable=True, renderer="parentId",
+                   align="center", i18n_key="tasks.col.pid"),
             Column("Typ", "task_type", width=90, sortable=True, renderer="badge", i18n_key="tasks.col.type"),
             Column("Status", "status", width=120, sortable=True, renderer="badge", i18n_key="tasks.col.status"),
             Column("Prioritaet", "priority", width=80, sortable=True, align="center", i18n_key="tasks.col.priority"),

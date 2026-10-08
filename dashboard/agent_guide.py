@@ -129,6 +129,7 @@ def build_agent_metadata(request: Request | None = None, *, mcp_base_url: str | 
             "Use Tareas MCP as the single point of truth for project planning.",
             "Use list_projects_page for compact paginated lists, following next_offset until null; load descriptions and subtasks with get_project. list_projects keeps its legacy list response.",
             "Status values are offen, in_arbeit, erledigt and abgebrochen; subtask progress is an integer from 0 to 100. Project status is derived from completed subtasks, with cancellation taking precedence.",
+            "create_project/update_project accept parent_subtask_id (PID) to link one child project per parent subtask. update_project(parent_subtask_id=0) unlinks. Both sides need edit access, no permission inheritance or cycles. Parent progress is the share of completed child subtasks, rounded down, empty=0. It propagates through all ancestors. Subtasks expose child_project_id/progress_automatic; writing linked status_percent fails with linked_project_progress_readonly. Unlinking/deleting the child keeps the last percentage; deleting the parent only detaches child projects.",
             "MCP tool errors have isError=true and structuredContent with code, message and applicable field/fields; use stable codes instead of parsing message text.",
             "If MCP tools are missing, configure MCP instead of creating a local shadow database.",
             "Use descriptions for scope and acceptance criteria; use handoff.add for progress, handoffs, and decisions.",
@@ -347,6 +348,28 @@ Bei Projekten gilt wie in der Weboberflaeche:
   wieder auf; danach gilt erneut die Ableitung aus den Teilaufgaben.
 
 Normale Aufgaben behalten ihren manuell gesetzten Status.
+
+Mit `create_project(parent_subtask_id=123)` oder
+`update_project(project_id=456, parent_subtask_id=123)` wird ein Kind-Projekt an
+Teilaufgabe 123 gehaengt. Pro Teilaufgabe ist ein Kind-Projekt erlaubt. Beide
+Seiten brauchen Bearbeitungsrechte, die Verknuepfung vererbt keine Zugriffsrechte.
+Selbstbezuege und Zyklen ueber mehrere Projekte werden abgewiesen.
+Die PID-Spalte zeigt die Eltern-Teilaufgaben-ID, nicht die Eltern-Projekt-ID.
+Projektantworten enthalten `parent_subtask_id`, `parent_project_id` und
+`progress_percent`, Teilaufgaben `child_project_id` und `progress_automatic`.
+
+Der Eltern-Subtask uebernimmt den Anteil vollstaendig erledigter Teilaufgaben des
+Kind-Projekts, auf ganze Prozent abgerundet (leer = 0). Teilfortschritte und der
+separate Abbruchstatus aendern die Berechnung nicht. Aenderungen werden innerhalb
+derselben Transaktion ueber alle Elternebenen weitergegeben. Bei
+`progress_automatic=true` darf `status_percent` auch als Admin nicht geschrieben
+werden: `linked_project_progress_readonly`, Feld `status_percent`.
+Andere Teilaufgabenfelder bleiben entsprechend den bisherigen Rechten editierbar.
+`update_project(parent_subtask_id=0)` trennt die Verbindung. Der letzte Fortschritt
+bleibt erhalten und ist wieder editierbar. Das gilt auch beim Loeschen des
+Kind-Projekts. Das Loeschen eines Eltern-Subtasks/-Projekts trennt die Kinder,
+ohne diese Projekte zu loeschen. Typwechsel zu einer normalen Aufgabe brauchen
+vorher die Trennung aller betroffenen Projektverknuepfungen.
 
 MCP-Werkzeugfehler liefern `isError=true`. `structuredContent` und der
 JSON-Textinhalt enthalten `code`, `message` und bei feldbezogenen Fehlern

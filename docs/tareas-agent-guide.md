@@ -143,6 +143,28 @@ Bei Projekten gilt wie in der Weboberflaeche:
 
 Normale Aufgaben behalten ihren manuell gesetzten Status.
 
+Mit `create_project(parent_subtask_id=123)` oder
+`update_project(project_id=456, parent_subtask_id=123)` wird ein Kind-Projekt an
+Teilaufgabe 123 gehaengt. Pro Teilaufgabe ist ein Kind-Projekt erlaubt. Beide
+Seiten brauchen Bearbeitungsrechte, die Verknuepfung vererbt keine Zugriffsrechte.
+Selbstbezuege und Zyklen ueber mehrere Projekte werden abgewiesen.
+Die PID-Spalte zeigt die Eltern-Teilaufgaben-ID, nicht die Eltern-Projekt-ID.
+Projektantworten enthalten `parent_subtask_id`, `parent_project_id` und
+`progress_percent`, Teilaufgaben `child_project_id` und `progress_automatic`.
+
+Der Eltern-Subtask uebernimmt den Anteil vollstaendig erledigter Teilaufgaben des
+Kind-Projekts, auf ganze Prozent abgerundet (leer = 0). Teilfortschritte und der
+separate Abbruchstatus aendern die Berechnung nicht. Aenderungen werden innerhalb
+derselben Transaktion ueber alle Elternebenen weitergegeben. Bei
+`progress_automatic=true` darf `status_percent` auch als Admin nicht geschrieben
+werden: `linked_project_progress_readonly`, Feld `status_percent`.
+Andere Teilaufgabenfelder bleiben entsprechend den bisherigen Rechten editierbar.
+`update_project(parent_subtask_id=0)` trennt die Verbindung. Der letzte Fortschritt
+bleibt erhalten und ist wieder editierbar. Das gilt auch beim Loeschen des
+Kind-Projekts. Das Loeschen eines Eltern-Subtasks/-Projekts trennt die Kinder,
+ohne diese Projekte zu loeschen. Typwechsel zu einer normalen Aufgabe brauchen
+vorher die Trennung aller betroffenen Projektverknuepfungen.
+
 MCP-Werkzeugfehler liefern `isError=true`. `structuredContent` und der
 JSON-Textinhalt enthalten `code`, `message` und bei feldbezogenen Fehlern
 `field`/`fields`. Stabile Codes wie `invalid_status`, `invalid_progress`,

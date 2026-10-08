@@ -36,6 +36,9 @@ from dashboard.task_validation import (
 from dashboard.note_service import update_note_as_admin
 from dashboard.permissions import require_task_access, require_subtask_access, task_visibility_sql
 from dashboard.dependency_service import add_subtask_dependency, set_subtask_predecessors
+from dashboard.project_links import (
+    SUBTASK_LINK_SELECT, ensure_manual_progress, refresh_parent_progress, set_parent_subtask,
+)
 from dashboard.file_storage import get_task_storage, safe_rel_path, storage_type
 from dashboard.mcp_errors import MCPToolError, StructuredToolErrors, tool_error_from_http
 
@@ -75,6 +78,9 @@ def _change_dependencies(operation, *args, **kwargs):
 def _task_to_dict(row, *, include_description: bool = True) -> dict:
     result = {
         "id": row["id"],
+        "parent_subtask_id": row["parent_subtask_id"],
+        "parent_project_id": row["parent_project_id"],
+        "progress_percent": row["progress_percent"],
         "name": row["name"],
         "status": row["effective_status"],
         "priority": row["priority"],
@@ -103,6 +109,8 @@ def _subtask_to_dict(row) -> dict:
         "deadline": row["deadline"],
         "priority": row["priority"],
         "status_percent": row["status_percent"],
+        "child_project_id": row["child_project_id"],
+        "progress_automatic": row["child_project_id"] is not None,
         "position_number": row["position_number"],
         "created_at": row["created_at"],
         "created_by": row["created_by"],
@@ -133,7 +141,7 @@ def _renumber_project_subtasks(db, ordered_ids: list[int]) -> dict[int, int]:
 
 
 def _subtask_with_predecessors(db, subtask_id: int) -> dict:
-    row = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+    row = db.execute(SUBTASK_LINK_SELECT + " WHERE st.id = ?", (subtask_id,)).fetchone()
     if not row:
         raise MCPToolError("subtask_not_found", f"Teilaufgabe {subtask_id} nicht gefunden", field="subtask_id")
     preds = db.execute(
@@ -234,7 +242,8 @@ def list_projects_page(
         params.append(status)
     columns = (
         "t.id, t.name, t.effective_status, t.priority, t.task_type, t.deadline, "
-        "t.created_at, t.created_by, t.assigned_to, t.nextcloud_path, t.file_storage_type"
+        "t.created_at, t.created_by, t.assigned_to, t.nextcloud_path, t.file_storage_type, "
+        "t.parent_subtask_id, t.parent_project_id, t.progress_percent"
     )
     if include_description:
         columns += ", t.description, t.description_format"
@@ -276,7 +285,7 @@ def get_project(project_id: int) -> dict:
             raise MCPToolError("task_not_found", f"Projekt {project_id} nicht gefunden", field="project_id")
         _require_task_read_access(db, project_id, _user())
         subs = db.execute(
-            "SELECT * FROM sub_tasks WHERE project_id = ? ORDER BY position_number ASC, id ASC",
+            SUBTASK_LINK_SELECT + " WHERE st.project_id = ? ORDER BY st.position_number ASC, st.id ASC",
             (project_id,),
         ).fetchall()
         deps = db.execute(
@@ -305,8 +314,13 @@ def create_project(
     priority: int = 50,
     status: ProjectStatus = "offen",
     task_type: str = "projekt",
+    parent_subtask_id: Annotated[int, Field(strict=True, ge=0)] | None = None,
 ) -> dict:
-    """Legt ein neues Projekt an. Gibt das angelegte Projekt-Dict (mit id) zurueck."""
+    """Legt ein Projekt an, optional als Kind von parent_subtask_id (PID).
+    Ein Kind-Projekt pro Teilaufgabe, keine Zyklen, Schreibrechte auf beiden Seiten.
+    Der Eltern-Subtask uebernimmt den Anteil erledigter Teilaufgaben in Prozent;
+    sein status_percent ist danach schreibgeschuetzt. Keine Rechtevererbung.
+    """
     user = _user()
     status = _access(validate_project_status, status)
     if not name.strip():
@@ -316,16 +330,20 @@ def create_project(
     except ValueError as exc:
         raise MCPToolError("invalid_task_type", "task_type muss aufgabe oder projekt sein", field="task_type") from exc
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         cursor = db.execute(
             """INSERT INTO tasks (name, description, deadline, priority, status, task_type, created_by, assigned_to)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (name.strip(), description, deadline, priority, status, task_type, user["id"], user["id"]),
         )
         task_id = cursor.lastrowid
+        if parent_subtask_id is not None:
+            _access(set_parent_subtask, db, task_id, parent_subtask_id, user)
         row = task_with_status(db, task_id)
     log_change(user, "task", task_id, "create", {
         "name": name, "description": description, "priority": priority,
         "status": status, "task_type": task_type, "deadline": deadline,
+        "parent_subtask_id": parent_subtask_id or None,
     })
     return _task_to_dict(row)
 
@@ -339,6 +357,7 @@ def update_project(
     priority: int | None = None,
     status: ProjectStatus | None = None,
     assigned_to: int | None = None,
+    parent_subtask_id: Annotated[int, Field(strict=True, ge=0)] | None = None,
 ) -> dict:
     """Aktualisiert ein Projekt. Nur uebergebene Felder werden geaendert.
 
@@ -347,11 +366,15 @@ def update_project(
     MCP und Weboberflaeche berechnen seinen Status dann wieder aus erledigten
     Teilaufgaben. Manuelle Werte offen/in_arbeit/erledigt ueberschreiben bei
     Projekten diese Ableitung nicht; normale Aufgaben behalten diese Werte.
+    parent_subtask_id verknuepft mit einer Eltern-Teilaufgabe (PID), 0 trennt.
+    Beim Trennen bleibt deren letzter Fortschritt erhalten und wird editierbar.
+    Verknuepfung/Trennung brauchen Schreibrechte auf Projekt und Eltern-Subtask.
     """
     user = _user()
     if status is not None:
         status = _access(validate_project_status, status)
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         before = db.execute("SELECT * FROM tasks WHERE id = ?", (project_id,)).fetchone()
         if not before:
             raise MCPToolError("task_not_found", f"Projekt {project_id} nicht gefunden", field="project_id")
@@ -362,6 +385,9 @@ def update_project(
             raise MCPToolError("permission_denied", "Nur Statusaenderungen sind erlaubt")
         updates, values = [], []
         new_vals = {}
+        if parent_subtask_id is not None:
+            _access(set_parent_subtask, db, project_id, parent_subtask_id, user)
+            new_vals["parent_subtask_id"] = parent_subtask_id or None
         if name is not None:
             updates.append("name = ?"); values.append(name); new_vals["name"] = name
         if description is not None:
@@ -378,10 +404,11 @@ def update_project(
                 updates.append("assigned_to = NULL"); new_vals["assigned_to"] = None
             else:
                 updates.append("assigned_to = ?"); values.append(assigned_to); new_vals["assigned_to"] = assigned_to
-        if not updates:
+        if not new_vals:
             raise MCPToolError("empty_update", "Keine Felder zum Aktualisieren angegeben")
-        values.append(project_id)
-        db.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", values)
+        if updates:
+            values.append(project_id)
+            db.execute(f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", values)
         after = task_with_status(db, project_id)
     changes = diff_fields(dict(before), {**dict(before), **new_vals}, list(new_vals.keys()))
     log_change(user, "task", project_id, "update", changes)
@@ -419,7 +446,7 @@ def list_subtasks(project_id: int) -> list[dict]:
         if not db.execute("SELECT id FROM tasks WHERE id = ?", (project_id,)).fetchone():
             raise MCPToolError("task_not_found", f"Projekt {project_id} nicht gefunden", field="project_id")
         subs = db.execute(
-            "SELECT * FROM sub_tasks WHERE project_id = ? ORDER BY position_number ASC, id ASC",
+            SUBTASK_LINK_SELECT + " WHERE st.project_id = ? ORDER BY st.position_number ASC, st.id ASC",
             (project_id,),
         ).fetchall()
         deps = db.execute(
@@ -445,7 +472,7 @@ def get_subtask(subtask_id: int) -> dict:
     """Holt eine einzelne Teilaufgabe inkl. predecessor_ids."""
     with db_query() as db:
         _access(require_subtask_access, db, subtask_id, _user())
-        row = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+        row = db.execute(SUBTASK_LINK_SELECT + " WHERE st.id = ?", (subtask_id,)).fetchone()
         if not row:
             raise MCPToolError("subtask_not_found", f"Teilaufgabe {subtask_id} nicht gefunden", field="subtask_id")
         preds = db.execute(
@@ -480,6 +507,7 @@ def create_subtask(
     if depends_on_project and 0 not in predecessor_ids:
         predecessor_ids.append(0)
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         _, rights = _access(require_task_access, db, project_id, user, "create")
         if assigned_to not in (None, user["id"]) and not rights["can_manage"]:
             raise MCPToolError("permission_denied", "Nur Ersteller und Admins duerfen Zuweisungen aendern", field="assigned_to")
@@ -501,7 +529,8 @@ def create_subtask(
         )
         subtask_id = cursor.lastrowid
         _change_dependencies(set_subtask_predecessors, db, subtask_id, predecessor_ids)
-        row = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+        _access(refresh_parent_progress, db, project_id)
+        row = db.execute(SUBTASK_LINK_SELECT + " WHERE st.id = ?", (subtask_id,)).fetchone()
     log_change(user, "sub_task", subtask_id, "create", {
         "project_id": project_id, "name": name, "description": description,
         "priority": priority, "deadline": deadline,
@@ -526,15 +555,20 @@ def update_subtask(
 ) -> dict:
     """Aktualisiert eine Teilaufgabe. Nur uebergebene Felder werden geaendert.
     predecessor_ids ersetzt KOMPLETT die bestehenden Vorgaenger.
-    Keine Zyklen oder transitiv redundanten Abhaengigkeiten, auch nicht an anderen Teilaufgaben."""
+    Keine Zyklen oder transitiv redundanten Abhaengigkeiten, auch nicht an anderen Teilaufgaben.
+    Bei progress_automatic=true ist status_percent gesperrt (Fehlercode
+    linked_project_progress_readonly). Stattdessen das Kind-Projekt bearbeiten."""
     user = _user()
     if status_percent is not None:
         status_percent = _access(validate_status_percent, status_percent)
     with db_transaction() as db:
-        before = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+        db.execute("BEGIN IMMEDIATE")
+        before = db.execute(SUBTASK_LINK_SELECT + " WHERE st.id = ?", (subtask_id,)).fetchone()
         if not before:
             raise MCPToolError("subtask_not_found", f"Teilaufgabe {subtask_id} nicht gefunden", field="subtask_id")
         _, rights = _access(require_subtask_access, db, subtask_id, user, "edit")
+        if status_percent is not None:
+            _access(ensure_manual_progress, db, subtask_id)
         if assigned_to is not None and not rights["can_manage"]:
             raise MCPToolError("permission_denied", "Nur Ersteller und Admins duerfen Zuweisungen aendern", field="assigned_to")
         if predecessor_ids is not None:
@@ -565,7 +599,9 @@ def update_subtask(
         if predecessor_ids is not None:
             _change_dependencies(set_subtask_predecessors, db, subtask_id, predecessor_ids)
             new_vals["predecessor_ids"] = predecessor_ids
-        after = db.execute("SELECT * FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
+        if status_percent is not None:
+            _access(refresh_parent_progress, db, before["project_id"])
+        after = db.execute(SUBTASK_LINK_SELECT + " WHERE st.id = ?", (subtask_id,)).fetchone()
         preds = db.execute(
             "SELECT depends_on_id FROM sub_task_dependencies WHERE sub_task_id = ?",
             (subtask_id,),
@@ -582,11 +618,13 @@ def delete_subtask(subtask_id: int) -> dict:
     """Loescht eine Teilaufgabe."""
     user = _user()
     with db_transaction() as db:
+        db.execute("BEGIN IMMEDIATE")
         _access(require_subtask_access, db, subtask_id, user, "manage")
         row = db.execute("SELECT id, name, project_id FROM sub_tasks WHERE id = ?", (subtask_id,)).fetchone()
         if not row:
             raise MCPToolError("subtask_not_found", f"Teilaufgabe {subtask_id} nicht gefunden", field="subtask_id")
         db.execute("DELETE FROM sub_tasks WHERE id = ?", (subtask_id,))
+        _access(refresh_parent_progress, db, row["project_id"])
     log_change(user, "sub_task", subtask_id, "delete", {
         "name": row["name"], "project_id": row["project_id"],
     })

@@ -17,8 +17,11 @@ WITH subtask_progress AS (
     GROUP BY project_id
 ), tasks_with_status AS (
     SELECT t.*,
+           (SELECT st.project_id FROM sub_tasks st WHERE st.id = t.parent_subtask_id) AS parent_project_id,
            COALESCE(progress.subtask_total, 0) AS subtask_total,
            COALESCE(progress.subtask_done, 0) AS subtask_done,
+           CASE WHEN COALESCE(progress.subtask_total, 0) = 0 THEN 0
+                ELSE progress.subtask_done * 100 / progress.subtask_total END AS progress_percent,
            CASE
                WHEN COALESCE(t.task_type, '') != 'projekt' OR t.status = 'abgebrochen' THEN t.status
                WHEN COALESCE(progress.subtask_total, 0) = 0 THEN 'offen'

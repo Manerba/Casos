@@ -102,6 +102,23 @@ and the main table header and filter bar. Collapsing it restores the list and
 filter bar with the current filters and sort order. The subtask table header
 stays visible within the project.
 
+Expand a subtask and choose **Projekt verknüpfen** to attach an existing project
+or create a child project. Each subtask can have one child project. Its progress
+is the percentage of fully completed subtasks in that child project, rounded
+down (an empty project gives 0%). Changes propagate through nested projects.
+The parent's progress is read-only in the UI, REST and MCP while linked.
+The **PID** column contains the parent **subtask ID** and opens that subtask.
+Linking or unlinking requires edit access to both sides and does not grant any
+additional access. Cycles are rejected. Unlinking or deleting a child project
+keeps the parent's last progress and restores manual editing. Deleting a parent
+subtask or project detaches its child projects without deleting them.
+
+MCP `create_project` and `update_project` accept `parent_subtask_id`;
+`update_project(parent_subtask_id=0)` unlinks. Project responses include
+`parent_subtask_id`, `parent_project_id` and `progress_percent`. Subtasks expose
+`child_project_id` and `progress_automatic`; attempting to write their linked
+progress returns `linked_project_progress_readonly` with field `status_percent`.
+
 Subtask handoffs appear as a responsive grid beside the description. Each compact
 widget shows its ID, author, timestamp and a single-line preview of the note.
 Drag the separator to adjust the column widths or the bottom handle to resize

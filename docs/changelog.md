@@ -1,6 +1,11 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+08.10.2026 15:11;0.0.1+139;Docs;163 Backend-Tests und sechs Browser-Pruefungen erfolgreich. Teilaufgaben-Scrolltest nach einmaligem Timeout in der Wiederholung erfolgreich. Produktive Datenbank vor Migration gesichert, drei Dienste neu gestartet und Migration, Authentifizierung sowie MCP-Guide auf beiden Ports geprueft
+08.10.2026 15:05;0.0.1+139;Feature;Kind-Projekte mit Eltern-Teilaufgaben verknuepfen und PID-Spalte mit Navigation ergaenzen. UI bietet bestehende Projekte, Neuanlage und Trennen, REST und MCP verwenden parent_subtask_id
+08.10.2026 15:05;0.0.1+139;Feature;Eltern-Fortschritt aus dem Anteil erledigter Kind-Teilaufgaben berechnen und atomar ueber alle Elternebenen weitergeben. Manuelle Fortschrittsaenderungen in UI, REST und MCP sperren, strukturierter MCP-Fehler linked_project_progress_readonly
+08.10.2026 15:05;0.0.1+139;Security;Projektverknuepfungen auf Schreibrechte beider Seiten, eindeutige Zuordnung, Projekttypen und Zyklen pruefen. Keine Rechtevererbung, Trennen erhaelt Fortschritt und Loeschen von Eltern erhaelt Kind-Projekte
+08.10.2026 15:05;0.0.1+139;Docs;README, Agent-Guide, Bootstrap und Agentenkontext um Projektverknuepfungen ergaenzen. Migration, Rechte, verschachtelte Fortschritte, parallele Verknuepfung, MCP-Fehler und Browser-Ablauf mit isolierten Datenbanken testen
 08.10.2026 14:29;0.0.1+138;Bugfix;Projektstatus und Teilaufgabenfortschritt in REST und MCP gemeinsam validieren, nur bekannte Statuswerte und ganzzahlige 0 bis 100 Prozent akzeptieren. Projektstatus in Weboberflaeche, MCP-Details und Listenfiltern einheitlich aus erledigten Teilaufgaben ableiten, Abbruch hat Vorrang
 08.10.2026 14:29;0.0.1+138;Feature;MCP-Werkzeugfehler mit isError, stabilen Codes und betroffenen Feldern als strukturierte Daten und JSON-Text liefern. Validierung, Rechte, Abhaengigkeiten und Dateioperationen einschliesslich Quell-/Zielfehlern beim Verschieben abdecken, REST-Fehlerformat beibehalten
 08.10.2026 14:29;0.0.1+138;Feature;list_projects_page mit kompakten Antworten, optionalen Beschreibungen, stabiler Sortierung und konsistenter Pagination ergaenzen. Bestehendes list_projects kompatibel halten und fehlende Dateiablage mit konkreten Einrichtungsschritten und Browserrechten erklaeren

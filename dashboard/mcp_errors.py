@@ -86,6 +86,7 @@ def _validation_payload(exc: ValidationError) -> dict:
         code, message = {
             "status": ("invalid_status", "status muss offen, in_arbeit, erledigt oder abgebrochen sein"),
             "status_percent": ("invalid_progress", "status_percent muss eine ganze Zahl von 0 bis 100 sein"),
+            "parent_subtask_id": ("invalid_parent_subtask", "parent_subtask_id muss eine ganze Zahl ab 0 sein"),
             "encoding": ("invalid_encoding", "Die angegebene Kodierung wird nicht unterstuetzt"),
             "offset": ("invalid_pagination", "offset muss eine ganze Zahl ab 0 sein"),
             "limit": ("invalid_pagination", "limit liegt ausserhalb des erlaubten Bereichs"),
