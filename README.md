@@ -202,12 +202,45 @@ MCP transport sessions belong to the endpoint where they were established.
 - Write operations are recorded in the audit log and can be reviewed in the Admin Panel. Admin-only `note.update` and `handoff.update` correct existing content while preserving its author and creation time.
 - Available tools cover projects, subtasks, dependencies, editable notes (`note.*`), handoffs/progress history (`handoff.*`), project files (`file.*`), users, areas, search, self-assignment, and `whoami`.
 
+Use `list_projects_page` for compact project lists. It returns `items`, `total`,
+`offset`, `limit`, and `next_offset`; pass `next_offset` as the next request's
+`offset` until it is `null`. The default page size is 50, with a maximum of 500.
+Descriptions are omitted unless `include_description=true`; use `get_project`
+to load a project's full description and subtasks. Results retain visibility
+checks and sort by priority descending, creation time descending, then ID
+descending. Keep the same filters while paging; concurrent changes can shift
+offsets. The existing `list_projects` tool keeps its list response for existing
+clients. Both tools filter by the effective project status.
+
+REST and MCP accept the statuses `offen`, `in_arbeit`, `erledigt`, and
+`abgebrochen`, and require subtask progress to be an integer from 0 to 100.
+Project status follows the web UI: no completed subtasks means `offen`, some
+completed subtasks means `in_arbeit`, and all completed subtasks means `erledigt`.
+An empty project is `offen`; partially progressed subtasks alone do not change
+that status. `abgebrochen` overrides progress until the project is resumed with
+`status="offen"`. Ordinary tasks retain a manually set status. A project with
+all subtasks completed needs no separate completion call.
+
+MCP tool errors retain `isError=true` and provide `code`, `message`, and, when
+applicable, `field`/`fields` in `structuredContent` and as JSON text. Clients can
+handle codes such as `invalid_status`, `invalid_progress`, `dependency_cycle`,
+and `storage_not_configured` without parsing a localized message. REST clients
+keep their existing error response format.
+
 Agents access configured local or WebDAV storage through `file.list`, `file.read`,
 `file.write`, `file.mkdir`, `file.move`, and `file.delete`. Pass the project ID as
 `task_id` and paths relative to its storage root. Read access allows listing and
 reading, edit access allows file changes. Permissions are checked on every call.
 `get_project` includes `file_storage_type`; `file.list` includes `can_write` and
 pagination via `next_offset` (default 200, maximum 500 entries).
+
+If no storage is configured, expand the task/project in the web UI and use the
+**Dateiablage** (file storage) button to choose local storage or WebDAV. Once
+configured, storage settings are in the file browser header. Configuration
+requires edit access to the task/project (creator, admin,
+or an explicit edit share); an assignment alone is insufficient. Reading files
+requires read access, while file changes require edit access. MCP file tools
+never configure storage automatically.
 
 `file.read` returns text as UTF-8 or binary data as Base64, identified by `encoding`.
 `file.write` accepts either encoding and replaces the entire file. Parent folders

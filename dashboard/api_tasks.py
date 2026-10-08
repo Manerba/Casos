@@ -13,6 +13,8 @@ from pydantic import BaseModel, Field
 from dashboard.audit_log import log_change
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.task_types import normalize_task_type
+from dashboard.task_status import TASK_STATUS_CTE
+from dashboard.task_validation import ProjectStatus, StatusPercent
 from dashboard.user_utils import get_display_name
 from dashboard.auth import get_current_user
 from dashboard.components import Column, Filter, ExpandableTable
@@ -36,7 +38,7 @@ class TaskCreate(BaseModel):
     deadline: Optional[str] = None
     priority: int = 50
     task_type: str = "aufgabe"
-    status: str = "offen"
+    status: ProjectStatus = "offen"
     description: str = ""
 
 
@@ -45,7 +47,7 @@ class TaskUpdate(BaseModel):
     deadline: Optional[str] = None
     priority: Optional[int] = None
     task_type: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[ProjectStatus] = None
     description: Optional[str] = None
     assigned_to: Optional[int] = None
     nextcloud_path: Optional[str] = None
@@ -57,7 +59,7 @@ class SubTaskCreate(BaseModel):
     area_id: Optional[int] = None
     deadline: Optional[str] = None
     priority: int = 50
-    status_percent: int = 0
+    status_percent: StatusPercent = 0
     predecessor_ids: list[int] = []
     description: str = ""
 
@@ -67,7 +69,7 @@ class SubTaskUpdate(BaseModel):
     area_id: Optional[int] = None
     deadline: Optional[str] = None
     priority: Optional[int] = None
-    status_percent: Optional[int] = None
+    status_percent: Optional[StatusPercent] = None
     position_number: Optional[int] = None
     predecessor_ids: Optional[list[int]] = None
     description: Optional[str] = None
@@ -145,21 +147,6 @@ def _format_datetime(iso_str: Optional[str]) -> str:
         return iso_str or ""
 
 
-def _project_status(row) -> str:
-    """Ein Abbruch hat Vorrang vor dem berechneten Teilaufgaben-Fortschritt."""
-    if row["status"] == "abgebrochen":
-        return "abgebrochen"
-    total = row["subtask_total"] or 0
-    done = row["subtask_done"] or 0
-    if total == 0:
-        return "offen"
-    if done >= total:
-        return "erledigt"
-    if done > 0:
-        return "in_arbeit"
-    return "offen"
-
-
 def _parse_date_input(date_str: Optional[str]) -> Optional[str]:
     """Konvertiert Benutzereingabe zu ISO-Datum fuer DB."""
     if not date_str or not date_str.strip():
@@ -233,14 +220,12 @@ async def get_tasks(user=Depends(get_current_user)):
     with db_query() as db:
         visibility, params = task_visibility_sql(user)
         rows = db.execute(
-            """SELECT t.*,
+            TASK_STATUS_CTE + """SELECT t.*,
                       uc.vorname || ' ' || uc.nachname AS created_by_name,
                       uc.auth_source AS created_by_auth_source,
                       ua.vorname || ' ' || ua.nachname AS assigned_to_name,
-                      pm.id AS is_team_member,
-                      (SELECT COUNT(*) FROM sub_tasks st WHERE st.project_id = t.id) AS subtask_total,
-                      (SELECT COUNT(*) FROM sub_tasks st WHERE st.project_id = t.id AND st.status_percent >= 100) AS subtask_done
-               FROM tasks t
+                      pm.id AS is_team_member
+               FROM tasks_with_status t
                LEFT JOIN users uc ON t.created_by = uc.id
                LEFT JOIN users ua ON t.assigned_to = ua.id
                LEFT JOIN project_members pm ON pm.project_id = t.id AND pm.user_id = ?
@@ -283,7 +268,7 @@ async def get_tasks(user=Depends(get_current_user)):
                 "deadline": _format_date(row["deadline"]),
                 "priority": row["priority"],
                 "task_type": row["task_type"],
-                "status": _project_status(row) if row["task_type"] == "projekt" else row["status"],
+                "status": row["effective_status"],
                 "description": row["description"] or "",
                 "description_format": row["description_format"],
                 "created_by": row["created_by"],

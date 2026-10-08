@@ -127,6 +127,9 @@ def build_agent_metadata(request: Request | None = None, *, mcp_base_url: str | 
             "Store the real MCP token only in the local agent-client configuration.",
             "Never write tokens or secrets to AGENTS.md, docs, .env files, logs, issues, or Tareas notes.",
             "Use Tareas MCP as the single point of truth for project planning.",
+            "Use list_projects_page for compact paginated lists, following next_offset until null; load descriptions and subtasks with get_project. list_projects keeps its legacy list response.",
+            "Status values are offen, in_arbeit, erledigt and abgebrochen; subtask progress is an integer from 0 to 100. Project status is derived from completed subtasks, with cancellation taking precedence.",
+            "MCP tool errors have isError=true and structuredContent with code, message and applicable field/fields; use stable codes instead of parsing message text.",
             "If MCP tools are missing, configure MCP instead of creating a local shadow database.",
             "Use descriptions for scope and acceptance criteria; use handoff.add for progress, handoffs, and decisions.",
             "Write descriptions, notes, and handoffs as Markdown source, not rendered HTML.",
@@ -290,6 +293,7 @@ Eine korrekt gestartete Session sieht Tareas-Tools, z.B.:
 ```text
 mcp__tareas__whoami
 mcp__tareas__list_projects
+mcp__tareas__list_projects_page
 mcp__tareas__get_project
 mcp__tareas__note.write
 mcp__tareas__note.update
@@ -310,7 +314,7 @@ Pruefablauf:
 
 1. `whoami` aufrufen.
 2. Erwarteten `display_name` und `auth_source: "mcp"` pruefen.
-3. `list_projects` aufrufen.
+3. `list_projects_page` fuer eine kompakte, paginierte Uebersicht aufrufen.
 4. Zielprojekt mit `get_project(project_id=...)` lesen.
 5. Bei konfigurierter Dateiablage (`file_storage_type` ist `local` oder `webdav`)
    mit `file.list(task_id=...)` die Dateien und effektiven Schreibrechte pruefen.
@@ -318,6 +322,45 @@ Pruefablauf:
 Wenn keine Tareas-MCP-Tools verfuegbar sind, keine lokale Ersatz-DB und keine
 Schattenquelle in einem anderen System anlegen. Erst MCP einrichten oder den
 Benutzer um lokale Konfiguration bitten.
+
+## Projektlisten, Status und Fehler
+
+`list_projects_page(status=null, offset=0, limit=50, include_description=false)`
+liefert `items`, `total`, `offset`, `limit` und `next_offset`. Maximal 500 Eintraege
+pro Seite; fuer die naechste Seite `offset=next_offset` verwenden, bis
+`next_offset=null` ist. Filter beim Blaettern beibehalten. Sortierung: Prioritaet,
+Erstellungszeit und ID, jeweils absteigend. Gleichzeitige Aenderungen koennen
+Offsets verschieben. Beschreibungen fehlen standardmaessig; Details mit
+`get_project(project_id=...)` nachladen oder `include_description=true` setzen.
+Das bisherige `list_projects` liefert fuer bestehende Clients weiterhin eine
+Liste. Beide Werkzeuge beachten Sichtbarkeitsrechte und filtern den wirksamen Status.
+
+REST und MCP akzeptieren nur `offen`, `in_arbeit`, `erledigt` und `abgebrochen`
+als Status sowie ganzzahligen Teilaufgabenfortschritt von 0 bis 100.
+Bei Projekten gilt wie in der Weboberflaeche:
+
+- Keine vollstaendig erledigte Teilaufgabe: `offen`, auch bei Teilfortschritt.
+- Einige, aber nicht alle Teilaufgaben zu 100 % erledigt: `in_arbeit`.
+- Alle Teilaufgaben zu 100 % erledigt: `erledigt`, ohne manuellen Abschluss.
+- Leeres Projekt: `offen`.
+- `abgebrochen` hat Vorrang. `update_project(status="offen")` nimmt das Projekt
+  wieder auf; danach gilt erneut die Ableitung aus den Teilaufgaben.
+
+Normale Aufgaben behalten ihren manuell gesetzten Status.
+
+MCP-Werkzeugfehler liefern `isError=true`. `structuredContent` und der
+JSON-Textinhalt enthalten `code`, `message` und bei feldbezogenen Fehlern
+`field`/`fields`. Stabile Codes wie `invalid_status`, `invalid_progress`,
+`dependency_cycle` und `storage_not_configured` fuer die Fehlerbehandlung
+verwenden, statt Meldungstexte auszuwerten. Das bestehende REST-Fehlerformat bleibt erhalten.
+
+Bei `storage_not_configured`: Aufgabe/Projekt in der Weboberflaeche aufklappen und
+den Button **Dateiablage** verwenden (lokal oder WebDAV). Nach der Einrichtung
+stehen die Einstellungen im Header des Dateibrowsers. Hierfuer sind
+Bearbeitungsrechte am Projekt erforderlich, etwa als Ersteller, Admin oder durch
+eine Bearbeitungsfreigabe. Eine blosse Zuweisung reicht nicht aus. Dateien lesen
+braucht Leserechte, Dateiaenderungen brauchen Bearbeitungsrechte. Die MCP-Werkzeuge
+legen keine Ablage automatisch an.
 
 ## Dateiablage per REST
 
