@@ -538,13 +538,15 @@ function createMarkdownField(containerId, content, options) {
             if (response.status === 409) throw new Error(t('description.conflict'));
             if (!response.ok) throw new Error(t('common.saveError'));
             const result = await response.json();
+            return { revision: result.description_revision };
+        },
+        onSaved: (source, result) => {
             if (options.model) {
                 options.model[field] = source;
                 options.model[`${field}_format`] = 'markdown';
-                if (field === 'description') options.model.description_revision = result.description_revision;
+                if (field === 'description') options.model.description_revision = result.revision;
             }
             options.onSaved?.(source);
-            return { revision: result.description_revision };
         },
     });
 }

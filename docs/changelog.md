@@ -1,6 +1,8 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+11.10.2026 23:00;0.0.1+141;Bugfix;Projekt 75 Teilaufgabe 373: Laufende Beschreibungsspeicherung beim Zeilen-Neuaufbau an den aktuellen Markdown-Editor uebergeben. Eingabesperre, bestaetigter Inhalt und Revision einschliesslich neuem Zeilenmodell bleiben konsistent. Fehler erhalten Entwurf und Basisrevision
+11.10.2026 23:00;0.0.1+141;Docs;Falschen HTTP 409 vor Korrektur in Chromium reproduziert. Regression mit 8 verzoegerten Erfolgen und 8 echten Konflikten fuer Projekte und Teilaufgaben, gleichen und ersetzten DOM-Knoten sowie erneuten Modell-Neuaufbau bestanden. Insgesamt vier Browserprogramme und 8 REST-/MCP-Beschreibungstests erfolgreich, unabhängige Codepruefung ohne weiteren Befund
 11.10.2026 22:37;0.0.1+140;Docs;218 Backend- und MCP-Tests in 304,220 Sekunden erfolgreich sowie 9 abschliessende Transport- und Fehlerpruefungen nach Feldnamenanpassung. Sieben Browserprogramme und Audit-UI mit Unicode und HTML-Angriffstext bestanden. Antwortmessung mit 25 Teilaufgaben: 123977 Bytes voll, 12083 Bytes kompakt, 15853 Bytes Statusuebersicht
 11.10.2026 22:37;0.0.1+140;Infra;Produktive Datenbank konsistent gesichert, Backupverzeichnis aus Git ausgeschlossen und alle drei Dienste neu gestartet. Datenintegritaet, Foreign Keys, Audit-Migration, FTS5 mit 18 Triggern, indexiertes Projekt 75, HTTP-Authentifizierung, Guides auf beiden MCP-Ports und authentifizierte Live-Suche erfolgreich geprueft
 11.10.2026 22:32;0.0.1+140;Feature;Projekt 75: kompakte MCP-Lese- und Schreibantworten, Statusuebersicht mit letzten Handoffs und sichtbaren Fortschrittszaehlern sowie Startbereitschaft und Blocker ergaenzen. Bestehende Vollantworten bleiben Standard, Positionen und fachliche Titel bleiben getrennt
