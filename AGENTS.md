@@ -1,6 +1,6 @@
 # Tareas - Agenten-Kontext
 
-Stand: 04.06.2026, gegen Repo-Dateien und Claude-Memory geprueft.
+Stand: 11.10.2026, um Projekt #75 ergaenzt und gegen Repo-Dateien geprueft.
 
 ## Projektziel
 
@@ -138,6 +138,13 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 - Schreiboperationen sollen `audit_log.log_change(...)` verwenden.
 - `file.list/read/write/mkdir/move/delete` nutzen `dashboard/file_storage.py` fuer lokale und WebDAV-Projektablagen mit aktuellen Projektrechten. `task_id` ist die Projekt-ID, Pfade sind relativ zur Ablage. Lesen/Schreiben maximal 1 MiB je Datei, UTF-8 oder Base64, Listen mit `offset`/`limit` (max. 500) und `next_offset`. `file.write` ersetzt die ganze Datei, `file.delete` loescht Ordner rekursiv, die Ablagewurzel ist geschuetzt. Audit ohne Dateiinhalte. `get_project`/`list_projects` liefern `file_storage_type`.
 - Der globale MCP-Kill-Switch liegt in `mcp_config.enabled`.
+
+- Projekt #75: `get_project`/`list_subtasks` unterstuetzen `include_description=false`, `update_project`/`update_subtask` `compact=true` (bestehende Vollantworten bleiben Standard). Kompakte Updates liefern tatsaechliche `changed_fields`, kurze wirksame Werte und bei Textaenderung Laenge/Revision. `project_views.py` liefert `get_project_status` mit konsistentem Snapshot, sichtbaren Zaehlern, maximal 200 Zeichen letzter Handoff-Vorschau und `readiness`/`blocker_ids`. 100%=completed, Abbruch=cancelled, Kindprojekt=delegated, unsichtbarer Vorgaenger=restricted, sonst blocked/ready. Startanker 0 blockiert nicht. `handoff.get` laedt einzelne Handoffs nach. ID bleibt technische Referenz, Position Anzeigereihenfolge, Name fachlicher Titel ohne Positionspraefix.
+- `description_service.py` teilt Beschreibungsrevisionen und atomare Aenderungen zwischen REST/MCP. Reads liefern `description_revision`, Volltext-PUT/Update pruefen sie optional (Legacy ohne Revision bleibt bedingungslos). `patch_description` und REST PATCH auf `/api/tasks/{id}/description` bzw. `/api/subtasks/{id}/description` verlangen `revision`, `operation` append/replace, `text`, bei replace eindeutigen `old_text`. Exaktes Anhaengen ohne Newline, fehlende/mehrdeutige Ziele abweisen, Format erhalten. Konflikt 409/`revision_conflict`; Browser behaelt Entwurf und urspruengliche Revision auch beim Zeilen-Neuaufbau.
+- Handoff-Autoren duerfen mit aktuellen Beitragsrechten innerhalb `0 <= Alter < 300` Sekunden Serverzeit UTC korrigieren. `note_service.py` prueft Rechte/Zeit/Revision gemeinsam unter BEGIN IMMEDIATE. Neue Autorroute braucht Revision, Adminroute bleibt optional kompatibel. Autor/ID/Erstellungszeit bleiben erhalten. REST/MCP-Reads liefern `can_write` und Revision, reale Bearbeiter stehen im Audit.
+- `file.append` ergaenzt vorhandene UTF-8-Dateien exakt, optionalen BOM erhalten, keine automatische Newline/Neuanlage, keine NUL/UTF-16, Gesamtlimit 1 MiB. `TaskStorage.append_text` nutzt dieselbe prozessuebergreifende Sperre wie Upload/Texteditor/Office. Audit nur Metadaten. Nach unklaren Netzwerkfehlern lesen vor Wiederholung (nicht idempotent).
+- MCP-Updates akzeptieren `reason` (maximal 1000 Unicode-Zeichen vor Trimmen, leer=null), getrennt vom fachlichen Diff in `audit_log.reason`, Admin-UI zeigt die Begruendung. Vor fachlichen Mutationen validieren, fuer kuenftige Tools `audit_log.normalize_reason` verwenden.
+- `search_service.py` verwendet FTS5/unicode61 mit gemeinsamem BM25-Ranking, UND-Begriffen, Phrasen und Wortpraefixen. `search` filtert mit `project_id`, `types` (auch handoff-Alias), `since` (ISO8601 mit Zone, inklusiv). Notes nutzen updated_at, andere created_at UTC. Rechte vor Limit, begrenzte plain/HTML-escaped Fundstellen. Keine beliebige Teilwortsuche. Atomarer Backfill und Quelltrigger inkl. Kaskaden, FTS5 muss vorhanden sein; `rebuild_search_index(db)` im `db_transaction()` fuer Wartung. Migrationen vor Dienstneustarts sichern.
 
 ## Frontend-Konventionen
 

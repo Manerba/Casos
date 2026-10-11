@@ -34,6 +34,7 @@ function renderMarkdown(value, format = 'markdown') {
 class MarkdownEditor {
     // Keep unfinished edits when expandable rows are rebuilt or tabs change.
     static drafts = new Map();
+    static draftRevisions = new Map();
 
     constructor(containerId, value = '', options = {}) {
         this.containerId = containerId;
@@ -41,6 +42,8 @@ class MarkdownEditor {
         if (!this.container) return;
         this.options = options;
         this.source = markdownSource(value, options.format);
+        this.revision = MarkdownEditor.drafts.has(containerId)
+            ? (MarkdownEditor.draftRevisions.get(containerId) ?? options.revision) : options.revision;
         this.editing = !options.readOnly && MarkdownEditor.drafts.has(containerId);
         this.saving = false;
         this.render();
@@ -71,6 +74,7 @@ class MarkdownEditor {
         this.input.value = MarkdownEditor.drafts.get(this.containerId) ?? this.source;
         this.input.addEventListener('input', () => {
             MarkdownEditor.drafts.set(this.containerId, this.input.value);
+            MarkdownEditor.draftRevisions.set(this.containerId, this.revision);
         });
         this.container.querySelector('[data-md-action="edit"]')?.addEventListener('click', () => {
             this.editing = true;
@@ -79,6 +83,8 @@ class MarkdownEditor {
         });
         this.container.querySelector('[data-md-action="cancel"]')?.addEventListener('click', () => {
             MarkdownEditor.drafts.delete(this.containerId);
+            MarkdownEditor.draftRevisions.delete(this.containerId);
+            this.revision = this.options.revision;
             this.input.value = this.source;
             this.editing = false;
             this.error.hidden = true;
@@ -114,14 +120,17 @@ class MarkdownEditor {
         this.error.hidden = true;
         this.updateView();
         try {
-            await this.options.onSave(source);
+            const result = await this.options.onSave(source, this.revision);
+            if (result?.revision) this.revision = this.options.revision = result.revision;
             this.source = source;
             if (MarkdownEditor.drafts.get(this.containerId) === source) {
                 MarkdownEditor.drafts.delete(this.containerId);
+                MarkdownEditor.draftRevisions.delete(this.containerId);
             }
             this.editing = false;
         } catch (error) {
             MarkdownEditor.drafts.set(this.containerId, source);
+            MarkdownEditor.draftRevisions.set(this.containerId, this.revision);
             this.error.textContent = this.options.saveErrorMessage?.(error) || t('common.saveError');
             this.error.hidden = false;
         } finally {
