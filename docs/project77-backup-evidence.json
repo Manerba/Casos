@@ -2,11 +2,12 @@
   "project_id": 77,
   "subtask_id": 399,
   "result": "passed",
-  "started_utc": "2026-10-19T16:27:03.064139+00:00",
-  "completed_utc": "2026-10-19T16:27:24.180265+00:00",
-  "command": "venv/bin/python tests/check_backup_restore.py",
-  "checked_worktree_head": "146c6ba9c473116506dd6b169deb340b141837d4",
-  "checked_worktree_version": "0.0.1+148",
+  "started_utc": "2026-10-19T16:41:42.616169+00:00",
+  "completed_utc": "2026-10-19T16:42:07.188674+00:00",
+  "command": "venv/bin/python tests/check_backup_restore.py --evidence /tmp/casos-project77-artifacts/backup-149.json",
+  "checked_worktree_dirty": false,
+  "checked_worktree_head": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92",
+  "checked_worktree_version": "0.0.1+149",
   "processes": {
     "apps": [
       "dashboard.app",
@@ -32,7 +33,7 @@
     "method": "Complete offline copy after both app processes exited cleanly; restore into new empty directory",
     "full_manifest_equal_before_start": true,
     "copied_file_count": 7,
-    "sqlite_snapshot_sha256": "2d07371a6ac7f40d25302d707115dd6aba665b51d50f6dee61b97618fb12b932",
+    "sqlite_snapshot_sha256": "5330b7cf683f1095d88d877ed64bac8836c2286e3c9a0be61b6fbc4245ca40d3",
     "wal_shm_files_present_in_snapshot": [],
     "secret_file_equal": true,
     "secret_mode": "0600",
@@ -82,7 +83,5 @@
     "external TLS key/certificate backup",
     "cross-host OS account ownership migration",
     "live concurrent-writer backup"
-  ],
-  "checked_worktree_dirty": true,
-  "checked_worktree_note": "Root repeat on the final product changes for #399, before central version commit; parent +148. Only later test/documentation changes followed."
+  ]
 }

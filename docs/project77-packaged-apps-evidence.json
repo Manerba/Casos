@@ -5,15 +5,15 @@
     400
   ],
   "result": "passed",
-  "started_utc": "2026-10-19T16:33:33.127456+00:00",
-  "completed_utc": "2026-10-19T16:33:45.141220+00:00",
-  "command": "venv/bin/python tests/check_packaged_apps.py",
+  "started_utc": "2026-10-19T16:41:57.425997+00:00",
+  "completed_utc": "2026-10-19T16:42:11.699910+00:00",
+  "command": "venv/bin/python tests/check_packaged_apps.py --package <existing-deb> --evidence /tmp/casos-project77-artifacts/package-149.json",
   "package": {
     "name": "casos",
-    "version": "0.0.1+148",
-    "sha256": "48cfca83cbda29e74aacd6e0466df993d85f320f59f7e80214eba5c22982e2ab",
-    "built_by_check": true,
-    "build_command": "./publish.sh --build <temporary-artifact-directory>",
+    "version": "0.0.1+149",
+    "sha256": "0c24242da1fb31357d493c1af748de0caa9674a92a5763e64e87a65c6cfa0e33",
+    "built_by_check": false,
+    "build_command": null,
     "extraction": "dpkg-deb -x into temporary directory; no installation/hooks",
     "payload_file_count": 97,
     "payload_unchanged_after_runtime": true

@@ -1,0 +1,160 @@
+{
+  "project_id": 77,
+  "subtask_id": 400,
+  "status": "bereit zur PL-Abnahme",
+  "acceptance_owner": "Separate PL session; #401 remains open and untouched",
+  "completed_implementation_subtasks": [
+    390,
+    391,
+    392,
+    393,
+    394,
+    395,
+    396,
+    397,
+    398,
+    399,
+    400
+  ],
+  "source_commit": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92",
+  "source_version": "0.0.1+149",
+  "delivery_version": "0.0.1+150",
+  "delivery_commit": "Exact +150 hash is recorded in Tareas #400 and the project handoff after the central documentation commit.",
+  "delivery_delta": "Only documentation/evidence and version.txt change in +150. Product source, tests, dependencies and package scripts match tested +149. Final +150 DEB gets an additional exact-artifact check after commit, with evidence under dist/.",
+  "browser_source": "Browsers tested the integrated product worktree committed as +149. Final nav.mcp correction retested in settings; no later product changes.",
+  "created_utc": "2026-10-19T16:46:19.717351+00:00",
+  "implementation_commits": [
+    "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92 0.0.1+149: Issue-Umbau bereinigen und lokalen Betrieb absichern",
+    "146c6ba9c473116506dd6b169deb340b141837d4 0.0.1+148: Bild-/MSG-Vorschau, Issue-Verlauf und Benachrichtigungen",
+    "2623b0f04dd2aa7256a7be196612f10d8fd26084 0.0.1+147: Issue-Oberflaeche, neuer MCP-Vertrag und Volltextsuche",
+    "4b7a7d936de288fb6f50a7b73f0054ab05b08257 0.0.1+146: Updates, lokale Anhaenge und Einstellungs-Overlay integrieren",
+    "0cdd27fdc4d05cd9871b5b83a999439c8209967c 0.0.1+145: Issue-Grundmodell, REST und gemeinsame Rechte fuer Projekt 77"
+  ],
+  "capture_source": "Tareas 71572183649a3c358ebf0c03fbe36b6d0d684fd0 / 0.0.1+144. Adapted update_service/api_updates/UpdateDialog/tests. Tareas source and runtime unchanged.",
+  "checks": [
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -v",
+      "result": "146 tests OK in 138.690s",
+      "commit": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92",
+      "log": "docs/project77-evidence/acceptance-backend-149.txt",
+      "includes": "8 operations/package tests, 11 initialization tests, 8 atomic-secret tests and rights/security/service/REST/MCP tests"
+    },
+    {
+      "command": "venv/bin/python tests/check_issues_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "Issue lifecycle, Alice/Bob/Admin, assignment/close/reopen, revisions/grants/drafts, duplicate attachments/download/retry/delete, pagination",
+      "log": "docs/project77-evidence/final-issues-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_update_dialog_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "Cookie/REST creation, author/time, save errors/drafts, double submit, correction/revision, Escape/focus/mobile, rights revocation, real translations/static assets",
+      "log": "docs/project77-evidence/final-updates-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_attachment_preview_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "Five raster formats, eight MSG cases, header/text/HTML/RTF/Unicode/CID/embedded and original downloads, corrupt/active inputs, focus/mobile/dark mode",
+      "log": "docs/project77-evidence/final-preview-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_settings_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "All sections, drafts and errors, TLS/SMTP/templates/users/tokens/kill switch, personal preferences/password change, mobile and Missing-key guard",
+      "log": "docs/project77-evidence/final-settings-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_search_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "Global search, AND/phrase/prefix/Unicode, safe snippets, since filter/deep link/drafts/pagination/stale responses/mobile",
+      "log": "docs/project77-evidence/final-search-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_history_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "Assignment/status/reopen/actor/snapshots, update corrections/deletion, mail preferences/fake recipients, drafts/errors/mobile",
+      "log": "docs/project77-evidence/final-history-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_markdown_ui.py",
+      "result": "passed, independently repeated by root",
+      "scope": "Real REST roundtrip, tables/lists/code/literal HTML, Issue/Update readers, XSS/namespace/DOM-clobbering defenses",
+      "log": "docs/project77-evidence/final-markdown-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_mcp_http.py",
+      "result": "passed; actual SDK and both isolated HTTP processes",
+      "log": "docs/project77-evidence/final-mcp-live.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_backup_restore.py --evidence /tmp/casos-project77-artifacts/backup-149.json",
+      "result": "passed; clean exact commit +149, 12 checks, offline restore and two parallel restarts",
+      "evidence": "docs/project77-backup-evidence.json"
+    },
+    {
+      "command": "./publish.sh --build /tmp/casos-project77-artifacts",
+      "result": "passed; actual local DEB +149",
+      "log": "docs/project77-evidence/acceptance-build-149.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_packaged_apps.py --package /tmp/casos-project77-artifacts/casos_0.0.1+149_all.deb --evidence /tmp/casos-project77-artifacts/package-149.json",
+      "result": "passed; two extracted scripts, 24 byte-exact assets, 22 tools, fresh parallel start, cross-service Issues/Updates/search/binary attachments/PNG preview/auth/revocation",
+      "evidence": "docs/project77-packaged-apps-evidence.json"
+    },
+    {
+      "command": "Python AST/JSON, node --check, bash -n, git diff --check, i18n parity and literal/dynamic-key scan",
+      "result": "passed; 394 keys per language, including 135 derived keys; no missing active assets; data/ empty; no remote"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_history_mail tests.test_issue_search tests.test_settings -v",
+      "result": "36 tests OK, 20.346s; host log unchanged by size/mtime/SHA256",
+      "log": "docs/project77-evidence/final-log-isolation.txt"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization -v",
+      "result": "11 tests OK, 16.457s; independent concurrent migration verification",
+      "log": "docs/project77-evidence/final-init-review.txt"
+    }
+  ],
+  "preview_evidence": {
+    "manifest": "tests/fixtures/msg/manifest.json",
+    "browser_result": "docs/project77-evidence/preview-result.json",
+    "screenshots": [
+      "docs/project77-evidence/preview-image-png.png",
+      "docs/project77-evidence/preview-mail-three-cid.png",
+      "docs/project77-evidence/preview-mail-rtf.png",
+      "docs/project77-evidence/preview-mail-mobile-dark.png",
+      "docs/project77-evidence/preview-unicode.msg.png"
+    ],
+    "fixtures": "JPEG/PNG/GIF/WebP/BMP, public unicode-header.msg/strangeDate.msg/unicode.msg with hashes/provenance/licenses; synthetic text/HTML/RTF/UTF16/CID, duplicate/traversal names, active/external resources, malformed/oversized/OLE/resource cases. Real bounded workers and byte-exact original/embedded downloads. Browser made no automatic external resource requests.",
+    "limits": "25 MiB preview input; image20MP/10000px/output4096px; worker10s wall/5s CPU/512MiB, two per app; MSG100 bounded attachments/body/OLE/output. Exact limits: docs/operations.md."
+  },
+  "known_limitations": [
+    "In-process MCP TestClient emits AnyIO MemoryObjectReceiveStream ResourceWarnings; real HTTP SDK checks pass. No assertion failure or multiprocessing tracker/semaphore warning. Intentional fake-mail failure logs its stack trace; that negative test passes.",
+    "Unsupported SVG/TIFF use download fallback; animated raster previews show first frame; nested MSG downloads without recursive preview. Over-limit previews give explicit errors and retain original download.",
+    "Mail is postcommit best-effort, without durable outbox/retry guarantee; delivery failure does not lose saved content.",
+    "Restart needs operator/systemd authorization; otherwise settings remain saved and UI reports restart_failed. No broad sudo/polkit rights added.",
+    "Main CSP retains unsafe-inline for existing admin/login handlers; no unsafe-eval. Stored Markdown/mail HTML is sanitized and browser XSS cases pass.",
+    "Killed secret publication can leave a private unused staging file; never adopted/reused. Existing active key bytes never replaced.",
+    "Earlier tests initialized /var/log/casos.log. Existing entries retained; final fixtures block host-handler setup. Targeted tests and final suite leave that log unchanged. Runtime DB/secret/attachments stayed isolated."
+  ],
+  "not_executed": [
+    "Real root/apt/systemd install/activation/upgrade/removal. Package hooks use mandatory local stubs; extracted apps use existing repository venv.",
+    "Fresh dependency download/install or another Python runtime than tested Python3.12.",
+    "Real LDAP/AD/SMTP/TLS connections, isolated LDAP provider login/sync regression, SMTP SSL/STARTTLS protocol fake-server regression. Configuration/secret/verify flags and mail decisions tested with fake transports.",
+    "Physical 500 MiB upload: streaming/chunk/size/disconnect/error boundaries tested with lowered limits, plus real binary roundtrips and same-name files.",
+    "Live concurrent-writer backup, external TLS certificate backup, cross-host account/ownership migration; complete offline restore tested.",
+    "Explicit login/password rate-limit boundary sequences and re-login after password change. Successful ordinary password change and login/cookie/logout/current-rights checks are covered.",
+    "Independent PL acceptance #401."
+  ],
+  "test_retirement": "docs/project77-test-retirement.json maps all 23 retired backend and 10 retired browser files; retained combined concurrent migration regression passes.",
+  "open_functional_blockers": [],
+  "scope_protection": {
+    "runtime_data_directory_empty": true,
+    "remote_configured": false,
+    "production_services_activated": false,
+    "real_mail_sent": false,
+    "tareas_code_or_runtime_modified": false
+  },
+  "handoff": "bereit zur PL-Abnahme; #401 remains exclusively for the separate PL session."
+}

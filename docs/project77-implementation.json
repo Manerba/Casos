@@ -199,6 +199,13 @@
       "command": "Visual review of desktop settings screenshot; translation scan and tests/check_settings_ui.py repeat",
       "result": "Found missing dynamic nav.mcp label; restored in all seven languages, now 394 keys; browser regression guard added",
       "log": "docs/project77-evidence/final-settings-browser.txt"
+    },
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -v",
+      "result": "146 tests OK in 138.690s",
+      "commit": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92",
+      "log": "docs/project77-evidence/acceptance-backend-149.txt",
+      "includes": "8 operations/package tests, 11 initialization tests, 8 atomic-secret tests and rights/security/service/REST/MCP tests"
     }
   ],
   "progress": {
@@ -212,8 +219,8 @@
     "397": "complete; Root15 backend tests and11-scenario real browser repetition passed, mobile screenshot viewed; version0.0.1+147",
     "394": "complete implementation and root review; version0.0.1+148",
     "398": "complete implementation and root review; version0.0.1+148",
-    "399": "Complete implementation and root review; grouped cleanup/operations commit version 0.0.1+149",
-    "400": "Final exact-commit verification and handoff pending after #399"
+    "399": "Complete: b0bcbc5 / 0.0.1+149; Tareas100",
+    "400": "Exact-source integration passed; ready for PL handoff, documentation version0.0.1+150"
   },
   "constraints": [
     "No Tareas writes except authorized project handoffs/status through MCP",
@@ -222,11 +229,12 @@
     "Complete packages only after coordinator review and recorded tests"
   ],
   "environment": "Playwright1.64/Chromium156 installed and smoke-tested; extract-msg0.56.1/Pillow12.3.0 installed; runtime data/ still empty",
-  "next": "400: exact-commit final full suite, backup/restore and packaged-app checks, then PL handoff. #401 remains open.",
-  "last_committed": "146c6ba /0.0.1+148;394/398 Tareas100",
+  "next": "Only independent PL acceptance #401. Final +150 hash/artifact verification in Tareas.",
+  "last_committed": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92 / 0.0.1+149",
   "known_test_notes": [
     "ASGI TestClient MCP protocol tests emit upstream anyio MemoryObjectReceiveStream ResourceWarnings; live SDK two-process check clean. No assertion failure.",
     "Earlier in-process tests initialized /var/log/casos.log; test fixtures now suppress host-handler installation. Existing log retained, no runtime DB/secret/attachments created. Final targeted isolation rerun verified unchanged host log.",
     "A too-broad test-only os.write fault injection caused resource_tracker warnings; narrowed to candidate key file descriptors. Full 145-test rerun has no multiprocessing tracker/semaphore warnings."
-  ]
+  ],
+  "final_integration_report": "docs/project77-handoff.json"
 }
