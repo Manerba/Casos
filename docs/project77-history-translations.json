@@ -1,0 +1,93 @@
+{
+  "de": {
+    "history.title": "Verlauf",
+    "history.refresh": "Aktualisieren",
+    "history.update": "Update",
+    "history.unassigned": "Nicht zugewiesen",
+    "history.assignment": "Verantwortlich",
+    "history.status": "Status",
+    "history.to": "nach",
+    "history.unknownActor": "Gelöschter Benutzer",
+    "history.empty": "Noch keine Änderungen oder Updates.",
+    "history.older": "Ältere Einträge",
+    "history.loadError": "Verlauf konnte nicht geladen werden."
+  },
+  "en": {
+    "history.title": "History",
+    "history.refresh": "Refresh",
+    "history.update": "Update",
+    "history.unassigned": "Unassigned",
+    "history.assignment": "Assignee",
+    "history.status": "Status",
+    "history.to": "to",
+    "history.unknownActor": "Deleted user",
+    "history.empty": "No changes or updates yet.",
+    "history.older": "Older entries",
+    "history.loadError": "Could not load history."
+  },
+  "es": {
+    "history.title": "Historial",
+    "history.refresh": "Actualizar",
+    "history.update": "Actualización",
+    "history.unassigned": "Sin asignar",
+    "history.assignment": "Responsable",
+    "history.status": "Estado",
+    "history.to": "a",
+    "history.unknownActor": "Usuario eliminado",
+    "history.empty": "Aún no hay cambios ni actualizaciones.",
+    "history.older": "Entradas anteriores",
+    "history.loadError": "No se pudo cargar el historial."
+  },
+  "fr": {
+    "history.title": "Historique",
+    "history.refresh": "Actualiser",
+    "history.update": "Mise à jour",
+    "history.unassigned": "Non attribué",
+    "history.assignment": "Responsable",
+    "history.status": "Statut",
+    "history.to": "vers",
+    "history.unknownActor": "Utilisateur supprimé",
+    "history.empty": "Aucun changement ni mise à jour.",
+    "history.older": "Entrées précédentes",
+    "history.loadError": "Impossible de charger l’historique."
+  },
+  "ro": {
+    "history.title": "Istoric",
+    "history.refresh": "Reîmprospătează",
+    "history.update": "Actualizare",
+    "history.unassigned": "Neatribuit",
+    "history.assignment": "Responsabil",
+    "history.status": "Stare",
+    "history.to": "la",
+    "history.unknownActor": "Utilizator șters",
+    "history.empty": "Nu există încă modificări sau actualizări.",
+    "history.older": "Intrări mai vechi",
+    "history.loadError": "Istoricul nu a putut fi încărcat."
+  },
+  "ru": {
+    "history.title": "История",
+    "history.refresh": "Обновить",
+    "history.update": "Обновление",
+    "history.unassigned": "Не назначен",
+    "history.assignment": "Ответственный",
+    "history.status": "Статус",
+    "history.to": "на",
+    "history.unknownActor": "Удалённый пользователь",
+    "history.empty": "Изменений и обновлений пока нет.",
+    "history.older": "Более ранние записи",
+    "history.loadError": "Не удалось загрузить историю."
+  },
+  "uk": {
+    "history.title": "Історія",
+    "history.refresh": "Оновити",
+    "history.update": "Оновлення",
+    "history.unassigned": "Не призначено",
+    "history.assignment": "Відповідальний",
+    "history.status": "Статус",
+    "history.to": "на",
+    "history.unknownActor": "Видалений користувач",
+    "history.empty": "Змін і оновлень ще немає.",
+    "history.older": "Попередні записи",
+    "history.loadError": "Не вдалося завантажити історію."
+  }
+}

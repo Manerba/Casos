@@ -2,12 +2,15 @@
   "project_id": 77,
   "subtask_id": 394,
   "prepared_on": "2026-10-19",
-  "state": "Vorbereitung abgeschlossen; Implementierung wartet auf Fertigstellung von #393 und Freigabe der Dateizuständigkeit durch Koordination.",
+  "state": "Historischer Vorbereitungsplan; aktuelle Implementierung und Prüfergebnisse siehe project77-implementation.json und project77-evidence.",
   "specification": "docs/project77-spec.json, insbesondere vollständige Projektbeschreibung und Subtask #394; Ergänzung zu docs/project77-preview-research.json.",
   "implementation_prerequisites": {
     "attachment_backend": "#392 abgeschlossen, Commit 4b7a7d9, Version 0.0.1+146; open_attachment liefert geprüften Dateideskriptor und Metadaten.",
     "frontend_hook": "openAttachmentPreview(issueId, attachmentId); exakt mit capture-Agent abgestimmt. Metadaten für Namen/Originaldownload können vor der Vorschau geladen werden.",
-    "packages_installed": ["extract-msg==0.56.1", "Pillow==12.3.0"],
+    "packages_installed": [
+      "extract-msg==0.56.1",
+      "Pillow==12.3.0"
+    ],
     "package_to_add_by_root": "striprtf==0.0.33; von Koordination bestätigt, bisher nicht installiert.",
     "browser": "Koordination meldet isolierte Browser-Testinfrastruktur verfügbar. In diesem Vorbereitungsschritt keine Browserprüfung ausgeführt."
   },
@@ -99,7 +102,14 @@
       }
     ],
     "embedded_item": "index,name,size,media_type,can_preview,download_url,image_url optional. Namen nur Anzeige/Download-Disposition, niemals Dateipfade. Fehlende Namen durch generierte Anzeigenamen ersetzen. Gleichnamige Anhänge bleiben über Index eindeutig.",
-    "errors": ["preview_unsupported", "preview_invalid", "preview_too_large", "preview_timeout", "preview_busy", "embedded_not_found"],
+    "errors": [
+      "preview_unsupported",
+      "preview_invalid",
+      "preview_too_large",
+      "preview_timeout",
+      "preview_busy",
+      "embedded_not_found"
+    ],
     "headers": "Cache-Control private,no-store; X-Content-Type-Options nosniff; Original-/Embedded-Download attachment und sandbox. Keine Mailtexte/Dateiinhalte/Parser-Stacktraces in API-Fehlern oder Betriebslog.",
     "fallback": "SVG und andere unbekannte Formate werden nicht gerendert und erhalten einen ausdrücklich erklärten Download-Fallback. Kein Anspruch auf rekursive Vorschau eingebetteter MSGs; begrenzter Download bleibt möglich."
   },

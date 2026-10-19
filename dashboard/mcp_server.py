@@ -151,6 +151,13 @@ def issue_editors_get(issue_id: Id) -> dict:
     return issue_service.get_editors(issue_id, _user())
 
 
+@mcp.tool(name='issue.history', annotations={'readOnlyHint': True})
+def issue_history(issue_id: Id, offset: Offset = 0, limit: Limit = 50) -> dict:
+    """Status-/Zuweisungsereignisse und Updates gemeinsam, neueste zuerst; Akteur und Vorher-/Nachher-Werte."""
+    from dashboard.issue_history_service import list_history
+    return list_history(issue_id, _user(), offset, limit)
+
+
 @mcp.tool(name='issue.editors.set')
 def issue_editors_set(issue_id: Id, user_ids: list[Id], revision: Text, reason: Text | None = None) -> dict:
     """Gesamte Bearbeiterliste revisionsgesichert ersetzen (Ersteller/Admin); leere Liste entfernt Freigaben."""

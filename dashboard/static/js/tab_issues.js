@@ -214,7 +214,11 @@
             list.querySelectorAll('[data-delete-update]').forEach(button => button.onclick = async () => {
                 if (!window.confirm(tr('deleteUpdateConfirm'))) return;
                 button.disabled = true;
-                try { await request(`/api/issues/${issueId}/updates/${button.dataset.deleteUpdate}`, { method: 'DELETE' }); await loadUpdates(issueId, false); }
+                try {
+                    await request(`/api/issues/${issueId}/updates/${button.dataset.deleteUpdate}`, { method: 'DELETE' });
+                    await loadUpdates(issueId, false);
+                    window.dispatchEvent(new CustomEvent('issue-history-changed', { detail: { issueId } }));
+                }
                 catch (error) { if (current(issueId, generation)) sectionError('issue-updates-panel', error); button.disabled = false; }
             });
             const more = document.getElementById('issue-more-updates');

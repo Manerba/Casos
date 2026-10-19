@@ -4,8 +4,11 @@ SMTP-Versand, Template-Rendering, HTML-Layout.
 """
 
 import logging
+import html
+import re
 import smtplib
 import ssl
+from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -15,6 +18,7 @@ from dashboard.user_utils import get_display_name
 from dashboard.tls_utils import get_tls_config, get_tls_verify_config
 
 logger = logging.getLogger(__name__)
+ISSUE_MAIL_EVENTS = ('issue_assigned', 'status_change', 'new_update', 'deadline_reached', 'deadline_warning')
 
 
 def get_app_url() -> str:
@@ -126,9 +130,13 @@ def render_template(event_type: str, placeholders: dict) -> tuple[str, str] | No
         subject = row["subject"]
         body_text = row["body_text"]
 
-        for key, value in placeholders.items():
-            subject = subject.replace(f"{{{key}}}", str(value or ""))
-            body_text = body_text.replace(f"{{{key}}}", str(value or ""))
+        # Substitute once: user text containing another placeholder stays literal.
+        def substitute(match):
+            value = placeholders.get(match.group(1), match.group(0))
+            return '' if value is None else str(value)
+        subject = re.sub(r'\{(\w+)\}', substitute, subject)
+        body_text = re.sub(r'\{(\w+)\}', substitute, body_text)
+        subject = subject.replace('\r', ' ').replace('\n', ' ')
 
         return subject, body_text
     finally:
@@ -138,7 +146,7 @@ def render_template(event_type: str, placeholders: dict) -> tuple[str, str] | No
 def build_html_mail(content_text: str) -> str:
     """Baut einen HTML-Rahmen im Casos-Design um den Content-Text."""
     # Zeilenumbrueche zu <br> konvertieren
-    content_html = content_text.replace("\n", "<br>")
+    content_html = html.escape(content_text).replace("\n", "<br>")
 
     return f"""<!DOCTYPE html>
 <html>
@@ -178,7 +186,7 @@ def notify_event(event_type: str, recipient_user_id: int, placeholders: dict) ->
     try:
         # User laden
         user = db.execute(
-            "SELECT id, vorname, nachname, email FROM users WHERE id = ?",
+            "SELECT id, username, vorname, nachname, email FROM users WHERE id = ? AND is_active = 1",
             (recipient_user_id,),
         ).fetchone()
         if not user or not user["email"]:
@@ -200,7 +208,8 @@ def notify_event(event_type: str, recipient_user_id: int, placeholders: dict) ->
         db.close()
 
     # Empfaenger-Name in Platzhalter einfuegen
-    recipient_name = get_display_name(user)
+    recipient_name = get_display_name(dict(user))
+    placeholders = dict(placeholders)
     placeholders["recipient_name"] = recipient_name
 
     # App-URL automatisch einfuegen (Caller kann ueberschreiben)
@@ -222,8 +231,7 @@ def ensure_default_prefs(user_id: int):
     """Stellt sicher, dass Default-Mail-Preferences fuer einen User existieren."""
     db = get_db()
     try:
-        event_types = ["task_assigned", "status_change", "deadline_reached", "deadline_warning"]
-        for et in event_types:
+        for et in ISSUE_MAIL_EVENTS:
             db.execute(
                 """INSERT OR IGNORE INTO user_mail_preferences (user_id, event_type, enabled, days_before)
                    VALUES (?, ?, 1, 2)""",
@@ -232,3 +240,95 @@ def ensure_default_prefs(user_id: int):
         db.commit()
     finally:
         db.close()
+
+
+def notify_issue_event(issue_id, event_type, actor_id=None, *, changes=None, update_id=None, days_before=None):
+    """Best-effort postcommit delivery; failures never undo an Issue mutation.
+
+    Current active creator/assignee only, respecting event preferences. Duplicate
+    mailboxes and the actor's own mailbox are excluded. No SMTP occurs in a write
+    transaction. Delivery errors are logged; this is not a durable mail queue.
+    """
+    try:
+        if event_type not in ISSUE_MAIL_EVENTS:
+            raise ValueError('Unsupported Issue mail event')
+        db = get_db()
+        try:
+            db.execute('BEGIN')
+            if not db.execute('SELECT 1 FROM mail_config WHERE id=1').fetchone():
+                return 0
+            row = db.execute('SELECT * FROM issues WHERE id=?', (issue_id,)).fetchone()
+            if row is None:
+                return 0
+            issue = dict(row)
+            if event_type.startswith('deadline_') and issue['status'] not in ('offen', 'in_arbeit'):
+                return 0
+            actor = db.execute('SELECT * FROM users WHERE id=?', (actor_id,)).fetchone()
+            actor_name = get_display_name(dict(actor)) if actor else ''
+            actor_email = (actor['email'] or '').strip().casefold() if actor else ''
+            recipients = []
+            seen = {actor_email} if actor_email else set()
+            for uid in dict.fromkeys((issue['created_by'], issue['assigned_to'])):
+                if uid is None or uid == actor_id:
+                    continue
+                recipient = db.execute('SELECT * FROM users WHERE id=? AND is_active=1', (uid,)).fetchone()
+                if recipient is None or not (recipient['email'] or '').strip():
+                    continue
+                pref = db.execute('SELECT enabled,days_before FROM user_mail_preferences WHERE user_id=? AND event_type=?',
+                                  (uid, event_type)).fetchone()
+                if pref and not pref['enabled']:
+                    continue
+                if event_type == 'deadline_warning' and days_before != (pref['days_before'] if pref else 2):
+                    continue
+                email = (recipient['email'] or '').strip().casefold()
+                if email in seen:
+                    continue
+                seen.add(email)
+                recipients.append(uid)
+        finally:
+            db.close()
+        change = changes or {}
+        issue_url = f'{get_app_url()}/issues/{issue_id}'
+        placeholders = {'issue_id': issue_id, 'issue_title': issue['title'], 'issue_url': issue_url,
+                        'actor_name': actor_name, 'deadline': issue['deadline'] or '', 'priority': issue['priority'],
+                        'old_status': change.get('old', ''), 'new_status': change.get('new', issue['status']),
+                        'old_assignee': change.get('old_label') or 'Nicht zugewiesen',
+                        'new_assignee': change.get('new_label') or 'Nicht zugewiesen',
+                        'update_id': update_id or '',
+                        'update_url': f'{issue_url}?update={update_id}' if update_id else issue_url,
+                        'days_before': days_before if days_before is not None else ''}
+        sent = 0
+        for uid in recipients:
+            try:
+                error = notify_event(event_type, uid, placeholders)
+                if error:
+                    logger.warning('Issue notification failed: issue=%s event=%s recipient=%s: %s', issue_id, event_type, uid, error)
+                else:
+                    sent += 1
+            except Exception:
+                logger.exception('Issue notification failed: issue=%s event=%s recipient=%s', issue_id, event_type, uid)
+        return sent
+    except Exception:
+        logger.exception('Issue notification preparation failed: issue=%s event=%s', issue_id, event_type)
+        return 0
+
+
+def notify_due_issues(today=None):
+    """One daily scheduler pass, using local calendar dates and per-user warnings."""
+    today = today or date.today()
+    if type(today) is not date:
+        raise ValueError('today must be a date')
+    db = get_db()
+    try:
+        rows = db.execute("SELECT id,deadline FROM issues WHERE status IN ('offen','in_arbeit') AND deadline>=?",
+                          (today.isoformat(),)).fetchall()
+    finally:
+        db.close()
+    counts = {'deadline_reached': 0, 'deadline_warning': 0}
+    for row in rows:
+        remaining = (date.fromisoformat(row['deadline']) - today).days
+        if remaining == 0:
+            counts['deadline_reached'] += notify_issue_event(row['id'], 'deadline_reached')
+        elif remaining <= 365:
+            counts['deadline_warning'] += notify_issue_event(row['id'], 'deadline_warning', days_before=remaining)
+    return counts

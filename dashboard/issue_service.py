@@ -157,8 +157,8 @@ def list_issues(user, offset=0, limit=50, status=None, assigned_to=None, include
 
 
 def _event(db, issue_id, actor_id, event_type, old, new):
-    db.execute("INSERT INTO issue_events (issue_id, actor_id, event_type, old_value, new_value) VALUES (?, ?, ?, ?, ?)",
-               (issue_id, actor_id, event_type, json.dumps(old, ensure_ascii=False), json.dumps(new, ensure_ascii=False)))
+    from dashboard.issue_history_service import record_event
+    return record_event(db, issue_id, actor_id, event_type, old, new)
 
 
 def create_issue(data, user, reason=None):
@@ -166,6 +166,7 @@ def create_issue(data, user, reason=None):
     data = validate_issue_data(data, creating=True)
     values = {"title": data["title"], "description": "", "priority": 50, "deadline": None,
               "assigned_to": None, "status": "offen", **data}
+    notifications = []
     with db_transaction() as db:
         db.execute("BEGIN IMMEDIATE")
         current = require_active_user(db, user)
@@ -178,17 +179,23 @@ def create_issue(data, user, reason=None):
         )
         issue_id = cursor.lastrowid
         if values["assigned_to"] is not None:
-            _event(db, issue_id, current["id"], "assignment", None, values["assigned_to"])
+            change = _event(db, issue_id, current["id"], "assignment", None, values["assigned_to"])
+            notifications.append(("issue_assigned", change))
         if values["status"] != "offen":
-            _event(db, issue_id, current["id"], "status", "offen", values["status"])
+            change = _event(db, issue_id, current["id"], "status", "offen", values["status"])
+            notifications.append(("status_change", change))
         result = _serialize(db, db.execute("SELECT * FROM issues WHERE id = ?", (issue_id,)).fetchone(), current)
         log_change(current, "issue", issue_id, "create", {"title": values["title"], "status": values["status"]}, reason=reason, db=db)
+    from dashboard.mail_service import notify_issue_event
+    for event_type, change in notifications:
+        notify_issue_event(issue_id, event_type, current["id"], changes=change)
     return result
 
 
 def update_issue(issue_id, data, user, reason=None):
     reason = normalize_reason(reason)
     data = validate_issue_data(data)
+    notifications = []
     with db_transaction() as db:
         db.execute("BEGIN IMMEDIATE")
         current = require_active_user(db, user)
@@ -209,13 +216,17 @@ def update_issue(issue_id, data, user, reason=None):
                        [*(data[key] for key in fields), issue_id])
             for field, event_type in (("status", "status"), ("assigned_to", "assignment")):
                 if field in changes:
-                    _event(db, issue_id, current["id"], event_type, row[field], data[field])
+                    change = _event(db, issue_id, current["id"], event_type, row[field], data[field])
+                    notifications.append(("issue_assigned" if event_type == "assignment" else "status_change", change))
         result = _serialize(db, db.execute("SELECT * FROM issues WHERE id = ?", (issue_id,)).fetchone(), current)
         if changes:
             audit = {key: value for key, value in changes.items() if key != "description"}
             if "description" in changes:
                 audit["description_len"] = len(data["description"])
             log_change(current, "issue", issue_id, "update", audit, reason=reason, db=db)
+    from dashboard.mail_service import notify_issue_event
+    for event_type, change in notifications:
+        notify_issue_event(issue_id, event_type, current["id"], changes=change)
     return result
 
 

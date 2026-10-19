@@ -17,7 +17,7 @@
       "offset": "Integer 0..9223372036854775807, default 0",
       "issue_id": "Optional positive SQLite integer ID; unknown ID yields an empty filtered page",
       "types": "Repeated query parameters types=issue&types=update; omitted means both; unknown values rejected",
-      "since": "Optional inclusive ISO8601 lower bound with explicit timezone, e.g. 2026-10-19T16:00:00+02:00"
+      "since": "Optional inclusive ISO8601 lower bound with explicit timezone and at most six fractional digits, e.g. 2026-10-19T16:00:00.123456+02:00; finer precision is rejected rather than truncated"
     }
   },
   "page": {
@@ -28,8 +28,8 @@
         "issue_id": "Issue ID",
         "update_id": "Update ID or null for Issue hits",
         "title": "Current parent Issue title, max 240 characters",
-        "created_at": "UTC ISO8601 with Z",
-        "updated_at": "UTC ISO8601 with Z",
+        "created_at": "UTC ISO8601 with Z; existing microseconds preserved, whole seconds remain without fraction; invalid stored timestamp null",
+        "updated_at": "UTC ISO8601 with Z; existing microseconds preserved, whole seconds remain without fraction; invalid stored timestamp null",
         "user_id": "Source author ID or null after user deletion",
         "user": "Current username, max 160 characters, or null",
         "snippet": "Plain excerpt <=322 visible characters including ellipses",
@@ -58,13 +58,14 @@
   },
   "semantics": {
     "visibility": "All active users, including active MCP identities, see the same corpus. require_active_user checks current activity and supplied mcp_token_id including revocation and Kill-Switch before any early return. No edit permission required.",
-    "time": "since uses updated_at of both source types, not created_at. Source timestamps are UTC with second resolution; fractional lower bounds round upwards to the next source second. Non-content Issue changes that change updated_at also affect since. Search is not a change feed.",
+    "time": "since uses updated_at of both source types, not created_at. Legacy naive timestamps are UTC; seconds and microseconds, including explicit source offsets, compare exactly at microsecond resolution. No rounding to source seconds or SQLite julianday milliseconds. More than six fractional digits in since is rejected. Non-content Issue changes that change updated_at also affect since. Search is not a change feed.",
     "unicode": "FTS5 unicode61 remove_diacritics 2, case-insensitive, with NFC input normalization. No stemming or arbitrary infix matching.",
-    "ranking": "One shared BM25 corpus with equal title/body weights, ascending BM25 then updated_at descending, type ascending, source ID descending. Raw scores are not exposed.",
+    "ranking": "One shared BM25 corpus with equal title/body weights, ascending BM25 then exact UTC updated_at descending, type ascending, source ID descending. Invalid stored timestamps sort last and are excluded by since. Raw scores are not exposed.",
     "query_syntax": "Whitespace/punctuation separate ordinary words combined with AND. Double quotes specify an ordered phrase. A final * expands the final word prefix. Uppercase AND/OR/NOT are literal search terms. FTS control syntax is rejected.",
     "empty": "Empty/whitespace query and an explicitly empty types list return an empty page after current-identity and filter validation.",
     "snapshot": "Identity, total, and items share one SQLite read snapshot. Pagination across separate requests may change after concurrent writes.",
-    "snippet_security": "Random per-query FTS markers; source characters HTML-escaped; no stored HTML passed through. Plain excerpts are suitable for textContent."
+    "snippet_security": "Random per-query FTS markers; source characters HTML-escaped; no stored HTML passed through. Plain excerpts are suitable for textContent.",
+    "timestamp_implementation": "Each nonempty search registers deterministic SQLite function casos_search_utc on its connection. It returns normalized UTC ISO8601 with fixed six fractional digits, or NULL for an invalid source timestamp. The same canonical key powers inclusive filtering and ordering before pagination; no source/index schema migration."
   },
   "index": {
     "version": 2,
@@ -94,7 +95,7 @@
   ],
   "verification": {
     "command": "venv/bin/python -m unittest discover -s tests -p test_issue_search.py -v",
-    "scope": "15 tests: real content matching/ranking/snippets, current users/tokens, REST/service parity, filters/time/pagination, source triggers/cascades, atomic backfill/rollback, restart/idempotency, FTS failure behavior",
+    "scope": "18 tests: real content matching/ranking/snippets, current users/tokens, REST/service parity, filters/time/pagination, source triggers/cascades, atomic backfill/rollback, restart/idempotency, FTS failure behavior. Integration regression covers inclusive milliseconds/microseconds immediately before/equal/after, second boundaries, mixed legacy/offset sources, positive/negative timezone day changes, timestamp roundtrip, cross-source tie ordering and pagination, precision rejection and maximum datetime.",
     "mcp": "Root #396 integrates and tests actual MCP transport using the same service."
   }
 }

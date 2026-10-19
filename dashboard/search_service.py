@@ -5,7 +5,7 @@ inclusive `since` filter uses updated_at for both sources; this is a content
 search, not a change feed. DB timestamps without a timezone are UTC.
 """
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import html
 import re
 import sqlite3
@@ -164,16 +164,8 @@ def _since_utc(value: str) -> str:
     try:
         if not isinstance(value, str) or not re.match(r"^\d{4}-\d{2}-\d{2}T", value):
             raise ValueError
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            raise ValueError
-        parsed = parsed.astimezone(timezone.utc)
-        # Source services store UTC timestamps at second resolution. Round a
-        # fractional lower bound upwards rather than lose it in SQLite's
-        # millisecond-resolution julianday conversion.
-        if parsed.microsecond:
-            parsed = parsed.replace(microsecond=0) + timedelta(seconds=1)
-        return parsed.isoformat()
+        parsed = _parse_utc(value, require_timezone=True)
+        return parsed.isoformat(timespec="microseconds").replace("+00:00", "Z")
     except (ValueError, OverflowError):
         raise ApplicationError(
             400, "since muss ein ISO-8601-Zeitpunkt mit Zeitzone sein, z.B. 2026-10-11T12:00:00Z",
@@ -181,20 +173,36 @@ def _since_utc(value: str) -> str:
         ) from None
 
 
-def _date_utc(value: str | None) -> str | None:
-    if not value:
-        return None
+def _parse_utc(value: str, *, require_timezone: bool = False) -> datetime:
+    if not isinstance(value, str) or re.search(r"[.,]\d{7,}", value):
+        # datetime.fromisoformat silently truncates higher precision. Reject
+        # it so an inclusive lower bound cannot accidentally include an older
+        # microsecond. Source services write at most six fractional digits.
+        raise ValueError
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        if require_timezone:
+            raise ValueError
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _canonical_utc(value: str | None) -> str | None:
+    """Sortable exact SQLite key; invalid source timestamps sort last.
+
+    SQLite julianday rounds to milliseconds, so it cannot compare current
+    Update timestamps. Fixed-width UTC strings preserve all six fractional
+    digits and make old second-resolution and offset timestamps comparable.
+    """
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        parsed = parsed.astimezone(timezone.utc)
-        # Source services store UTC timestamps at second resolution. Round a
-        # fractional lower bound upwards rather than lose it in SQLite's
-        # millisecond-resolution julianday conversion.
-        if parsed.microsecond:
-            parsed = parsed.replace(microsecond=0) + timedelta(seconds=1)
-        return parsed.isoformat().replace("+00:00", "Z")
+        return _parse_utc(value).isoformat(timespec="microseconds").replace("+00:00", "Z")
+    except (ValueError, OverflowError):
+        return None
+
+
+def _date_utc(value: str | None) -> str | None:
+    try:
+        return _parse_utc(value).isoformat().replace("+00:00", "Z")
     except (ValueError, OverflowError):
         return None
 
@@ -269,13 +277,14 @@ def _search_snapshot(db, query, limit, offset, issue_id, types, since):
     page = {"items": [], "total": 0, "offset": offset, "limit": limit, "next_offset": None}
     if not prepared or not selected:
         return page
+    db.create_function("casos_search_utc", 1, _canonical_utc, deterministic=True)
     conditions = ["search_fts MATCH ?", "d.type IN (" + ','.join('?' for _ in selected) + ")"]
     params = [prepared, *selected]
     if issue_id is not None:
         conditions.append("d.issue_id = ?")
         params.append(issue_id)
     if timestamp is not None:
-        conditions.append("julianday(d.updated_at) >= julianday(?)")
+        conditions.append("casos_search_utc(d.updated_at) >= ?")
         params.append(timestamp)
     joins = ("FROM search_fts JOIN search_documents d ON d.search_id = search_fts.rowid "
              "JOIN issues i ON i.id = d.issue_id LEFT JOIN users u ON u.id = d.user_id WHERE " + " AND ".join(conditions))
@@ -287,7 +296,7 @@ def _search_snapshot(db, query, limit, offset, issue_id, types, since):
             "SELECT d.type,d.id,d.issue_id,d.user_id,d.created_at,d.updated_at, "
             "substr(i.title,1,240) AS issue_title,substr(u.username,1,160) AS username, "
             "snippet(search_fts,-1,?,?,' … ',24) AS excerpt " + joins +
-            " ORDER BY bm25(search_fts),julianday(d.updated_at) DESC,d.type ASC,d.id DESC LIMIT ? OFFSET ?",
+            " ORDER BY bm25(search_fts),casos_search_utc(d.updated_at) DESC,d.type ASC,d.id DESC LIMIT ? OFFSET ?",
             [opening, closing, *params, limit, offset],
         ).fetchall()
     except sqlite3.OperationalError as exc:

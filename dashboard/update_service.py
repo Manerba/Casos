@@ -110,12 +110,16 @@ def create_update(issue_id, content, user, reason=None):
         db.execute("BEGIN IMMEDIATE")
         current = require_active_user(db, user)
         _, rights = require_issue_access(db, issue_id, current, "contribute")
-        cursor = db.execute("INSERT INTO issue_updates(issue_id,user_id,content,content_format) VALUES(?,?,?,'markdown')",
-                            (issue_id, current["id"], content))
+        created_at = _utc_now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        cursor = db.execute("INSERT INTO issue_updates(issue_id,user_id,content,content_format,created_at,updated_at) VALUES(?,?,?,'markdown',?,?)",
+                            (issue_id, current["id"], content, created_at, created_at))
         update_id = cursor.lastrowid
         log_change(current, "update", update_id, "create", {"issue_id": issue_id, "owner_user_id": current["id"],
                    "content_len": len(content)}, reason=reason, db=db)
-        return _serialize(_get(db, issue_id, update_id), current, rights)
+        result = _serialize(_get(db, issue_id, update_id), current, rights)
+    from dashboard.mail_service import notify_issue_event
+    notify_issue_event(issue_id, "new_update", current["id"], update_id=update_id)
+    return result
 
 
 def edit_update(issue_id, update_id, content, user, revision, reason=None):
@@ -138,8 +142,8 @@ def edit_update(issue_id, update_id, content, user, revision, reason=None):
         if revision != update_revision(row["content"], row["content_format"]):
             raise ApplicationError(409, "updates.conflict", code="revision_conflict", field="revision")
         if row["content"] != content or row["content_format"] != "markdown":
-            db.execute("UPDATE issue_updates SET content=?, content_format='markdown', updated_at=datetime('now') WHERE id=?",
-                       (content, update_id))
+            db.execute("UPDATE issue_updates SET content=?, content_format='markdown', updated_at=? WHERE id=?",
+                       (content, _utc_now().strftime('%Y-%m-%d %H:%M:%S.%f'), update_id))
             log_change(current, "update", update_id, "update", {"issue_id": issue_id, "owner_user_id": row["user_id"],
                        "content_len": len(content)}, reason=reason, db=db)
         return _serialize(_get(db, issue_id, update_id), current, rights)

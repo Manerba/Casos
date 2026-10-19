@@ -183,6 +183,7 @@ Deaktivierung, aktuelle Rollen und MCP-Kill-Switch gelten auch in bestehenden Se
 | issue.patch_description | issue_id, revision, operation=append/replace, text; replace braucht eindeutiges old_text. Keine automatische Newline. Antwort neue description_revision |
 | issue.delete | issue_id; endgueltig samt Updates und Anhaengen; cleanup_pending nennt verbleibende wiederholbare Dateibereinigung |
 | issue.editors.get/set | issue_id; get liefert user_ids/revision, set ersetzt alle user_ids mit revision; nur Ersteller/Admin |
+| issue.history | issue_id, offset/limit; Status-/Zuweisungsereignisse mit Akteur und Vorher-/Nachher-Werten sowie menschliche Updates, neueste zuerst |
 | update.list/get | issue_id, optional update_id; Listen offset/limit, neueste zuerst; Inhalte, revision, can_write/can_delete |
 | update.add | issue_id, content; neuer Eintrag, Antwort ok/update_id/revision |
 | update.edit | issue_id, update_id, content, revision; Antwort ok/revision |

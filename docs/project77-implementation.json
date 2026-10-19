@@ -39,9 +39,9 @@
   },
   "ownership": {
     "root": "schema, main app/router integration, core JS, templates, i18n, requirements, version/commits, independent integration review",
-    "capture_analysis": "391 complete/reviewed;393 prepared, waiting prerequisites",
-    "attachments_analysis": "392 complete/reviewed;394 waiting393",
-    "settings_ops_analysis": "395 final browser checks"
+    "capture_analysis": "398 frozen;399 legacy test/security analysis",
+    "attachments_analysis": "394 final theme browser check",
+    "settings_ops_analysis": "397 precision fix frozen;399 operations plan complete"
   },
   "checks": [
     {
@@ -100,18 +100,44 @@
       "command": "venv/bin/python tests/check_search_ui.py",
       "result": "Root repetition passed11 scenarios; mobile screenshot viewed",
       "log": "/tmp/casos-project77-397-browser-review.log"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization tests.test_issue_history_mail tests.test_issue_search -v",
+      "result": "35 tests OK26.378s; root review",
+      "log": "docs/project77-evidence/casos-project77-phase4-review.log"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_attachment_preview -v",
+      "result": "17 tests OK45.873s; real bounded worker",
+      "log": "docs/project77-evidence/casos-project77-preview-review.log"
+    },
+    {
+      "command": "venv/bin/python tests/check_history_ui.py",
+      "result": "Passed; root repeat and screenshot review",
+      "log": "docs/project77-evidence/casos-project77-history-review.log"
+    },
+    {
+      "command": "venv/bin/python tests/check_attachment_preview_ui.py",
+      "result": "Passed; root repeat with actual dark color scheme and computed color assertion",
+      "log": "docs/project77-evidence/casos-project77-preview-browser-final.log"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization tests.test_issue_http tests.test_issues tests.test_issue_sorting tests.test_updates tests.test_attachments tests.test_attachment_auth tests.test_settings tests.test_issue_search tests.test_issue_mcp tests.test_issue_history_mail tests.test_attachment_preview -v",
+      "result": "119 tests OK124.849s",
+      "log": "docs/project77-evidence/casos-project77-phase4-integrated-tests.log"
     }
   ],
   "progress": {
     "390": "complete: 0cdd27f / 0.0.1+145; Tareas100",
-    "391_400": "not completed",
     "401": "PL only; open",
     "391": "complete implementation and root review; grouped version 0.0.1+146",
     "392": "complete implementation and root review; grouped version 0.0.1+146",
     "395": "complete implementation and root review; grouped version 0.0.1+146",
     "393": "complete; Root browser repetition passed incl concurrent save/detail reload; desktop/mobile light/dark viewed; version0.0.1+147",
     "396": "complete; Root6 real protocol tests passed, live2process SDK check passed, integrated86 tests passed; version0.0.1+147",
-    "397": "complete; Root15 backend tests and11-scenario real browser repetition passed, mobile screenshot viewed; version0.0.1+147"
+    "397": "complete; Root15 backend tests and11-scenario real browser repetition passed, mobile screenshot viewed; version0.0.1+147",
+    "394": "complete implementation and root review; version0.0.1+148",
+    "398": "complete implementation and root review; version0.0.1+148"
   },
   "constraints": [
     "No Tareas writes except authorized project handoffs/status through MCP",
@@ -120,8 +146,8 @@
     "Complete packages only after coordinator review and recorded tests"
   ],
   "environment": "Playwright1.64/Chromium156 installed and smoke-tested; extract-msg0.56.1/Pillow12.3.0 installed; runtime data/ still empty",
-  "next": "394 previews and398 history/mail now released; then399 cleanup/ops,400 final review/handoff.401 PL only.",
-  "last_committed": "4b7a7d9 / 0.0.1+146;391/392/395 Tareas100",
+  "next": "399 cleanup, operations and regression preservation; then400 final handoff.401 PL only.",
+  "last_committed": "2623b0f /0.0.1+147;393/396/397 Tareas100",
   "known_test_notes": [
     "ASGI TestClient MCP protocol tests emit upstream anyio MemoryObjectReceiveStream ResourceWarnings; live SDK two-process check clean. No assertion failure."
   ]

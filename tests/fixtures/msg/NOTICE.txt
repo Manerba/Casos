@@ -1,0 +1,5 @@
+Public test fixtures from TeamMsgExtractor/msg-extractor, commit 18172ea4730fcfef6edaa0bd20e7a9c64bea20b9. See manifest.json for immutable URLs and SHA-256 hashes. Repository license GPL-3.0-or-later is preserved in GPL-3.0.txt.
+
+strangeDate.msg additionally contains text licensed CC BY-SA 3.0, attributed to online-convert.com and Wikipedia https://en.wikipedia.org/wiki/John_Doe. The original attribution is preserved in strangeDate-attribution.txt; license: https://creativecommons.org/licenses/by-sa/3.0/legalcode . The message is unmodified.
+
+These are public parser test messages, not Casos user data. The synthetic MSG/image fixtures in tests/preview_test_helpers.py are created for this test suite. Dependency and fixture notices do not relicense Casos source or claim blanket distribution compatibility.

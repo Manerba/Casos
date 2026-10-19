@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/admin/mcp", tags=["mcp-admin"])
 # und um Import-Reihenfolge-Probleme zu vermeiden.
 MCP_TOOLS = [
     "whoami", "get_agent_guide", "issue.list", "issue.get", "issue.create", "issue.update", "issue.delete",
-    "issue.patch_description", "issue.editors.get", "issue.editors.set",
+    "issue.patch_description", "issue.editors.get", "issue.editors.set", "issue.history",
     "update.list", "update.get", "update.add", "update.edit", "update.delete",
     "attachment.list", "attachment.add", "attachment.read", "attachment.delete", "users.list", "search",
 ]

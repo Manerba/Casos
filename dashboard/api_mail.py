@@ -2,10 +2,10 @@
 Casos - API-Router fuer Mail-Konfiguration, Templates und Preferences.
 """
 
-from typing import Optional
+from typing import Optional, Literal
 
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.config_utils import get_masked_config, resolve_masked_password
@@ -19,6 +19,7 @@ from dashboard.mail_service import (
     build_html_mail,
     ensure_default_prefs,
     get_app_url,
+    ISSUE_MAIL_EVENTS,
 )
 from dashboard.logging_config import get_security_logger
 
@@ -53,9 +54,9 @@ class TestMailRequest(BaseModel):
 
 
 class MailPreferenceItem(BaseModel):
-    event_type: str
+    event_type: Literal['issue_assigned', 'status_change', 'new_update', 'deadline_reached', 'deadline_warning']
     enabled: bool
-    days_before: int = 2
+    days_before: int = Field(default=2, ge=1, le=365, strict=True)
 
 
 class MailPreferencesSave(BaseModel):
@@ -219,12 +220,14 @@ async def get_mail_preferences(user=Depends(get_current_user)):
             "SELECT event_type, enabled, days_before FROM user_mail_preferences WHERE user_id = ?",
             (user["id"],),
         ).fetchall()
-        return {"preferences": [dict(r) for r in rows]}
+        return {"preferences": [dict(r) for r in rows if r['event_type'] in ISSUE_MAIL_EVENTS]}
 
 
 @mail_user_router.put("/api/user/mail/preferences")
 async def save_mail_preferences(data: MailPreferencesSave, user=Depends(get_current_user)):
     """Eigene Mail-Prefs speichern."""
+    if len({pref.event_type for pref in data.preferences}) != len(data.preferences):
+        raise HTTPException(status_code=422, detail='Doppelte Mail-Ereignisse sind nicht erlaubt')
     with db_transaction() as db:
         for pref in data.preferences:
             db.execute(

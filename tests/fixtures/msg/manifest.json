@@ -1,0 +1,23 @@
+[
+  {
+    "name": "unicode-header.msg",
+    "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/unicode-header.msg",
+    "size": 86016,
+    "sha256": "fe13d8dfba467cd1a6dbc538bef43fccc8ac3fcdcba46cfda1fc15b72fe18a7f",
+    "license": "GPL-3.0-or-later des Parser-Repos; keine separate Fixture-Lizenz gefunden, Herkunft erhalten."
+  },
+  {
+    "name": "strangeDate.msg",
+    "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/strangeDate.msg",
+    "size": 31744,
+    "sha256": "9676ca02b32c15bf47bcf4295131d807a2729c2d1cddc53c4d40b57aa6c6d32b",
+    "license": "Nachrichteninhalt CC BY-SA 3.0 laut erwartetem Textoutput; Attribution online-convert.com und Wikipedia John_Doe ergänzen. Parser-Repo-Lizenz allein genügt hierfür nicht."
+  },
+  {
+    "name": "unicode.msg",
+    "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/unicode.msg",
+    "size": 2045952,
+    "sha256": "3c67dc70854b994e469fc14496d23bf778e718831806ebafc72436c840439f9c",
+    "license": "GPL-3.0-or-later des Parser-Repos; keine separate Fixture-Lizenz gefunden, Herkunft erhalten."
+  }
+]

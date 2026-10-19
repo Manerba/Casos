@@ -1,5 +1,6 @@
 """Content-level FTS regressions on disposable Casos Issue databases."""
 from contextlib import closing
+from datetime import datetime, timedelta, timezone
 import tempfile
 import sqlite3
 import unittest
@@ -103,6 +104,67 @@ class IssueSearchTests(unittest.TestCase):
         self.assertEqual(collected,list(reversed(ids)))
         self.assertIsNone(self.find('needle',offset=100)['next_offset'])
         self.assertEqual(self.find('needle',offset=100)['total'],7)
+
+    def test_since_preserves_microsecond_boundaries_for_both_sources_and_zones(self):
+        parent=self.issue()
+        zones=(timezone.utc,timezone(timedelta(hours=5,minutes=30)),timezone(timedelta(hours=-7)))
+        for index,microsecond in enumerate((0,123000,123456,999999)):
+            pivot=datetime(2026,2,1,23,59,59,microsecond,tzinfo=timezone.utc)
+            query=f'microboundary{index}'
+            records=[]
+            for delta in (-1,0,1):
+                instant=pivot+timedelta(microseconds=delta)
+                # Mix legacy naive seconds and zoned fractional sources,
+                # including offsets that change the local calendar day.
+                stamp=(instant.strftime('%Y-%m-%d %H:%M:%S') if instant.microsecond==0
+                       else instant.astimezone(zones[delta+1]).isoformat())
+                iid=self.issue(query,created_at=stamp,updated_at=stamp)
+                uid=self.update(parent,query,created_at=stamp,updated_at=stamp)
+                records.extend(((instant,'issue',iid),(instant,'update',uid)))
+            for delta in (-1,0,1):
+                lower=pivot+timedelta(microseconds=delta)
+                expected={(kind,rid) for instant,kind,rid in records if instant>=lower}
+                for zone in zones:
+                    since=lower.astimezone(zone).isoformat()
+                    with self.subTest(microsecond=microsecond,delta=delta,since=since):
+                        page=self.find(query,since=since)
+                        self.assertEqual(page['total'],len(expected))
+                        self.assertEqual({(row['type'],row['id']) for row in page['items']},expected)
+                        for row in page['items']:
+                            instant=next(moment for moment,kind,rid in records if (kind,rid)==(row['type'],row['id']))
+                            exact=instant.isoformat().replace('+00:00','Z')
+                            self.assertEqual(row['created_at'],exact)
+                            self.assertEqual(row['updated_at'],exact)
+
+    def test_microsecond_ranking_ties_sort_mixed_sources_before_pagination(self):
+        parent=self.issue()
+        newest=self.update(parent,'chronologicalneedle',updated_at='2026-03-02T00:00:00.123457Z')
+        equal_issue=self.issue('chronologicalneedle',updated_at='2026-03-01T17:00:00.123456-07:00')
+        legacy=self.issue('chronologicalneedle',updated_at='2026-03-02 00:00:00')
+        equal_update=self.update(parent,'chronologicalneedle',updated_at='2026-03-02T05:30:00.123456+05:30')
+        later_issue_id=self.issue('chronologicalneedle',updated_at='2026-03-02 00:00:00.123456')
+        older_update=self.update(parent,'chronologicalneedle',updated_at='2026-03-02 00:00:00.123455')
+        malformed=self.issue('chronologicalneedle',updated_at='invalid timestamp')
+        expected=[('update',newest),('issue',later_issue_id),('issue',equal_issue),('update',equal_update),('update',older_update),('issue',legacy),('issue',malformed)]
+        actual=[];offset=0
+        while offset is not None:
+            page=self.find('chronologicalneedle',offset=offset,limit=2)
+            self.assertEqual(page['total'],len(expected))
+            actual.extend((row['type'],row['id']) for row in page['items'])
+            offset=page['next_offset']
+        self.assertEqual(actual,expected)
+        self.assertEqual(self.find('chronologicalneedle',since='2026-03-02T00:00:00.123456Z')['total'],4)
+        self.assertIsNone(self.find('chronologicalneedle')['items'][-1]['updated_at'])
+
+    def test_since_rejects_precision_loss_and_preserves_latest_supported_instant(self):
+        iid=self.issue('lastinstant',created_at='9999-12-31 23:59:59.999999',updated_at='9999-12-31 23:59:59.999999')
+        result=self.find('lastinstant',since='9999-12-31T23:59:59.999999Z')
+        self.assertEqual([row['id'] for row in result['items']],[iid])
+        self.assertEqual(result['items'][0]['updated_at'],'9999-12-31T23:59:59.999999Z')
+        for since in ('2026-01-01T00:00:00.1234567Z','2026-01-01T00:00:00,1234567Z','0001-01-01T00:00:00+14:00'):
+            with self.subTest(since=since),self.assertRaises(ApplicationError) as caught:
+                self.find('lastinstant',since=since)
+            self.assertEqual(caught.exception.code,'invalid_search_since')
 
     def test_insert_update_delete_and_issue_cascade_update_index(self):
         issue=self.issue('Oldword','oldword')
@@ -212,15 +274,20 @@ class IssueSearchTests(unittest.TestCase):
         self.assertEqual((caught.exception.status_code,caught.exception.code),(503,'search_unavailable'))
 
     def test_real_rest_auth_filters_and_service_parity(self):
-        issue=self.issue(description='Sharedneedle');update=self.update(issue,'Sharedneedle')
+        issue=self.issue(description='Sharedneedle')
+        update=self.update(issue,'Sharedneedle',updated_at='2026-10-19 14:30:00.123456')
+        self.update(issue,'Sharedneedle',updated_at='2026-10-19 14:30:00.123455')
+        since='2026-10-19T16:30:00.123456+02:00'
         self.db.commit()
         with TestClient(app) as client:
             self.assertEqual(client.get('/api/search?query=Sharedneedle').status_code,401)
             client.cookies.set(auth.COOKIE_NAME,auth.sign_token(auth.create_session(2)))
-            response=client.get('/api/search',params={'query':'Sharedneedle','types':'update','issue_id':issue,'limit':1})
+            response=client.get('/api/search',params={'query':'Sharedneedle','types':'update','issue_id':issue,'limit':1,'since':since})
             self.assertEqual(response.status_code,200,response.text)
-            self.assertEqual(response.json(),self.find('Sharedneedle',types=['update'],issue_id=issue,limit=1))
+            self.assertEqual(response.json(),self.find('Sharedneedle',types=['update'],issue_id=issue,limit=1,since=since))
             self.assertEqual(response.json()['items'][0]['update_id'],update)
+            self.assertEqual(response.json()['total'],1)
+            self.assertEqual(response.json()['items'][0]['updated_at'],'2026-10-19T14:30:00.123456Z')
             error=client.get('/api/search',params={'query':'needle','types':'subtask'}).json()
             self.assertEqual(error['code'],'invalid_search_types')
 

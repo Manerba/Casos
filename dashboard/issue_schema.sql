@@ -42,7 +42,8 @@ CREATE TABLE IF NOT EXISTS attachment_gc (
 CREATE TABLE IF NOT EXISTS issue_events (
  id INTEGER PRIMARY KEY AUTOINCREMENT, issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
  actor_id INTEGER REFERENCES users(id) ON DELETE SET NULL, event_type TEXT NOT NULL,
- old_value TEXT, new_value TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+ old_value TEXT, new_value TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')),
+ actor_name TEXT NOT NULL DEFAULT '', old_label TEXT, new_label TEXT
 );
 CREATE INDEX IF NOT EXISTS issue_events_order ON issue_events(issue_id,created_at,id);
 CREATE TABLE IF NOT EXISTS ldap_config (

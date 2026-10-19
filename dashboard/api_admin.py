@@ -151,14 +151,30 @@ async def delete_user(user_id: int, user=Depends(get_admin_user)):
     if user_id == user["id"]:
         raise HTTPException(status_code=400, detail="Eigenen Account kann man nicht loeschen")
 
+    from dashboard.issue_permissions import require_active_user
+    from dashboard.issue_history_service import record_event
+    from dashboard.mail_service import notify_issue_event
+    notifications = []
     with db_transaction() as db:
+        db.execute('BEGIN IMMEDIATE')
+        current = require_active_user(db, user)
+        if not current['is_admin']:
+            raise HTTPException(status_code=403, detail='Adminrechte erforderlich')
         existing = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
 
+        for issue in db.execute('SELECT id FROM issues WHERE assigned_to=?', (user_id,)).fetchall():
+            change = record_event(db, issue['id'], current['id'], 'assignment', user_id, None)
+            notifications.append((issue['id'], change))
+            db.execute("UPDATE issues SET assigned_to=NULL,updated_at=datetime('now') WHERE id=?", (issue['id'],))
+            log_change(current, 'issue', issue['id'], 'update', {'assigned_to': {'old': user_id, 'new': None}}, db=db)
+
         # Sessions mitloeschen (CASCADE sollte das tun, aber sicherheitshalber)
         db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
         db.execute("DELETE FROM users WHERE id = ?", (user_id,))
-        log_change(user, "user", user_id, "delete", db=db)
-        security_log.info("USER_DELETED user_id=%s by=%s", user_id, user["username"])
-        return {"message": "Benutzer geloescht"}
+        log_change(current, "user", user_id, "delete", db=db)
+    security_log.info("USER_DELETED user_id=%s by=%s", user_id, current["username"])
+    for issue_id, change in notifications:
+        notify_issue_event(issue_id, 'issue_assigned', current['id'], changes=change)
+    return {"message": "Benutzer geloescht"}

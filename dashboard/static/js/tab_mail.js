@@ -168,9 +168,9 @@ function renderTemplatesSection() {
     };
 
     const placeholderHints = {
-        'issue_assigned': '{recipient_name}, {issue_title}, {actor_name}, {deadline}, {priority}, {issue_url}',
-        'new_update': '{recipient_name}, {issue_title}, {actor_name}, {issue_url}',
-        'status_change': '{recipient_name}, {issue_title}, {actor_name}, {new_status}, {issue_url}',
+        'issue_assigned': '{recipient_name}, {issue_title}, {actor_name}, {old_assignee}, {new_assignee}, {deadline}, {priority}, {issue_url}',
+        'new_update': '{recipient_name}, {issue_title}, {actor_name}, {update_id}, {update_url}, {issue_url}',
+        'status_change': '{recipient_name}, {issue_title}, {actor_name}, {old_status}, {new_status}, {issue_url}',
         'deadline_reached': '{recipient_name}, {issue_title}, {issue_url}',
         'deadline_warning': '{recipient_name}, {issue_title}, {days_before}, {deadline}, {issue_url}',
         'invite': '{recipient_name}, {username}, {app_url}',

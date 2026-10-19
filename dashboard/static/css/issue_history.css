@@ -1,0 +1,10 @@
+.issue-history-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.issue-history-heading h3 { margin: 0; }
+.issue-history-list { list-style: none; padding: 0; margin: 1rem 0; }
+.issue-history-list li { padding: .85rem 0 .85rem 1rem; border-left: 2px solid var(--border-color, #667); overflow-wrap: anywhere; }
+.issue-history-list li + li { border-top: 1px solid var(--border-color, #667); }
+.issue-history-meta { display: flex; gap: .75rem; justify-content: space-between; flex-wrap: wrap; font-size: .85rem; margin-bottom: .4rem; }
+.issue-history-meta time, .issue-history-old { opacity: .8; }
+.issue-history-preview { white-space: pre-wrap; margin: .4rem 0 0; font-size: .9rem; }
+.issue-history-error { color: var(--danger-color, #ef4444); }
+@media(max-width:600px) { .issue-history-meta { gap: .25rem; } .issue-history-list li { padding-left: .65rem; } }

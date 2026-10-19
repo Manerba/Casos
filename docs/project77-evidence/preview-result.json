@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "formats": [
+    "JPEG",
+    "PNG",
+    "GIF",
+    "WebP",
+    "BMP"
+  ],
+  "message_fixtures": 8,
+  "unsafe_requests": [],
+  "page_errors": [],
+  "max_parallel_image_requests": 1,
+  "fixture_count": 15
+}

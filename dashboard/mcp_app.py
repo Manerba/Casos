@@ -13,6 +13,7 @@ import uvicorn
 
 from dashboard.agent_guide import build_agent_metadata, build_agent_guide_markdown
 from dashboard.api_attachments import router as attachments_router
+from dashboard.api_attachment_preview import router as preview_router
 from dashboard.errors import ApplicationError
 from dashboard.auth import get_file_user, get_mcp_user
 from dashboard.mcp_transport import install_mcp, mcp_lifespan, api_csrf_protection
@@ -22,6 +23,7 @@ from dashboard.tls_utils import get_tls_config
 app = FastAPI(title="Casos MCP", lifespan=mcp_lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 install_mcp(app, dedicated=True)
 app.include_router(attachments_router)
+app.include_router(preview_router)
 # Middleware prueft MCP-Bearer vor dem Body; Dependency prueft danach erneut.
 app.dependency_overrides[get_file_user] = get_mcp_user
 app.middleware("http")(api_csrf_protection)

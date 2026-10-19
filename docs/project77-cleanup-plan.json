@@ -1,0 +1,429 @@
+{
+  "project_id": 77,
+  "subtask_id": 399,
+  "prepared_on": "2026-10-19",
+  "baseline_commit": "2623b0f",
+  "baseline_version": "0.0.1+147",
+  "status": "Historischer Vorbereitungsplan; aktuelle Implementierung und Prüfergebnisse siehe project77-implementation.json und project77-evidence.",
+  "scope_guards": [
+    "Nur Casos; keine Tareas-Runtime, Datenbank oder Secrets gelesen.",
+    "Keine Dienste, Installation, Mail oder Veröffentlichung ausgeführt.",
+    "Root besitzt aktive Code-/Test-/i18n-Bereinigung und zentrale Commits.",
+    "Alle Prüfungen unten sind vorgeschlagen, sofern nicht ausdrücklich als bestehende Abdeckung bezeichnet."
+  ],
+  "ownership_proposal": {
+    "ops_docs_agent": [
+      "README.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "publish.sh",
+      "packaging/install.sh",
+      "packaging/DEBIAN/control",
+      "packaging/DEBIAN/postinst",
+      "packaging/DEBIAN/prerm",
+      "packaging/DEBIAN/postrm",
+      "packaging/services/*",
+      "scripts/*.service",
+      "scripts/*.timer",
+      "scripts/onlyoffice-setup.sh",
+      "docs/security-issues.md",
+      "docs/security-issues-fixes.md",
+      "docs/security-fixes-todo.md",
+      "docs/spec-desktop-app.md",
+      "new docs/operations.md",
+      "new tests/test_operations.py"
+    ],
+    "root": [
+      "dashboard/* legacy Python",
+      "dashboard/static/js/* legacy frontend",
+      "dashboard/static/css/* cleanup",
+      "dashboard/static/i18n/*.json",
+      "dashboard/templates/*",
+      "tests/* semantic replacements/removals",
+      "dashboard/db_utils.py",
+      "dashboard/app.py",
+      "dashboard/agent_guide.py",
+      "docs/casos-agent-guide.md",
+      "docs/casos-agents-snippet.md"
+    ],
+    "coordination": [
+      "requirements.txt bleibt #394/Root bis deren finalem Stand; ops dokumentiert endgültige Versionen/Lizenzen/Limits.",
+      "scripts/mail_scheduler.py und Mail-/Historiencode bleiben #398; ops integriert Units erst nach dessen Abschluss.",
+      "Keine parallelen Änderungen derselben Datei; README/AGENTS/CLAUDE erst nach finaler Codekarte verfassen."
+    ]
+  },
+  "ops_findings": [
+    {
+      "id": "ops-admin-office",
+      "files": [
+        "scripts/casos-admin.service",
+        "packaging/services/casos-admin.service",
+        "scripts/onlyoffice-setup.sh",
+        "packaging/DEBIAN/postinst",
+        "packaging/DEBIAN/prerm",
+        "packaging/DEBIAN/postrm",
+        "packaging/install.sh",
+        "packaging/DEBIAN/control"
+      ],
+      "observed": "Admin-Units/Port8515 werden noch kopiert, aktiviert, gestartet und entfernt. postinst startet Docker und ONLYOFFICE; postrm purge entfernt dessen Container. control verlangt Docker.",
+      "action": "Admin-/Office-Dateien entfernen; sämtliche aktiven Hook-/Port-/Docker-Aufrufe streichen. Aktuelle Services ausschließlich Haupt-App und MCP plus LDAP-/Mail-Scheduler. Keine fremden Docker-Container oder Tareas-Dienste anfassen. Historische Übergangsbereinigung allenfalls explizit dokumentieren, nicht beim lokalen Prüflauf ausführen."
+    },
+    {
+      "id": "ops-mail-timer",
+      "files": [
+        "scripts/casos-mail-scheduler.service",
+        "scripts/casos-mail-scheduler.timer",
+        "packaging/services/casos-mail-scheduler.service",
+        "packaging/DEBIAN/postinst",
+        "packaging/DEBIAN/prerm",
+        "packaging/DEBIAN/postrm"
+      ],
+      "observed": "Mail-Service/-Timer existieren, werden von den Paket-Hooks aber überhaupt nicht installiert/aktiviert/gestoppt/entfernt. Paketierter Mail-Timer fehlt als eigene Datei und wird derzeit nur durch Kopieren des lokalen scripts/-Baums mitgenommen.",
+      "action": "Beide Scheduler-Service/-Timer-Paare ausdrücklich in Paket-Lebenszyklus aufnehmen; package/services Mail-Timer ergänzen oder nachvollziehbar bewusst identischen lokalen Timer verwenden. Testtransport für Scheduler; keine realen Empfänger."
+    },
+    {
+      "id": "ops-build-artifact",
+      "files": [
+        "publish.sh"
+      ],
+      "observed": "--build baut lokal, danach entfernt das bedingungslose rm -rf \"$BUILD_DIR\" auch das gerade erzeugte DEB. Fester /tmp/casos-build kollidiert bei parallelen Builds. Dashboard/scripts werden inklusive sämtlicher noch vorhandener Altdateien kopiert.",
+      "action": "Lokalen Build mit eindeutiger temporärer Stagingwurzel und dauerhaftem vom Test angegebenen Artefaktziel ermöglichen. Erfolgsnachricht muss auf existierendes DEB zeigen. Paketmanifest auf entfernte Komponenten, Runtime und Secrets prüfen. Nur --build ausführen; kein Remote, Setup, Github-Sync oder Default-Publish. Explizite Guardrails gegen versehentliche Defaultveröffentlichung sinnvoll; keine Zielkonfiguration anlegen."
+    },
+    {
+      "id": "ops-installer-target",
+      "files": [
+        "packaging/install.sh",
+        "publish.sh"
+      ],
+      "observed": "install.sh und Publishing enthalten geerbte konkrete Repo-/Github-/GPG-Ziele; README erklärt zu Recht, dass kein Casos-Repository eingerichtet/veröffentlicht wurde.",
+      "action": "Aktiven Einstieg auf lokale DEB-Installation und dokumentierte Bedienung ändern oder Repository-Adresse ausdrücklich konfigurierbar machen; keinen ungeprüften produktiven Installationsendpunkt bewerben. Für Tests ausschließlich lokale Paketextraktion und gemockte Hooks."
+    },
+    {
+      "id": "ops-hook-lifecycle",
+      "files": [
+        "packaging/DEBIAN/postinst",
+        "packaging/DEBIAN/prerm",
+        "packaging/DEBIAN/postrm"
+      ],
+      "observed": "Hooks unterscheiden Upgrade/Remove kaum: prerm stoppt und deaktiviert immer, postrm entfernt Units immer. purge löscht Daten/venv/User. postinst führt pip live aus und chown auf gesamtem APP_DIR.",
+      "action": "Debian-Aufrufargumente configure/upgrade/remove/purge ausdrücklich handhaben; Remove und Upgrade müssen Daten/Secret/Anhänge bewahren. Purge nur explizit und dokumentiert destruktiv; Tests im Staging mit Ersatzbefehlen. Reale Dependencyinstallation/Services nicht als behauptete gemockte Prüfung ausgeben."
+    },
+    {
+      "id": "ops-hardening",
+      "files": [
+        "scripts/*.service",
+        "packaging/services/*.service"
+      ],
+      "observed": "Bestehende Units enthalten NoNewPrivileges, ProtectSystem=strict, ProtectHome, PrivateTmp, RestrictAddressFamilies, Kernel-/ControlGroup-Schutz. Paketunits laufen als casos; lokale Units als root/implizit root. data und /var/log sind writable.",
+      "action": "Bestehende Härtung erhalten. Vorschau-Worker nutzt nach #394 temporäre Dateien und Unterprozesse; mit PrivateTmp und Schreibpfaden vereinbar prüfen. Haupt/MCP bleiben8514/8516. CASOS_DATA_DIR-Abweichung erfordert passende ReadWritePaths und Besitzer; dokumentieren. Keine ungefragte Änderung des produktiven Dienstkontos."
+    }
+  ],
+  "legacy_code_candidates": {
+    "python_remove_after_import_graph_check": [
+      "dashboard/admin_app.py",
+      "dashboard/api_tasks.py",
+      "dashboard/api_teams.py",
+      "dashboard/dependency_service.py",
+      "dashboard/description_service.py",
+      "dashboard/note_service.py",
+      "dashboard/permissions.py",
+      "dashboard/project_links.py",
+      "dashboard/project_views.py",
+      "dashboard/task_status.py",
+      "dashboard/task_types.py",
+      "dashboard/task_validation.py",
+      "dashboard/api_nextcloud.py",
+      "dashboard/api_onlyoffice.py",
+      "dashboard/file_storage.py",
+      "dashboard/text_files.py",
+      "dashboard/webdav.py",
+      "dashboard/csp_utils.py"
+    ],
+    "templates_remove": [
+      "dashboard/templates/admin.html",
+      "dashboard/templates/admin_login.html",
+      "dashboard/templates/editor.html",
+      "dashboard/templates/text_editor.html"
+    ],
+    "javascript_remove": [
+      "dashboard/static/js/tab_aufgaben.js",
+      "dashboard/static/js/tab_nextcloud.js",
+      "dashboard/static/js/tab_onlyoffice.js",
+      "dashboard/static/js/project_links.js",
+      "dashboard/static/js/task_settings.js",
+      "dashboard/static/js/file_browser.js",
+      "dashboard/static/js/onlyoffice_editor.js",
+      "dashboard/static/js/editor_page.js",
+      "dashboard/static/js/text_file_editor.js",
+      "dashboard/static/js/vis-network.min.js",
+      "dashboard/static/js/wysiwyg_editor.js"
+    ],
+    "css_remove": [
+      "dashboard/static/css/aufgaben.css",
+      "dashboard/static/css/file_browser.css",
+      "dashboard/static/css/onlyoffice.css",
+      "dashboard/static/css/task_settings.css",
+      "dashboard/static/css/text_file_editor.css",
+      "dashboard/static/css/vis-network.min.css"
+    ],
+    "generic_components_review_not_blind_delete": [
+      "dashboard/components/expandable_table.py",
+      "dashboard/components/kpi_card.py",
+      "dashboard/components/__init__.py",
+      "dashboard/static/js/expandable_table.js",
+      "dashboard/static/css/expandable_table.css",
+      "dashboard/static/js/kpi_grid.js",
+      "dashboard/static/css/kpi_grid.css"
+    ],
+    "generic_components_note": "Aktuelle tab_issues/settings nutzen im Quelltext keine ExpandableTable/KPI. index.html lädt ExpandableTable JS/CSS dennoch. Prüfen ob verbleibende Helper von app_core dynamisch genutzt werden, erst dann gemeinsam Imports/Includes entfernen. Unbenutzte generische Dateien sind keine fachliche Voraussetzung; keine funktionierende Basiskomponente für bloße Wortbereinigung beschädigen."
+  },
+  "shared_cleanup": {
+    "markdown_keep": [
+      "dashboard/static/js/markdown_editor.js",
+      "dashboard/static/css/markdown_editor.css",
+      "dashboard/static/js/update_dialog.js",
+      "dashboard/static/css/update_dialog.css",
+      "dashboard/static/js/vendor/marked.umd.js",
+      "dashboard/static/js/vendor/marked.LICENSE",
+      "dashboard/static/js/vendor/turndown.js",
+      "dashboard/static/js/vendor/turndown.LICENSE",
+      "dashboard/static/js/vendor/README.md",
+      "sanitizeHtml in app_core.js"
+    ],
+    "markdown_notes": [
+      "UpdateDialog ist bereits unabhängig von text_file_editor.js und hat keinen Popup-/Datei-/Subtaskzweig.",
+      "MarkdownEditor instanziiert TurndownService auf Modulebene. Turndown niemals einzeln vor Entkopplung löschen. Marked/Sanitizer/Revisions-/Entwurfszustand weiter benötigen.",
+      "plainText-Option, textFile.source/hint sowie .project-detail-left CSS sind Restzweige. Nach bestätigtem Null-Callgraph entfernen oder neutralisieren.",
+      "Legacy-HTML-Konversion ist interne Kompatibilität, kein Datei-Editor. Kann zunächst mit Turndown erhalten bleiben; bewusste Entscheidung und Regression dokumentieren."
+    ],
+    "db_whitelist_remove": [
+      "nextcloud_config",
+      "onlyoffice_config",
+      "jwt_secret",
+      "verify_nextcloud",
+      "verify_onlyoffice",
+      "server_url (nur ehemaliges Office-Feld)",
+      "base_path (ehemaliges Nextcloud-Feld)"
+    ],
+    "db_whitelist_keep": "ldap_config/mail_config/tls_config/tls_verify_config/app_config, password/bind_password, username (weiterhin SMTP), verify_smtp/verify_ldap und alle realen LDAP/SMTP/TLS/Appfelder anhand get_masked_config/resolve_masked_password/upsert-Aufrufen prüfen. Dynamische Identifier weiter streng validieren.",
+    "other_active_text": [
+      "audit_log.py entity_type-Dokumentation task/sub_task/note/dependency auf issue/update/attachment anpassen.",
+      "app_core.js alte Mailpräferenzen (task_assigned) werden durch #398 ersetzt; anschließend verbleibende Alt-Settings-/Tab-/Modalzweige prüfen.",
+      "style.css projektbezogene Farben/Badges und app_core task-table-header Variable nur nach aktiver CSS-Nutzung entfernen/umbenennen.",
+      "app.py /api/dashboard/info Komponenten um tatsächlich genutzte Vorschauparser ergänzen; kein Office/Admin-Dashboard nennen."
+    ],
+    "translations": "Alle sieben Dateien gleiche Schlüsselmenge und gültiges JSON. Nach Entfernen aller Callstellen alte Prefixe tasks/subtask/netzplan/nc/ncAdmin/ooAdmin/editor/taskSettings/textFile/handoff/projectLink/wysiwyg sowie nav.nextcloud/nav.onlyoffice und entfernte TLS/Datei-Tools gezielt entfernen. common/status/auth/password/settings/users/ldap/mailAdmin/tls/mcp/markdown/description und dynamisch zusammengesetzte Keys nicht per blindem Prefix löschen. Neue #394/#398 Schlüssel zuerst übernehmen; Literal- und dynamische Keys zusammen prüfen."
+  },
+  "dependency_review": {
+    "keep": "FastAPI, Uvicorn, bcrypt, itsdangerous, ldap3, python-multipart, cryptography, fastmcp/mcp sowie endgültige #394 Preview-Abhängigkeiten. httpx wird nach Entfernung WebDAV/Office von den alten eigenen Runtimeimports nicht mehr direkt verwendet, bleibt aber in MCP/FastAPI-Testökosystem erforderlich; nicht blind aus Umgebung entfernen.",
+    "preview_versions_in_requirements_now": {
+      "extract-msg": "0.56.1",
+      "Pillow": "12.3.0",
+      "striprtf": "0.0.33"
+    },
+    "license_and_limits": "Endgültige #394 Angaben aus tests/fixtures/Lizenzen und Preview-Code übernehmen. Vorliegende Recherche dokumentiert extract-msg GPL-3.0-or-later, Pillow MIT-CMU und Herkunft öffentlicher Test-MSGs einschließlich abweichender Fixture-Lizenz. Nicht pauschal MIT für alle Abhängigkeiten behaupten. Lokales DEB soll README/Operations-/Lizenzhinweise mitliefern. Kein Publishing im Auftrag.",
+    "checks": [
+      "venv/bin/python -m pip check",
+      "Isolierter Importtest beider Apps und Scheduler nach Entfernung",
+      "DEB Depends ohne Docker/Office, Runtime enthält gebundene Preview-Abhängigkeiten",
+      "Buildvoraussetzungen rsync/dpkg-deb oder ersetzender lokaler Builder dokumentieren"
+    ]
+  },
+  "test_replacement_matrix": [
+    {
+      "old": [
+        "test_task_permissions.py",
+        "test_project_assignment_access.py",
+        "test_admin_project_access.py"
+      ],
+      "keep_semantics": "Aktuelle Rechte, Eigentümer/Admin-Management, reine Leser, Autorzeit/Revisionsschutz und atomare Grants.",
+      "replacement": [
+        "test_issues.py",
+        "test_issue_http.py",
+        "test_updates.py",
+        "test_attachment_auth.py",
+        "test_issue_mcp.py",
+        "check_issues_ui.py",
+        "check_update_dialog_ui.py"
+      ],
+      "gap": "Projektvererbung/Teams/Subtaskrechte entfallen spezifikationsgemäß; keine künstliche Kompatibilität."
+    },
+    {
+      "old": [
+        "test_description_revisions.py",
+        "test_handoff_editing.py",
+        "check_description_revisions_ui.py",
+        "check_handoff_ui.py"
+      ],
+      "keep_semantics": "Exakte Markdownbytes, Revisionskonflikte, concurrent one-winner, Auditrollback, aktuelle Rechte, 300s-Fenster, Draft beim Reload/Fehler, Speichersperre.",
+      "replacement": [
+        "test_issues.py",
+        "test_updates.py",
+        "test_issue_mcp.py",
+        "check_issues_ui.py",
+        "check_update_dialog_ui.py"
+      ],
+      "gap": "Browser-Erfolg/Fehler über erneuten DOM-Aufbau und zweite Revision kontrollieren; neue check_issues_ui deckt inzwischen Detail-Refresh während Speicherung ab. Popup-/Scopeunterscheidung fällt weg."
+    },
+    {
+      "old": [
+        "test_markdown_content.py",
+        "check_markdown_ui.py"
+      ],
+      "keep_semantics": "Markdownroundtrip, HTML als Codebeispiel, Tabellen/Listen, gefährliche Links/Attribute/SVG-Data-URL sicher, Rendering führt keine Scripts aus.",
+      "replacement": [
+        "test_issues.py",
+        "test_updates.py",
+        "check_update_dialog_ui.py",
+        "check_issues_ui.py"
+      ],
+      "gap": "Eigene aktualisierte Markdownregression erstellen/beibehalten: aktueller Updatebrowser prüft Scriptbeispiel, aber alte explizite javascript:/tab-Entity/onerror/data:image/svg+xml-Tests und formatierte Listen/Tabellen sind nicht vollständig ersetzt. Keine pauschale Löschung vor Übertragung."
+    },
+    {
+      "old": [
+        "test_file_storage.py",
+        "test_text_files.py",
+        "test_mcp_files.py",
+        "test_rest_file_auth.py",
+        "test_append_and_reason.py",
+        "check_file_storage_ui.py",
+        "check_text_file_ui.py"
+      ],
+      "keep_semantics": "Dateisicherheitsgrenzen, Tokenvorrang/Widerruf, Auth vor Body, Uploadlimit/Abbruch, Symlink/Hardlink/Traversal, AuditohneInhalt, Cleanup nach Fehler/Prozesstod.",
+      "replacement": [
+        "test_attachments.py",
+        "test_attachment_auth.py",
+        "test_issue_mcp.py",
+        "check_issues_ui.py",
+        "new #394 preview tests"
+      ],
+      "gap": "Dateiänderung/Append/Ordner/WebDAV/BOM-Konservierung entfallen. Reason ist weiterhin Auditmetadatum und wird in test_issues/test_issue_mcp geprüft; UTF8/Unicode-Längenrandfälle vor Entfernung vergleichen."
+    },
+    {
+      "old": [
+        "test_mcp_endpoints.py",
+        "test_mcp_errors.py",
+        "test_mcp_project_pagination.py",
+        "check_mcp_http.py"
+      ],
+      "keep_semantics": "Beide Mounts/echtes Protokoll, Sessionidentität nicht vom vorigen Bearer erben, aktuelle Adminrolle/Token/Killswitch, Fehler ohne Secrets, kompakte Schemaantworten, Pagination.",
+      "replacement": [
+        "test_issue_mcp.py",
+        "test_attachment_auth.py",
+        "test_issues.py",
+        "test_issue_sorting.py",
+        "new check_mcp_http.py or existing script rework"
+      ],
+      "gap": "Root führte bereits zwei echte Prozesse aus. Expliziten Test fremde Session-ID plus anderes Token und unerwartete Exception->sicheres internal_error vor Löschen alter Suite übernehmen; neue MCP-Tests enthalten beides nicht klar als Einzelassertion. Snapshot-Total/Items bei parallelem Delete überprüfen, falls alter Paginationtest entfällt."
+    },
+    {
+      "old": [
+        "test_editor_page.py",
+        "check_editor_ui.py"
+      ],
+      "keep_semantics": "Geschützte Seiten, CSP/Securityheader und CSRF; keine aktiven alten Endpunkte.",
+      "replacement": [
+        "test_issue_http.py",
+        "test_settings.py",
+        "check_update_dialog_ui.py",
+        "new #394 preview tests"
+      ],
+      "gap": "Strikte CSP und X-Frame-Options/nosniff/referrer-policy explizit an echter Haupt-App/Login und Vorschau prüfen. app.py enthält zurzeit script-src unsafe-inline; vor zusätzlicher Verschärfung noch vorhandenen login.html-Inlinecode berücksichtigen. Office-Editor selbst entfällt."
+    },
+    {
+      "old": [
+        "test_database_initialization.py"
+      ],
+      "keep_semantics": "Gleichzeitiger erster Start/Restart, Lock vor WAL, Prozessabbruch gibt Lock frei, SQL-Fehler propagiert und Connection schließt, keine Datenverluste.",
+      "replacement": [
+        "test_issue_initialization.py",
+        "test_issue_search.py"
+      ],
+      "gap": "Neue Init-Suite deckt fresh/restart/concurrent/DDLrollback/Legacyerhalt. Pausierten Lock vor WAL, Wiederanlauf nach getötetem Initialisierer und Connectioncleanup gezielt übertragen. Tareas-Schema-Migration/areas-Bootstrap werden bewusst durch Ablehnung unbekannter Daten ersetzt."
+    },
+    {
+      "old": [
+        "test_search.py"
+      ],
+      "keep_semantics": "UnicodeFTS/UND/Phrase/Prefix, sichere begrenzte Snippets, Filter/Rang/Pagination, Backfill/Trigger/Kaskade, aktuelle Tokens.",
+      "replacement": [
+        "test_issue_search.py",
+        "test_issue_mcp.py",
+        "check_search_ui.py"
+      ],
+      "gap": "15 neue inhaltliche Backendtests sowie realer Suchbrowser bestanden; keine Projekt/Handoff-Alias-Kompatibilität benötigt."
+    },
+    {
+      "old": [
+        "test_task_validation.py",
+        "test_task_cancellation.py",
+        "test_project_status.py"
+      ],
+      "keep_semantics": "Vier Statuswerte, Cancel/Resume, Validierung atomar, terminale Status keine Fristmails.",
+      "replacement": [
+        "test_issues.py",
+        "test_issue_mcp.py",
+        "check_issues_ui.py",
+        "new #398 mail/history tests"
+      ],
+      "gap": "Vor Entfernung terminale Fristen/Recipientprefs und keine Mail nach rollback aus #398 übernehmen."
+    },
+    {
+      "old": [
+        "test_dependencies.py",
+        "test_project_links.py",
+        "test_project_views.py",
+        "check_dependencies_ui.py",
+        "check_project_links_ui.py",
+        "check_project_scroll_ui.py",
+        "check_subtask_scroll_ui.py",
+        "check_task_settings_ui.py"
+      ],
+      "keep_semantics": "Generische Rechte/Revision/Pagination/DOM-Draft sind oben zugeordnet.",
+      "replacement": [
+        "test_issue_http.py::test_removed_endpoints_do_not_fall_through_to_spa",
+        "test_issue_initialization.py::test_fresh_restart_and_foreign_keys",
+        "test_issue_mcp.py::test_both_mounts_catalog_lifecycle_and_compact_writes"
+      ],
+      "gap": "Netzplan/Abhängigkeiten/PID/Fortschritt/Projektexpansion vollständig entfernt; eigene Fachtests ohne Ersatz legitim. Negative Router/Schema/Toolcatalog-Prüfungen beweisen Entfernung."
+    }
+  ],
+  "extra_regression_checks": [
+    "Auth: bestehendes Login/Passwort-Rate-Limit mit Fakezeit/isoliertem Limiter, Cookie HttpOnly/SameSite/Secure bei TLS, Logout und Passwortwechsel weiter prüfen; die neuen Suites prüfen primär Sitzungsaktivität/Rechte. Nicht als bereits bestanden ausgeben.",
+    "MCP-Token nur Hash in DB, PlainToken nur einmal; APIantworten und Audit keine Secrets. Aktuelle Settings-/MCP-Browser decken wesentliche Erstellung/Revocation, Backend explizit gegenlesen.",
+    "LDAP und SMTP mit Fakeprovider/Testtransport: configmasking, Testerrors, Deaktivierung, Datenpfad/TLS. Kein realer AD-/SMTP-Dienst nötig oder anzusprechen.",
+    "i18n Schlüsselgleichheit x7; alle statischen Includes existieren; Pythonimportgraph enthält keine entfernten Module; geschützte entfernte URLantworten bleiben404."
+  ],
+  "backup_restore_plan": {
+    "current_state": "Es gibt noch kein aktives Backup-/Restore-Tool oder vollständige aktuelle Anleitung. README beschreibt alte data/files/task-ID-Ablage. test_attachments.py hat bereits isolierten Mapping-/Byte-/Rights-Restoretest, aber noch keinen ganzen Betriebsablauf inklusive Secret und wieder gestarteter Apps.",
+    "backup_set": [
+      "data/casos.db einschließlich konsistent gesichertem WAL-Zustand",
+      "data/secret.key (Cookie-Signing und Fernet-Credentials)",
+      "data/attachments/ einschließlich intern generierter Namen; Metadaten und attachment_gc liegen in DB",
+      "Passende Anwendungsversion, requirements und betreiberspezifische TLS-Key-/Zertifikatdateien außerhalb data gesondert sichern"
+    ],
+    "consistency": "Für dokumentierte erste Version alle Schreibprozesse/Timer (Haupt-App, MCP, LDAP, Mail) stoppen. Vollständiges data-Verzeichnis gemeinsam offline kopieren oder SQLite-backup plus Attachmentcopy unter quiescent writes verwenden. Eine Livekopie nur der .db ohne WAL ist unzulässig; DBbackup ohne Schreibpause und getrennte Attachmentkopie kann inkonsistente Daten ergeben. Keine Lockdateien während laufender Prozesse löschen.",
+    "restore": "In neues leeres Datenverzeichnis und zur Version passendes isoliertes Appverzeichnis zurückspielen, Owner/0700/0600 erhalten, Secret vor erstem Login/Decrypt einsetzen. Bestehende Runtime nicht überschreiben. integrity_check + foreign_key_check, Anhangbytes/IDs, verschlüsselte LDAP/SMTP-Konfig mit Testwert, Token-/Cookieverhalten, FTS nach Restart prüfen. Erst dann Betreiberstart. Unbekanntes Tareas-Schema wird bewusst abgewiesen, keine automatische Migration.",
+    "test": "Eigenständiges temp data erstellen, zwei gleichnamige Anhänge und Update plus Testcredential/Secret, komplette Offline-Sicherung, neues data wiederherstellen, beide Apps nacheinander/echt isoliert starten, HTTP/MCP lesen/download, Bytes und aktuelles Schreiben vergleichen. Keine echte Systemd-Aktivierung; Lifecyclehooks mit Stubcommands testen.",
+    "cleanup": "Attachment-GC nach Restart entfernt nur durable Queueeinträge; teilweise Uploads dürfen nicht als fertige Anhänge sichtbar werden. Test existiert in test_attachments.py. Erfolg/Fehler/Restqueue nachvollziehbar dokumentieren."
+  },
+  "documentation_plan": {
+    "README": "Aktueller schlanker Issue-Umfang, globale Sichtbarkeit und differenzierte Schreibrechte, Updates300s, lokale500MiB-Anhänge, echte Previewlimits/Fallback, SettingsOverlay, Ports8514/8516, lokale Installation/DEB/Testbefehle, Backupverweis, nicht veröffentlicht. Keine toten Einstiege.",
+    "AGENTS": "Bestehende Versions-/Commit-/Sprach-/Tareas-Schutzregeln erhalten. Architekturkarte auf Issue-Schema/Services/Auth/Settings/FTS/Preview/Mail aktualisieren; Testworkflow und CASOS_DATA_DIR-Isolation dokumentieren. Keine zukünftige Spezifikation oder alten Runtime-Tabellen behaupten.",
+    "CLAUDE": "Kurzer aktueller Kontext mit Referenz auf AGENTS statt zweiter widersprüchlicher Altarchitektur.",
+    "historical": [
+      "docs/changelog.md unverändert historische Zeilen bewahren; Root ergänzt neue Changelogzeile zentral.",
+      "Screenshot-Projekt.png/Screenshot-Projekt2.png/Screenshot-Netplan.png erhalten und ausdrücklich Tareas-Historie nennen.",
+      "docs/security-issues.md/security-issues-fixes.md/security-fixes-todo.md/spec-desktop-app.md stammen aus Baseline; eindeutiger historischer Vorspann, keine aktuellen Betriebsanweisungen. Keine Sachinhalte als neue Casos-Auditbefunde ausgeben.",
+      "docs/project77-*-spec/plan/research/handoff sind Projektbelege, daher fachliche Altbegriffe dort bewusst erlaubt. Negative Regressiontests dürfen entfernte Namen enthalten."
+    ]
+  },
+  "validation_before_399_100": [
+    "Alle legitimen Ersatztests zunächst grün; dann Altmodule/-tests entfernen und vollständiges venv/bin/python -m unittest discover -s tests -v ausführen.",
+    "Alle realen Issue/Update/Settings/Search/Preview/History-Browserchecks auf finalem integrierten Stand.",
+    "bash -n für Shell-/Debian-Hooks; systemd-analyze verify oder isolierte Unit-Parserprüfung mit ehrlicher Einschränkung.",
+    "Isolierter lokaler DEB-Build, Inhalt/Control/Hooks/Lizenz-/Dokuprüfung, gestubbte configure/upgrade/remove/purge-Abläufe; Artefakt bleibt verfügbar.",
+    "Fresh init + paralleler Restart + vollständiger Backup-/Restore-Test mit Secret und Anhängen; keine aktiven Admin/Office/WebDAVimporte oder Dateien im Paket.",
+    "Gitstatus ausschließlich beabsichtigte Änderungen, keine Daten/Secrets, kein Remote/Publishing/produktiveServiceaktivierung. Root zentraler Changelog/Versionscommit; Handoff399 dann100."
+  ]
+}
