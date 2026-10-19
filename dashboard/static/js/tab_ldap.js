@@ -1,5 +1,5 @@
 /**
- * Casos Admin - LDAP-Tab
+ * Casos Einstellungen - LDAP-Tab
  * LDAP-Konfiguration und AD-Gruppen-Verwaltung
  */
 
@@ -10,7 +10,7 @@ let ldapConfig = null;
 // ========================================
 
 async function initLdapTab() {
-    await initTabGeneric({
+    await settingsInitSection('ldap', {
         showFilterBar: false,
         loadFn: loadLdapConfig,
         renderFn: renderLdapTab,
@@ -18,7 +18,7 @@ async function initLdapTab() {
 }
 
 async function loadLdapConfig() {
-    ldapConfig = await loadConfigFromAPI('/api/admin/ldap/config');
+    ldapConfig = await settingsLoadConfig('/api/admin/ldap/config');
 }
 
 // ========================================
@@ -26,7 +26,7 @@ async function loadLdapConfig() {
 // ========================================
 
 function renderLdapTab() {
-    const container = document.getElementById('contentContainer');
+    const container = settingsContainer('ldap');
     if (!container) return;
 
     const hasConfig = !!ldapConfig;
@@ -43,13 +43,13 @@ function renderLdapTab() {
     }
 
     html += '</div>';
-    container.innerHTML = html;
+    settingsRender('ldap', html);
 
     // SSL-Checkbox Event
-    const sslCheckbox = document.getElementById('ldapUseSSL');
+    const sslCheckbox = settingsField('ldap', 'ldapUseSSL');
     if (sslCheckbox) {
         sslCheckbox.addEventListener('change', function() {
-            const portInput = document.getElementById('ldapPort');
+            const portInput = settingsField('ldap', 'ldapPort');
             if (portInput) {
                 portInput.value = this.checked ? 636 : 389;
             }
@@ -92,7 +92,7 @@ function renderConfigSection(hasConfig) {
                     <div class="ldap-form-field">
                         <label>${t('ldap.bindPassword')}</label>
                         <input type="password" id="ldapBindPassword"
-                               value="${hasConfig ? '********' : ''}"
+                               value="${escapeAttr(c.bind_password || '')}"
                                placeholder="${t('auth.password')}..." autocomplete="new-password">
                     </div>
                 </div>
@@ -165,20 +165,22 @@ function renderGroupSection(hasGroup) {
 // ========================================
 
 async function saveLdapConfig() {
-    const server = document.getElementById('ldapServer')?.value?.trim();
-    const port = parseInt(document.getElementById('ldapPort')?.value) || 389;
-    const use_ssl = document.getElementById('ldapUseSSL')?.checked ? 1 : 0;
-    const bind_dn = document.getElementById('ldapBindDN')?.value?.trim();
-    const bind_password = document.getElementById('ldapBindPassword')?.value;
-    const search_base = document.getElementById('ldapSearchBase')?.value?.trim();
-    const sync_interval_minutes = parseInt(document.getElementById('ldapSyncInterval')?.value) || 60;
+    return settingsAction(async () => {
+    const server = settingsField('ldap', 'ldapServer')?.value?.trim();
+    const port = parseInt(settingsField('ldap', 'ldapPort')?.value) || 389;
+    const use_ssl = settingsField('ldap', 'ldapUseSSL')?.checked ? 1 : 0;
+    const bind_dn = settingsField('ldap', 'ldapBindDN')?.value?.trim();
+    const bind_password = settingsField('ldap', 'ldapBindPassword')?.value;
+    const search_base = settingsField('ldap', 'ldapSearchBase')?.value?.trim();
+    const sync_interval_minutes = parseInt(settingsField('ldap', 'ldapSyncInterval')?.value) || 60;
 
     if (!server || !bind_dn || !bind_password || !search_base) {
-        showNotification(t('common.fillRequired'), 'error');
+        settingsNotify(t('common.fillRequired'), 'error');
         return;
     }
 
-    await saveConfigToAPI({
+    await settingsSaveConfig({
+        section: 'ldap', fields: ['ldapServer', 'ldapPort', 'ldapUseSSL', 'ldapBindDN', 'ldapBindPassword', 'ldapSearchBase', 'ldapSyncInterval'],
         endpoint: '/api/admin/ldap/config',
         data: { server, port, use_ssl, bind_dn, bind_password, search_base, sync_interval_minutes },
         successMessage: t('ldap.saved'),
@@ -187,10 +189,13 @@ async function saveLdapConfig() {
             renderLdapTab();
         },
     });
+    });
 }
 
 async function deleteLdapConfig() {
-    await deleteConfigFromAPI({
+    return settingsAction(async () => {
+    await settingsDeleteConfig({
+        section: 'ldap', fields: ['ldapServer', 'ldapPort', 'ldapUseSSL', 'ldapBindDN', 'ldapBindPassword', 'ldapSearchBase', 'ldapSyncInterval'],
         endpoint: '/api/admin/ldap/config',
         confirmMessage: t('ldap.deleteConfirm'),
         successMessage: t('ldap.deleted'),
@@ -199,6 +204,7 @@ async function deleteLdapConfig() {
             renderLdapTab();
         },
     });
+    });
 }
 
 // ========================================
@@ -206,13 +212,13 @@ async function deleteLdapConfig() {
 // ========================================
 
 async function loadGroups() {
-    const container = document.getElementById('ldapGroupsList');
+    const container = settingsField('ldap', 'ldapGroupsList');
     if (!container) return;
 
     container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
 
     try {
-        const resp = await fetch('/api/admin/ldap/groups');
+        const resp = await settingsFetch('/api/admin/ldap/groups');
         if (!resp.ok) {
             const data = await resp.json().catch(() => ({}));
             throw new Error(data.detail || t('common.loadError'));
@@ -233,27 +239,32 @@ async function loadGroups() {
                 </thead>
                 <tbody>`;
 
-        for (const group of groups) {
+        for (const [index, group] of groups.entries()) {
             html += `
                 <tr>
                     <td>${escapeHtml(group.name)}</td>
                     <td class="ldap-group-dn">${escapeHtml(group.dn)}</td>
                     <td><button class="action-btn primary" style="padding:2px 10px"
-                            onclick="selectGroup('${escapeAttr(group.dn)}', '${escapeAttr(group.name)}')">+</button></td>
+                            data-ldap-group="${index}">+</button></td>
                 </tr>`;
         }
 
         html += '</tbody></table>';
         container.innerHTML = html;
+        container.querySelectorAll('[data-ldap-group]').forEach(button => {
+            const group = groups[Number(button.dataset.ldapGroup)];
+            button.onclick = () => selectGroup(group.dn, group.name);
+        });
     } catch (error) {
         container.innerHTML = '';
-        showNotification(error.message, 'error');
+        settingsNotify(error.message, 'error');
     }
 }
 
 async function selectGroup(dn, name) {
+    return settingsAction(async () => {
     try {
-        const resp = await fetch('/api/admin/ldap/group', {
+        const resp = await settingsFetch('/api/admin/ldap/group', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ group_dn: dn, group_name: name }),
@@ -266,7 +277,7 @@ async function selectGroup(dn, name) {
 
         const data = await resp.json();
         const sync = data.sync || {};
-        showNotification(
+        settingsNotify(
             t('ldap.groupSelected', { name, created: sync.created || 0, updated: sync.updated || 0 }),
             'success'
         );
@@ -274,23 +285,26 @@ async function selectGroup(dn, name) {
         await loadLdapConfig();
         renderLdapTab();
     } catch (error) {
-        showNotification(error.message, 'error');
+        settingsNotify(error.message, 'error');
     }
+    });
 }
 
 async function deselectGroup() {
-    if (!await msgbox('cancel/yes', 'warning', t('ldap.deselectConfirm'))) return;
+    return settingsAction(async () => {
+    if (!await settingsConfirm(t('ldap.deselectConfirm'))) return;
 
     try {
-        const resp = await fetch('/api/admin/ldap/group', { method: 'DELETE' });
+        const resp = await settingsFetch('/api/admin/ldap/group', { method: 'DELETE' });
         if (!resp.ok) throw new Error(t('common.error'));
 
-        showNotification(t('ldap.deselected'), 'success');
+        settingsNotify(t('ldap.deselected'), 'success');
         await loadLdapConfig();
         renderLdapTab();
     } catch (error) {
-        showNotification(error.message, 'error');
+        settingsNotify(error.message, 'error');
     }
+    });
 }
 
 // ========================================
@@ -298,8 +312,9 @@ async function deselectGroup() {
 // ========================================
 
 async function manualSync() {
+    return settingsAction(async () => {
     try {
-        const resp = await fetch('/api/admin/ldap/sync', { method: 'POST' });
+        const resp = await settingsFetch('/api/admin/ldap/sync', { method: 'POST' });
         if (!resp.ok) {
             const data = await resp.json().catch(() => ({}));
             throw new Error(data.detail || t('ldap.syncFailed'));
@@ -307,7 +322,7 @@ async function manualSync() {
 
         const data = await resp.json();
         const sync = data.sync || {};
-        showNotification(
+        settingsNotify(
             t('ldap.syncComplete', { created: sync.created || 0, updated: sync.updated || 0, deactivated: sync.deactivated || 0 }),
             'success'
         );
@@ -315,6 +330,7 @@ async function manualSync() {
         await loadLdapConfig();
         renderLdapTab();
     } catch (error) {
-        showNotification(error.message, 'error');
+        settingsNotify(error.message, 'error');
     }
+    });
 }

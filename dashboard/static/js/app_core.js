@@ -24,7 +24,6 @@ window.fetch = async function(url, options = {}) {
 // Globale Variablen
 // ========================================
 
-let currentTab = 'aufgaben';
 let currentUser = null;
 
 // Settings Dropdown State
@@ -70,21 +69,20 @@ const COLOR_SCHEMES = [
 ];
 
 // DOM-Cache fuer Tab-Inhalte (DocumentFragment-basiert)
-const tabDOMCache = {};
 
 // ========================================
 // Initialisierung
 // ========================================
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     initTheme();
     initEventListeners();
     initTaskTableHeaderOffset();
 
     // Admin-Mode Guard: Tabs nur in der Haupt-App initialisieren
     if (!document.body.dataset.adminMode && !document.body.dataset.standalone) {
-        loadCurrentUser();
-        initTabs();
+        await loadCurrentUser();
+        if (currentUser && window.initIssues) await window.initIssues();
     }
 });
 
@@ -114,6 +112,11 @@ function initEventListeners() {
             toggleSettingsDropdown();
         });
     }
+
+    document.getElementById('openSettingsBtn')?.addEventListener('click', () => {
+        toggleSettingsDropdown(false);
+        openSettingsOverlay();
+    });
 
     // Restart-Button
     const restartBtn = document.getElementById('restartBtn');
@@ -157,16 +160,8 @@ function initEventListeners() {
     document.querySelector('.header-home')?.addEventListener('click', (e) => {
         if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
-        navigateTo('aufgaben');
+        navigateIssue(null);
         window.scrollTo(0, 0);
-    });
-
-    // Tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', function(e) {
-            e.preventDefault();
-            navigateTo(this.dataset.tab);
-        });
     });
 
     // Klick ausserhalb Settings-Dropdown schliesst es
@@ -455,6 +450,7 @@ function toggleSettingsDropdown(forceState = null) {
     }
     if (btn) {
         btn.style.transform = settingsDropdownOpen ? 'rotate(90deg)' : '';
+        btn.setAttribute('aria-expanded', String(settingsDropdownOpen));
     }
 }
 
@@ -485,156 +481,18 @@ async function restartDashboard() {
 // ========================================
 
 function parseRoute() {
-    const path = window.location.pathname.replace(/\/+$/, '') || '/';
-    const segments = path.split('/').filter(Boolean);
-
-    if (segments.length === 0) return { tab: 'aufgaben' };
-
-    const first = segments[0];
-
-    const tabMap = {
-        'aufgaben': 'aufgaben',
-    };
-
-    return { tab: tabMap[first] || 'aufgaben' };
+    const match = window.location.pathname.match(/^\/issues\/(\d+)\/?$/);
+    return { issueId: match ? Number(match[1]) : null };
 }
 
-function buildPath(tab) {
-    const pathMap = {
-        'aufgaben': '/aufgaben',
-    };
-    return pathMap[tab] || '/aufgaben';
+function navigateIssue(issueId, replaceState = false) {
+    const path = issueId === null ? '/' : `/issues/${encodeURIComponent(issueId)}`;
+    if (replaceState) history.replaceState({issueId}, '', path);
+    else history.pushState({issueId}, '', path);
+    window.renderIssueRoute?.(parseRoute());
 }
 
-function navigateTo(tab, replaceState) {
-    const path = buildPath(tab);
-    const state = { tab };
-
-    if (replaceState) {
-        history.replaceState(state, '', path);
-    } else {
-        history.pushState(state, '', path);
-    }
-
-    switchTab(tab);
-}
-
-// Browser-Zurueck/Vorwaerts
-window.addEventListener('popstate', function(e) {
-    const route = parseRoute();
-    switchTab(route.tab);
-});
-
-// ========================================
-// Tab-Wechsel
-// ========================================
-
-function initTabs() {
-    const route = parseRoute();
-    switchTab(route.tab);
-    const path = buildPath(route.tab);
-    history.replaceState({ tab: route.tab }, '', path);
-}
-
-function switchTab(tab) {
-    const previousTab = currentTab;
-    const isSameTab = (previousTab === tab);
-
-    // Gleicher Tab nochmal geklickt = Cache verwerfen (Refresh)
-    if (isSameTab) {
-        invalidateTabCache(tab);
-    } else {
-        saveTabDOM(previousTab);
-    }
-
-    currentTab = tab;
-
-    // Tab-Buttons aktualisieren
-    document.querySelectorAll('.main-tabs .tab').forEach(t => {
-        t.classList.remove('active');
-        if (t.dataset.tab === tab) {
-            t.classList.add('active');
-        }
-    });
-
-    const filterBar = document.getElementById('filterBar');
-
-    // Cache vorhanden? DOM wiederherstellen
-    if (!isSameTab && restoreTabDOM(tab)) {
-        return;
-    }
-
-    // Kein Cache oder gleicher Tab: Init-Funktion aufrufen
-    if (tab === 'aufgaben') {
-        initAufgabenTab();
-        if (filterBar) filterBar.style.display = 'flex';
-    }
-}
-
-// ========================================
-// DOM-Caching fuer Tabs
-// ========================================
-
-function saveTabDOM(tabName) {
-    const contentContainer = document.getElementById('contentContainer');
-    const filterBar = document.getElementById('filterBar');
-    if (!contentContainer) return;
-
-    if (contentContainer.children.length === 0) return;
-
-    const contentFragment = document.createDocumentFragment();
-    while (contentContainer.firstChild) {
-        contentFragment.appendChild(contentContainer.firstChild);
-    }
-
-    const filterFragment = document.createDocumentFragment();
-    let filterBarDisplay = 'none';
-    if (filterBar) {
-        filterBarDisplay = filterBar.style.display || window.getComputedStyle(filterBar).display;
-        while (filterBar.firstChild) {
-            filterFragment.appendChild(filterBar.firstChild);
-        }
-    }
-
-    tabDOMCache[tabName] = {
-        content: contentFragment,
-        filter: filterFragment,
-        filterBarDisplay: filterBarDisplay,
-        scrollY: window.scrollY,
-    };
-}
-
-function restoreTabDOM(tabName) {
-    const cached = tabDOMCache[tabName];
-    if (!cached) return false;
-
-    const contentContainer = document.getElementById('contentContainer');
-    const filterBar = document.getElementById('filterBar');
-
-    if (contentContainer) {
-        contentContainer.innerHTML = '';
-        contentContainer.appendChild(cached.content);
-    }
-
-    if (filterBar) {
-        filterBar.innerHTML = '';
-        filterBar.appendChild(cached.filter);
-        filterBar.style.display = cached.filterBarDisplay;
-    }
-
-    const savedScrollY = cached.scrollY;
-    delete tabDOMCache[tabName];
-
-    requestAnimationFrame(() => {
-        window.scrollTo(0, savedScrollY);
-    });
-
-    return true;
-}
-
-function invalidateTabCache(tabName) {
-    delete tabDOMCache[tabName];
-}
+window.addEventListener('popstate', () => window.renderIssueRoute?.(parseRoute()));
 
 // ========================================
 // Notifications

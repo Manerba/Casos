@@ -4,25 +4,21 @@ Config-Lesen und Zertifikats-Validierung.
 """
 
 import sqlite3
+import ssl
+from contextlib import closing
 from pathlib import Path
 
-from dashboard.database import DB_PATH
+from dashboard import database
 
 
 def get_tls_config() -> dict | None:
     """Liest TLS-Config aus DB. Gibt None zurueck wenn nicht konfiguriert oder DB fehlt."""
-    if not DB_PATH.exists():
+    if not database.DB_PATH.exists():
         return None
-    try:
-        conn = sqlite3.connect(str(DB_PATH))
+    with closing(sqlite3.connect(str(database.DB_PATH))) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT * FROM tls_config WHERE id = 1").fetchone()
-        conn.close()
-        if not row:
-            return None
-        return dict(row)
-    except Exception:
-        return None
+        return dict(row) if row else None
 
 
 def validate_cert_files(cert_path: str, key_path: str) -> str | None:
@@ -40,48 +36,20 @@ def validate_cert_files(cert_path: str, key_path: str) -> str | None:
     if not key.is_file():
         return f"Key ist keine Datei: {key_path}"
 
-    # Lesbarkeit und PEM-Format pruefen
     try:
-        cert_content = cert.read_text()
-    except PermissionError:
-        return f"Zertifikat nicht lesbar (Berechtigung): {cert_path}"
-
-    try:
-        key_content = key.read_text()
-    except PermissionError:
-        return f"Key-Datei nicht lesbar (Berechtigung): {key_path}"
-
-    if "-----BEGIN CERTIFICATE-----" not in cert_content:
-        return f"Zertifikat ist kein gueltiges PEM-Format: {cert_path}"
-
-    if "-----BEGIN" not in key_content or "PRIVATE KEY" not in key_content:
-        return f"Key-Datei ist kein gueltiges PEM-Format: {key_path}"
-
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(str(cert), str(key))
+    except (OSError, ValueError, ssl.SSLError) as exc:
+        return f"Zertifikat/Key ungueltig oder nicht lesbar: {exc}"
     return None
 
 
 def get_tls_verify_config() -> dict:
-    """Liest TLS-Verify-Config aus DB. Gibt Dict mit 4 Booleans zurueck (Default: alle False)."""
-    defaults = {
-        "verify_nextcloud": False,
-        "verify_onlyoffice": False,
-        "verify_smtp": False,
-        "verify_ldap": False,
-    }
-    if not DB_PATH.exists():
+    """Current certificate validation settings for retained SMTP/LDAP integrations."""
+    defaults = {"verify_smtp": False, "verify_ldap": False}
+    if not database.DB_PATH.exists():
         return defaults
-    try:
-        conn = sqlite3.connect(str(DB_PATH))
+    with closing(sqlite3.connect(str(database.DB_PATH))) as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT * FROM tls_verify_config WHERE id = 1").fetchone()
-        conn.close()
-        if not row:
-            return defaults
-        return {
-            "verify_nextcloud": bool(row["verify_nextcloud"]),
-            "verify_onlyoffice": bool(row["verify_onlyoffice"]),
-            "verify_smtp": bool(row["verify_smtp"]),
-            "verify_ldap": bool(row["verify_ldap"]),
-        }
-    except Exception:
-        return defaults
+        return {key: bool(row[key]) for key in defaults} if row else defaults

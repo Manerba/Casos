@@ -1,5 +1,5 @@
 /**
- * Casos Admin - TLS-Tab
+ * Casos Einstellungen - TLS-Tab
  * TLS/HTTPS Konfiguration
  */
 
@@ -11,7 +11,7 @@ let tlsVerifyConfig = null;
 // ========================================
 
 async function initTlsTab() {
-    await initTabGeneric({
+    await settingsInitSection('tls', {
         showFilterBar: false,
         loadFn: () => Promise.all([loadTlsConfig(), loadTlsVerifyConfig()]),
         renderFn: renderTlsTab,
@@ -19,11 +19,11 @@ async function initTlsTab() {
 }
 
 async function loadTlsConfig() {
-    tlsConfig = await loadConfigFromAPI('/api/admin/tls/config');
+    tlsConfig = await settingsLoadConfig('/api/admin/tls/config');
 }
 
 async function loadTlsVerifyConfig() {
-    tlsVerifyConfig = await loadConfigFromAPI('/api/admin/tls/verify');
+    tlsVerifyConfig = await settingsLoadConfig('/api/admin/tls/verify');
 }
 
 // ========================================
@@ -31,7 +31,7 @@ async function loadTlsVerifyConfig() {
 // ========================================
 
 function renderTlsTab() {
-    const container = document.getElementById('contentContainer');
+    const container = settingsContainer('tls');
     if (!container) return;
 
     const hasConfig = !!tlsConfig;
@@ -52,7 +52,7 @@ function renderTlsTab() {
     html += renderTlsGuideSection();
 
     html += '</div>';
-    container.innerHTML = html;
+    settingsRender('tls', html);
 }
 
 function renderTlsStatusSection(hasConfig, isActive) {
@@ -92,20 +92,6 @@ function renderTlsVerifySection() {
                 ${t('tls.verifyHint')}
             </div>
             <div class="ldap-form">
-                <div class="ldap-form-row">
-                    <div class="ldap-form-field">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="verifyNextcloud" ${v.verify_nextcloud ? 'checked' : ''}>
-                            Nextcloud / WebDAV
-                        </label>
-                    </div>
-                    <div class="ldap-form-field">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="verifyOnlyoffice" ${v.verify_onlyoffice ? 'checked' : ''}>
-                            ONLYOFFICE
-                        </label>
-                    </div>
-                </div>
                 <div class="ldap-form-row">
                     <div class="ldap-form-field">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -201,89 +187,100 @@ certbot certonly --standalone -d meine-domain.de
 // ========================================
 
 async function validateTlsFiles() {
-    const cert_path = document.getElementById('tlsCertPath')?.value?.trim();
-    const key_path = document.getElementById('tlsKeyPath')?.value?.trim();
-    const resultDiv = document.getElementById('tlsValidationResult');
+    return settingsAction(async () => {
+    const cert_path = settingsField('tls', 'tlsCertPath')?.value?.trim();
+    const key_path = settingsField('tls', 'tlsKeyPath')?.value?.trim();
+    const resultDiv = settingsField('tls', 'tlsValidationResult');
 
     if (!cert_path || !key_path) {
-        showNotification(t('tls.pathsRequired'), 'error');
+        settingsNotify(t('tls.pathsRequired'), 'error');
         return;
     }
 
     try {
-        const resp = await fetch('/api/admin/tls/validate', {
+        const resp = await settingsFetch('/api/admin/tls/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ cert_path, key_path }),
         });
 
         const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || t('tls.validateError'));
 
         if (data.valid) {
             if (resultDiv) {
                 resultDiv.innerHTML = `<div class="ldap-status-info ldap-status-connected" style="margin-top: 12px;">${t('tls.valid')}</div>`;
             }
-            showNotification(t('tls.valid'), 'success');
+            settingsNotify(t('tls.valid'), 'success');
         } else {
             if (resultDiv) {
                 resultDiv.innerHTML = `<div class="ldap-status-info" style="margin-top: 12px; color: var(--danger);">${escapeHtml(data.error)}</div>`;
             }
-            showNotification(data.error, 'error');
+            settingsNotify(data.error, 'error');
         }
     } catch (error) {
-        showNotification(t('tls.validateError'), 'error');
+        settingsNotify(t('tls.validateError'), 'error');
     }
+    });
 }
 
 async function saveTlsConfig() {
-    const cert_path = document.getElementById('tlsCertPath')?.value?.trim();
-    const key_path = document.getElementById('tlsKeyPath')?.value?.trim();
-    const enabled = document.getElementById('tlsEnabled')?.checked ? 1 : 0;
+    return settingsAction(async () => {
+    const cert_path = settingsField('tls', 'tlsCertPath')?.value?.trim();
+    const key_path = settingsField('tls', 'tlsKeyPath')?.value?.trim();
+    const enabled = settingsField('tls', 'tlsEnabled')?.checked ? 1 : 0;
 
     if (!cert_path || !key_path) {
-        showNotification(t('tls.pathsRequired'), 'error');
+        settingsNotify(t('tls.pathsRequired'), 'error');
         return;
     }
 
     const action = enabled ? t('tls.enableConfirm') : t('tls.saveConfirm');
-    if (!await msgbox('cancel/yes', 'warning', action)) return;
+    if (!await settingsConfirm(action)) return;
 
-    await saveConfigToAPI({
+    await settingsSaveConfig({
+        section: 'tls', fields: ['tlsCertPath', 'tlsKeyPath', 'tlsEnabled'],
         endpoint: '/api/admin/tls/config',
         data: { cert_path, key_path, enabled },
         successMessage: t('tls.saved'),
         onSuccess: async () => {
-            await fetch('/api/dashboard/restart', { method: 'POST' });
+            await loadTlsConfig();
+            renderTlsTab();
+            await settingsRequest('/api/dashboard/restart', { method: 'POST' });
         },
+    });
     });
 }
 
 async function deleteTlsConfig() {
-    await deleteConfigFromAPI({
+    return settingsAction(async () => {
+    await settingsDeleteConfig({
+        section: 'tls', fields: ['tlsCertPath', 'tlsKeyPath', 'tlsEnabled'],
         endpoint: '/api/admin/tls/config',
         confirmMessage: t('tls.deleteConfirm'),
         successMessage: t('tls.deleted'),
         onSuccess: async () => {
             tlsConfig = null;
             renderTlsTab();
-            await fetch('/api/dashboard/restart', { method: 'POST' });
+            await settingsRequest('/api/dashboard/restart', { method: 'POST' });
         },
+    });
     });
 }
 
 async function saveTlsVerifyConfig() {
-    const verify_nextcloud = document.getElementById('verifyNextcloud')?.checked ? 1 : 0;
-    const verify_onlyoffice = document.getElementById('verifyOnlyoffice')?.checked ? 1 : 0;
-    const verify_smtp = document.getElementById('verifySmtp')?.checked ? 1 : 0;
-    const verify_ldap = document.getElementById('verifyLdap')?.checked ? 1 : 0;
+    return settingsAction(async () => {
+    const verify_smtp = settingsField('tls', 'verifySmtp')?.checked ? 1 : 0;
+    const verify_ldap = settingsField('tls', 'verifyLdap')?.checked ? 1 : 0;
 
-    await saveConfigToAPI({
+    await settingsSaveConfig({
+        section: 'tls', fields: ['verifySmtp', 'verifyLdap'],
         endpoint: '/api/admin/tls/verify',
-        data: { verify_nextcloud, verify_onlyoffice, verify_smtp, verify_ldap },
+        data: { verify_smtp, verify_ldap },
         successMessage: t('tls.verifySaved'),
         onSuccess: () => {
-            tlsVerifyConfig = { verify_nextcloud: !!verify_nextcloud, verify_onlyoffice: !!verify_onlyoffice,
-                                verify_smtp: !!verify_smtp, verify_ldap: !!verify_ldap };
+            tlsVerifyConfig = {verify_smtp: !!verify_smtp, verify_ldap: !!verify_ldap};
         },
+    });
     });
 }

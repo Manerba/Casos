@@ -1,0 +1,30 @@
+.settings-overlay,.settings-subdialog { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#0009; z-index:20000; padding:20px; box-sizing:border-box; }
+.settings-dialog { display:flex; flex-direction:column; width:min(1120px,100%); height:min(850px,94dvh); background:var(--bg-primary,#fff); color:var(--text-primary,#172033); border:1px solid var(--border-color,#ccc); border-radius:10px; box-shadow:0 16px 65px #0006; overflow:hidden; }
+.settings-dialog>header,.settings-dialog>footer { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-bottom:1px solid var(--border-color,#ccc); flex:none; }
+.settings-dialog>header h2 { font-size:18px; margin:0; }
+.settings-dialog>footer { justify-content:flex-end; border-top:1px solid var(--border-color,#ccc); border-bottom:0; }
+.settings-layout { display:flex; min-height:0; flex:1; }
+.settings-layout>nav { display:flex; flex-direction:column; gap:4px; width:180px; padding:12px; overflow:auto; flex:none; border-right:1px solid var(--border-color,#ccc); }
+.settings-layout>nav button { border:0; border-radius:5px; padding:11px; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.settings-layout>nav button[aria-current=true] { background:var(--bg-secondary,#e7efff); font-weight:700; }
+.settings-panels { min-width:0; flex:1; overflow:auto; padding:16px; }
+.settings-panel[hidden] { display:none; }
+.settings-panel .mail-container,.settings-panel .ldap-container { max-width:none; }
+.settings-panel input:not([type=checkbox]),.settings-panel textarea,.settings-panel select { max-width:100%; box-sizing:border-box; }
+.settings-panel label { display:block; margin:8px 0; }
+.settings-panel label>input:not([type=checkbox]) { display:block; width:100%; }
+.settings-panel input,.settings-panel select,.settings-panel textarea { background:var(--bg-primary,#fff); color:var(--text-primary,#172033); border:1px solid var(--border-color,#ccc); border-radius:4px; padding:8px; }
+.settings-panel .expandable-table,.settings-panel .admin-table { min-width:620px; }
+.settings-panel { overflow-x:auto; }
+.settings-subdialog { z-index:20001; }
+.settings-subdialog .modal-content { max-width:620px; max-height:90dvh; overflow:auto; width:100%; background:var(--bg-primary,#fff); color:var(--text-primary,#172033); }
+.settings-overlay button:focus-visible,.settings-overlay input:focus-visible,.settings-overlay select:focus-visible,.settings-overlay textarea:focus-visible { outline:2px solid var(--accent-color,#2563eb); outline-offset:2px; }
+@media(max-width:650px) { .settings-overlay { padding:6px; }.settings-dialog { height:98dvh; }.settings-layout { flex-direction:column; }.settings-layout>nav { width:auto; flex-direction:row; border-right:0; border-bottom:1px solid var(--border-color,#ccc); padding:6px; }.settings-layout>nav button { white-space:nowrap; }.settings-panels { padding:10px; }.settings-subdialog { padding:8px; }.settings-panel .mail-form-row,.settings-panel .ldap-form-row { flex-wrap:wrap; } }
+
+.settings-overlay { margin:0; border:0; width:100vw; height:100dvh; max-width:none; max-height:none; }
+.settings-overlay::backdrop { background:transparent; }
+.settings-panel details { border-bottom:1px solid var(--border-color,#ccc); padding:12px 0; }
+.settings-panel summary { cursor:pointer; padding:6px; overflow-wrap:anywhere; }
+
+.settings-notice { padding:8px 16px; background:var(--bg-secondary,#edf3ff); overflow-wrap:anywhere; flex:none; }
+.settings-notice[data-type=error] { border-left:4px solid #b91c1c; }

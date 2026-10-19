@@ -1,5 +1,5 @@
 /**
- * Casos Admin - Mail-Tab
+ * Casos Einstellungen - Mail-Tab
  * SMTP-Konfiguration, Testmail, Mail-Vorlagen
  */
 
@@ -11,7 +11,7 @@ let mailTemplates = [];
 // ========================================
 
 async function initMailTab() {
-    await initTabGeneric({
+    await settingsInitSection('mail', {
         showFilterBar: false,
         loadFn: () => Promise.all([loadMailConfig(), loadMailTemplates()]),
         renderFn: renderMailTab,
@@ -19,18 +19,12 @@ async function initMailTab() {
 }
 
 async function loadMailConfig() {
-    mailConfig = await loadConfigFromAPI('/api/admin/mail/config');
+    mailConfig = await settingsLoadConfig('/api/admin/mail/config');
 }
 
 async function loadMailTemplates() {
-    try {
-        const resp = await fetch('/api/admin/mail/templates');
-        if (!resp.ok) throw new Error(t('common.loadError'));
-        const data = await resp.json();
-        mailTemplates = data.templates || [];
-    } catch (e) {
-        mailTemplates = [];
-    }
+    const data = await settingsRequest('/api/admin/mail/templates');
+    mailTemplates = data.templates || [];
 }
 
 // ========================================
@@ -38,7 +32,7 @@ async function loadMailTemplates() {
 // ========================================
 
 function renderMailTab() {
-    const container = document.getElementById('contentContainer');
+    const container = settingsContainer('mail');
     if (!container) return;
 
     const hasConfig = !!mailConfig;
@@ -59,7 +53,7 @@ function renderMailTab() {
     }
 
     html += '</div>';
-    container.innerHTML = html;
+    settingsRender('mail', html);
 }
 
 function renderMailConfigSection(hasConfig) {
@@ -109,7 +103,7 @@ function renderMailConfigSection(hasConfig) {
                     <div class="mail-form-field">
                         <label>${t('auth.password')}</label>
                         <input type="password" id="mailPassword"
-                               value="${hasConfig ? '********' : ''}"
+                               value="${escapeAttr(c.password || '')}"
                                placeholder="${t('auth.password')}..." autocomplete="new-password">
                     </div>
                 </div>
@@ -164,7 +158,8 @@ function renderTestMailSection() {
 
 function renderTemplatesSection() {
     const eventLabels = {
-        'task_assigned': t('mailAdmin.event.task_assigned'),
+        'issue_assigned': t('mailAdmin.event.issue_assigned'),
+        'new_update': t('mailAdmin.event.new_update'),
         'status_change': t('mailAdmin.event.status_change'),
         'deadline_reached': t('mailAdmin.event.deadline_reached'),
         'deadline_warning': t('mailAdmin.event.deadline_warning'),
@@ -173,10 +168,11 @@ function renderTemplatesSection() {
     };
 
     const placeholderHints = {
-        'task_assigned': '{recipient_name}, {task_name}, {actor_name}, {deadline}, {priority}, {app_url}',
-        'status_change': '{recipient_name}, {task_name}, {actor_name}, {new_status}, {app_url}',
-        'deadline_reached': '{recipient_name}, {task_name}, {app_url}',
-        'deadline_warning': '{recipient_name}, {task_name}, {days_before}, {deadline}, {app_url}',
+        'issue_assigned': '{recipient_name}, {issue_title}, {actor_name}, {deadline}, {priority}, {issue_url}',
+        'new_update': '{recipient_name}, {issue_title}, {actor_name}, {issue_url}',
+        'status_change': '{recipient_name}, {issue_title}, {actor_name}, {new_status}, {issue_url}',
+        'deadline_reached': '{recipient_name}, {issue_title}, {issue_url}',
+        'deadline_warning': '{recipient_name}, {issue_title}, {days_before}, {deadline}, {issue_url}',
         'invite': '{recipient_name}, {username}, {app_url}',
         'test': t('mailAdmin.noPlaceholders'),
     };
@@ -225,21 +221,23 @@ function renderTemplatesSection() {
 // ========================================
 
 async function saveMailConfig() {
-    const smtp_server = document.getElementById('mailSmtpServer')?.value?.trim();
-    const smtp_port = parseInt(document.getElementById('mailSmtpPort')?.value) || 587;
-    const encryption = document.getElementById('mailEncryption')?.value || 'starttls';
-    const auth_enabled = document.getElementById('mailAuthEnabled')?.checked ?? true;
-    const username = document.getElementById('mailUsername')?.value?.trim() || '';
-    const password = document.getElementById('mailPassword')?.value || '';
-    const from_address = document.getElementById('mailFromAddress')?.value?.trim();
-    const from_name = document.getElementById('mailFromName')?.value?.trim() || 'Casos';
+    return settingsAction(async () => {
+    const smtp_server = settingsField('mail', 'mailSmtpServer')?.value?.trim();
+    const smtp_port = parseInt(settingsField('mail', 'mailSmtpPort')?.value) || 587;
+    const encryption = settingsField('mail', 'mailEncryption')?.value || 'starttls';
+    const auth_enabled = settingsField('mail', 'mailAuthEnabled')?.checked ?? true;
+    const username = settingsField('mail', 'mailUsername')?.value?.trim() || '';
+    const password = settingsField('mail', 'mailPassword')?.value || '';
+    const from_address = settingsField('mail', 'mailFromAddress')?.value?.trim();
+    const from_name = settingsField('mail', 'mailFromName')?.value?.trim() || 'Casos';
 
     if (!smtp_server || !from_address) {
-        showNotification(t('mailAdmin.fillRequired'), 'error');
+        settingsNotify(t('mailAdmin.fillRequired'), 'error');
         return;
     }
 
-    await saveConfigToAPI({
+    await settingsSaveConfig({
+        section: 'mail', fields: ['mailSmtpServer', 'mailSmtpPort', 'mailEncryption', 'mailAuthEnabled', 'mailUsername', 'mailPassword', 'mailFromAddress', 'mailFromName'],
         endpoint: '/api/admin/mail/config',
         data: { smtp_server, smtp_port, encryption, auth_enabled, username, password, from_address, from_name },
         successMessage: t('mailAdmin.saved'),
@@ -248,10 +246,13 @@ async function saveMailConfig() {
             renderMailTab();
         },
     });
+    });
 }
 
 async function deleteMailConfig() {
-    await deleteConfigFromAPI({
+    return settingsAction(async () => {
+    await settingsDeleteConfig({
+        section: 'mail', fields: ['mailSmtpServer', 'mailSmtpPort', 'mailEncryption', 'mailAuthEnabled', 'mailUsername', 'mailPassword', 'mailFromAddress', 'mailFromName'],
         endpoint: '/api/admin/mail/config',
         confirmMessage: t('mailAdmin.deleteConfirm'),
         successMessage: t('mailAdmin.deleted'),
@@ -260,6 +261,7 @@ async function deleteMailConfig() {
             renderMailTab();
         },
     });
+    });
 }
 
 // ========================================
@@ -267,14 +269,15 @@ async function deleteMailConfig() {
 // ========================================
 
 async function sendTestMail() {
-    const to_email = document.getElementById('mailTestRecipient')?.value?.trim();
+    return settingsAction(async () => {
+    const to_email = settingsField('mail', 'mailTestRecipient')?.value?.trim();
     if (!to_email) {
-        showNotification(t('mailAdmin.recipientRequired'), 'error');
+        settingsNotify(t('mailAdmin.recipientRequired'), 'error');
         return;
     }
 
     try {
-        const resp = await fetch('/api/admin/mail/test', {
+        const resp = await settingsFetch('/api/admin/mail/test', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ to_email }),
@@ -285,10 +288,11 @@ async function sendTestMail() {
             throw new Error(data.detail || t('mailAdmin.sendError'));
         }
 
-        showNotification(t('mailAdmin.testSent', { email: to_email }), 'success');
+        settingsNotify(t('mailAdmin.testSent', { email: to_email }), 'success');
     } catch (error) {
-        showNotification(error.message, 'error');
+        settingsNotify(error.message, 'error');
     }
+    });
 }
 
 // ========================================
@@ -296,16 +300,17 @@ async function sendTestMail() {
 // ========================================
 
 async function saveMailTemplate(eventType) {
-    const subject = document.getElementById(`tmplSubject_${eventType}`)?.value || '';
-    const body_text = document.getElementById(`tmplBody_${eventType}`)?.value || '';
+    return settingsAction(async () => {
+    const subject = settingsField('mail', `tmplSubject_${eventType}`)?.value || '';
+    const body_text = settingsField('mail', `tmplBody_${eventType}`)?.value || '';
 
     if (!subject.trim()) {
-        showNotification(t('mailAdmin.subjectRequired'), 'error');
+        settingsNotify(t('mailAdmin.subjectRequired'), 'error');
         return;
     }
 
     try {
-        const resp = await fetch(`/api/admin/mail/templates/${eventType}`, {
+        const resp = await settingsFetch(`/api/admin/mail/templates/${eventType}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ subject, body_text }),
@@ -316,8 +321,10 @@ async function saveMailTemplate(eventType) {
             throw new Error(data.detail || t('common.saveError'));
         }
 
-        showNotification(t('mailAdmin.templateSaved'), 'success');
+        settingsMarkSaved('mail', [`tmplSubject_${eventType}`, `tmplBody_${eventType}`]);
+        settingsNotify(t('mailAdmin.templateSaved'), 'success');
     } catch (error) {
-        showNotification(error.message, 'error');
+        settingsNotify(error.message, 'error');
     }
+    });
 }

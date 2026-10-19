@@ -230,7 +230,7 @@ class IssueTests(unittest.TestCase):
         self.assertIn("description", filtered["items"][0])
         self.assertIsNone(filtered["next_offset"])
 
-    def test_issue_delete_cascades_and_queues_attachment_cleanup(self):
+    def test_issue_delete_cascades_and_tracks_invalid_cleanup_names(self):
         issue = self.create(status="in_arbeit")
         with closing(database.get_db()) as db, db:
             db.execute("INSERT INTO issue_updates(issue_id,user_id,content) VALUES(?,?, 'update')", (issue["id"], self.user["id"]))
@@ -240,6 +240,7 @@ class IssueTests(unittest.TestCase):
         for table in ("issues", "issue_updates", "attachments", "issue_editors", "issue_events"):
             self.assertEqual(self.rows(table), [])
         self.assertEqual(self.rows("attachment_gc")[0]["storage_name"], "unique")
+        self.assertEqual(self.rows("attachment_gc")[0]["last_error"], "invalid_storage_name")
         with closing(database.get_db()) as db:
             self.assertEqual(db.execute("PRAGMA foreign_key_check").fetchall(), [])
 

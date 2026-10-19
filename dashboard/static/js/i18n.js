@@ -142,11 +142,19 @@
         });
     }
 
+    // Accessible labels use the same catalogue as visible UI strings.
+    function applyAccessibleI18n() {
+        applyDataI18n();
+        document.querySelectorAll('[data-i18n-aria-label]').forEach(el => {
+            el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria-label')));
+        });
+    }
+
     // Auto-Patch beim Laden
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', applyDataI18n);
+        document.addEventListener('DOMContentLoaded', applyAccessibleI18n);
     } else {
-        applyDataI18n();
+        applyAccessibleI18n();
     }
 
     // html lang Attribut setzen

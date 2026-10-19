@@ -31,8 +31,10 @@ async def list_users(user=Depends(get_current_user)):
 @router.get("/api/issues")
 async def list_issues(offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=500),
                       status: str | None = None, assigned_to: int | None = None,
-                      include_description: bool = False, user=Depends(get_current_user)):
-    return issue_service.list_issues(user, offset, limit, status, assigned_to, include_description)
+                      include_description: bool = False, sort_by: str = "id", sort_direction: str = "desc",
+                      unassigned: bool = False, user=Depends(get_current_user)):
+    return issue_service.list_issues(user, offset, limit, status, assigned_to, include_description,
+                                     sort_by, sort_direction, unassigned)
 
 
 @router.post("/api/issues", status_code=201)

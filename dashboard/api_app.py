@@ -2,11 +2,12 @@
 Casos - API-Router fuer App-Konfiguration (Server-Adresse etc.).
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import get_admin_user
+from dashboard.audit_log import log_change
 from dashboard.logging_config import get_security_logger
 
 security_log = get_security_logger()
@@ -39,6 +40,8 @@ async def save_app_config(data: AppConfigSave, user=Depends(get_admin_user)):
             break
     # Trailing Slash entfernen
     address = address.rstrip("/")
+    if not address or any(char.isspace() for char in address) or any(char in address for char in "<>\\?#@"):
+        raise HTTPException(status_code=400, detail="Gueltige Server-Adresse ist erforderlich")
 
     with db_transaction() as db:
         db.execute(
@@ -48,5 +51,6 @@ async def save_app_config(data: AppConfigSave, user=Depends(get_admin_user)):
                    server_address = excluded.server_address""",
             (address,),
         )
+        log_change(user, "app_config", 1, "update", {"server_address": address}, db=db)
         security_log.info("CONFIG_CHANGED section=app by=%s", user["username"])
         return {"message": "App-Konfiguration gespeichert"}

@@ -4,10 +4,11 @@ TLS-Konfiguration: Zertifikate verwalten, aktivieren/deaktivieren.
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from dashboard.db_utils import db_query, db_transaction, upsert_singleton_config
 from dashboard.auth import get_admin_user
+from dashboard.audit_log import log_change
 from dashboard.tls_utils import validate_cert_files, get_tls_verify_config
 from dashboard.logging_config import get_security_logger
 
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/api/admin/tls", tags=["tls"])
 class TlsConfigRequest(BaseModel):
     cert_path: str
     key_path: str
-    enabled: int = 0
+    enabled: int = Field(default=0, ge=0, le=1)
 
 
 class TlsValidateRequest(BaseModel):
@@ -32,10 +33,9 @@ class TlsValidateRequest(BaseModel):
 
 
 class TlsVerifyConfigRequest(BaseModel):
-    verify_nextcloud: int = 0
-    verify_onlyoffice: int = 0
-    verify_smtp: int = 0
-    verify_ldap: int = 0
+    model_config = ConfigDict(extra="forbid")
+    verify_smtp: int = Field(default=0, ge=0, le=1)
+    verify_ldap: int = Field(default=0, ge=0, le=1)
 
 
 # ============================================================
@@ -79,6 +79,7 @@ async def save_tls_config(req: TlsConfigRequest, user=Depends(get_admin_user)):
             "key_path": key_path,
             "enabled": req.enabled,
         })
+        log_change(user, "tls_config", 1, "update", {"cert_path": cert_path, "key_path": key_path, "enabled": req.enabled}, db=db)
         security_log.info("CONFIG_CHANGED section=tls by=%s", user["username"])
         return {"status": "ok", "message": "TLS-Konfiguration gespeichert"}
 
@@ -103,6 +104,7 @@ async def delete_tls_config(user=Depends(get_admin_user)):
     """TLS-Konfiguration loeschen (zurueck zu HTTP)."""
     with db_transaction() as db:
         db.execute("DELETE FROM tls_config WHERE id = 1")
+        log_change(user, "tls_config", 1, "delete", db=db)
         security_log.info("CONFIG_CHANGED section=tls_deleted by=%s", user["username"])
         return {"status": "ok", "message": "TLS-Konfiguration geloescht"}
 
@@ -118,10 +120,9 @@ async def save_verify_config(req: TlsVerifyConfigRequest, user=Depends(get_admin
     """Zertifikatsvalidierungs-Konfiguration speichern."""
     with db_transaction() as db:
         upsert_singleton_config(db, "tls_verify_config", {
-            "verify_nextcloud": req.verify_nextcloud,
-            "verify_onlyoffice": req.verify_onlyoffice,
             "verify_smtp": req.verify_smtp,
             "verify_ldap": req.verify_ldap,
         })
+        log_change(user, "tls_config", 1, "update", {"verify_smtp": req.verify_smtp, "verify_ldap": req.verify_ldap}, db=db)
         security_log.info("CONFIG_CHANGED section=tls_verify by=%s", user["username"])
         return {"status": "ok", "message": "Zertifikatsvalidierung gespeichert"}

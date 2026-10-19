@@ -1,6 +1,8 @@
 """Gemeinsamer HTTP-Transport und Auth fuer beide Casos-MCP-Zugaenge."""
 
 import re
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import HTTPException, Request
@@ -68,8 +70,27 @@ async def mcp_lifespan(app):
     init_db()
     migrate_plaintext_credentials()
     setup_security_logger()
+    from dashboard.attachment_service import process_attachment_gc
+    await asyncio.to_thread(process_attachment_gc)
+    stop = asyncio.Event()
+
+    async def cleanup_loop():
+        while not stop.is_set():
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=60)
+            except asyncio.TimeoutError:
+                try:
+                    await asyncio.to_thread(process_attachment_gc)
+                except Exception:
+                    logging.getLogger(__name__).exception("Attachment cleanup will retry")
+
     async with app.state.mcp_transport.lifespan(app):
-        yield
+        worker = asyncio.create_task(cleanup_loop())
+        try:
+            yield
+        finally:
+            stop.set()
+            await worker
 
 
 async def api_csrf_protection(request: Request, call_next):

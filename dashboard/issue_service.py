@@ -111,7 +111,8 @@ def get_issue(issue_id, user):
         return _serialize(db, row, current)
 
 
-def list_issues(user, offset=0, limit=50, status=None, assigned_to=None, include_description=False):
+def list_issues(user, offset=0, limit=50, status=None, assigned_to=None, include_description=False,
+                sort_by="id", sort_direction="desc", unassigned=False):
     if type(offset) is not int or offset < 0:
         _invalid("offset", "offset muss eine nichtnegative ganze Zahl sein")
     if type(limit) is not int or not 1 <= limit <= 500:
@@ -122,6 +123,18 @@ def list_issues(user, offset=0, limit=50, status=None, assigned_to=None, include
         _invalid("status", "Ungueltiger Issue-Status", "invalid_status")
     if assigned_to is not None and (type(assigned_to) is not int or assigned_to < 1):
         _invalid("assigned_to", "Verantwortlicher muss eine Benutzer-ID sein")
+    order_columns = {"id": "id", "title": "title COLLATE NOCASE", "priority": "priority",
+                     "deadline": "deadline", "created_at": "created_at"}
+    if not isinstance(sort_by, str) or sort_by not in order_columns:
+        _invalid("sort_by", "Ungueltige Sortierspalte")
+    if sort_direction not in ("asc", "desc"):
+        _invalid("sort_direction", "Sortierrichtung muss asc oder desc sein")
+    if type(unassigned) is not bool or (unassigned and assigned_to is not None):
+        _invalid("unassigned", "Unzugewiesen und Verantwortlicher sind alternative Filter")
+    ordering = ("deadline IS NULL ASC, " if sort_by == "deadline" else "")
+    ordering += order_columns[sort_by] + " " + sort_direction.upper()
+    if sort_by != "id":
+        ordering += ", id DESC"
     clauses, values = [], []
     if status is not None:
         clauses.append("status = ?")
@@ -129,12 +142,14 @@ def list_issues(user, offset=0, limit=50, status=None, assigned_to=None, include
     if assigned_to is not None:
         clauses.append("assigned_to = ?")
         values.append(assigned_to)
+    if unassigned:
+        clauses.append("assigned_to IS NULL")
     where = " WHERE " + " AND ".join(clauses) if clauses else ""
     with db_query() as db:
         db.execute("BEGIN")
         current = require_active_user(db, user)
         total = db.execute("SELECT COUNT(*) FROM issues" + where, values).fetchone()[0]
-        rows = db.execute("SELECT * FROM issues" + where + " ORDER BY id DESC LIMIT ? OFFSET ?",
+        rows = db.execute("SELECT * FROM issues" + where + " ORDER BY " + ordering + " LIMIT ? OFFSET ?",
                           [*values, limit, offset]).fetchall()
         return {"items": [_serialize(db, row, current, include_description=include_description) for row in rows],
                 "offset": offset, "limit": limit, "total": total,
@@ -213,7 +228,9 @@ def delete_issue(issue_id, user, reason=None):
         db.execute("INSERT OR IGNORE INTO attachment_gc (storage_name) SELECT storage_name FROM attachments WHERE issue_id = ?", (issue_id,))
         db.execute("DELETE FROM issues WHERE id = ?", (issue_id,))
         log_change(current, "issue", issue_id, "delete", reason=reason, db=db)
-    return {"ok": True}
+    from dashboard.attachment_service import process_attachment_gc
+    cleanup = process_attachment_gc(limit=1000)
+    return {"ok": True, "cleanup_pending": cleanup["pending"]}
 
 
 def patch_issue_description(issue_id, user, *, revision, operation, text, old_text=None, reason=None):

@@ -6,10 +6,11 @@ Benutzerverwaltung (CRUD).
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.auth import hash_password, get_admin_user
+from dashboard.audit_log import log_change
 from dashboard.logging_config import get_security_logger
 
 security_log = get_security_logger()
@@ -27,14 +28,15 @@ class UserCreate(BaseModel):
     vorname: str = ""
     nachname: str = ""
     email: str = ""
-    is_admin: int = 0
+    is_admin: int = Field(default=0, ge=0, le=1)
 
 
 class UserUpdate(BaseModel):
     vorname: Optional[str] = None
     nachname: Optional[str] = None
     email: Optional[str] = None
-    is_admin: Optional[int] = None
+    is_admin: Optional[int] = Field(default=None, ge=0, le=1)
+    is_active: Optional[int] = Field(default=None, ge=0, le=1)
     password: Optional[str] = None
 
 
@@ -91,6 +93,7 @@ async def create_user(data: UserCreate, user=Depends(get_admin_user)):
                VALUES (?, ?, ?, ?, ?, ?)""",
             (data.username.strip(), hashed, data.vorname, data.nachname, data.email, data.is_admin),
         )
+        log_change(user, "user", cursor.lastrowid, "create", {"username": data.username.strip(), "is_admin": data.is_admin}, db=db)
         security_log.info("USER_CREATED user=%s by=%s", data.username.strip(), user["username"])
         return {"id": cursor.lastrowid, "message": "Benutzer erstellt"}
 
@@ -99,7 +102,7 @@ async def create_user(data: UserCreate, user=Depends(get_admin_user)):
 async def update_user(user_id: int, data: UserUpdate, user=Depends(get_admin_user)):
     """Benutzer aktualisieren."""
     with db_transaction() as db:
-        existing = db.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+        existing = db.execute("SELECT id, auth_source FROM users WHERE id = ?", (user_id,)).fetchone()
         if not existing:
             raise HTTPException(status_code=404, detail="Benutzer nicht gefunden")
 
@@ -118,6 +121,11 @@ async def update_user(user_id: int, data: UserUpdate, user=Depends(get_admin_use
         if data.is_admin is not None:
             updates.append("is_admin = ?")
             values.append(data.is_admin)
+        if data.is_active is not None:
+            if existing["auth_source"] == "ldap":
+                raise HTTPException(status_code=400, detail="LDAP-Aktivitaet wird durch Synchronisierung verwaltet")
+            updates.append("is_active = ?")
+            values.append(data.is_active)
         if data.password is not None and data.password.strip():
             if len(data.password) < 4:
                 raise HTTPException(status_code=400, detail="Passwort muss mindestens 4 Zeichen haben")
@@ -131,6 +139,9 @@ async def update_user(user_id: int, data: UserUpdate, user=Depends(get_admin_use
                 values,
             )
 
+        changed = data.model_dump(exclude_none=True, exclude={"password"})
+        if data.password: changed["password_changed"] = True
+        log_change(user, "user", user_id, "update", changed, db=db)
         return {"message": "Benutzer aktualisiert"}
 
 
@@ -148,5 +159,6 @@ async def delete_user(user_id: int, user=Depends(get_admin_user)):
         # Sessions mitloeschen (CASCADE sollte das tun, aber sicherheitshalber)
         db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
         db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        log_change(user, "user", user_id, "delete", db=db)
         security_log.info("USER_DELETED user_id=%s by=%s", user_id, user["username"])
         return {"message": "Benutzer geloescht"}

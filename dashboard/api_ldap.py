@@ -8,12 +8,13 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.config_utils import get_masked_config, resolve_masked_password
 from dashboard.crypto_utils import decrypt
 from dashboard.auth import get_admin_user
+from dashboard.audit_log import log_change
 from dashboard.ldap_utils import test_connection, list_groups
 from dashboard.ldap_sync import sync_ldap_users
 from dashboard.tls_utils import get_tls_verify_config
@@ -31,12 +32,12 @@ router = APIRouter(prefix="/api/admin/ldap", tags=["ldap"])
 
 class LdapConfigRequest(BaseModel):
     server: str
-    port: int = 389
+    port: int = Field(default=389, ge=1, le=65535)
     use_ssl: int = 0
     bind_dn: str
     bind_password: str
     search_base: str
-    sync_interval_minutes: int = 60
+    sync_interval_minutes: int = Field(default=60, ge=1, le=10080)
 
 
 class GroupSelectRequest(BaseModel):
@@ -105,6 +106,7 @@ async def save_ldap_config(data: LdapConfigRequest, user=Depends(get_admin_user)
                  data.search_base.strip(), data.sync_interval_minutes),
             )
 
+        log_change(user, "ldap_config", 1, "update", {"server": data.server.strip(), "port": data.port, "use_ssl": data.use_ssl, "credentials_changed": data.bind_password != "********"}, db=db)
         security_log.info("CONFIG_CHANGED section=ldap by=%s", user["username"])
         return {"message": "LDAP-Konfiguration gespeichert"}
 
@@ -115,6 +117,7 @@ async def delete_ldap_config(user=Depends(get_admin_user)):
     with db_transaction() as db:
         db.execute("DELETE FROM ldap_config WHERE id = 1")
         db.execute("UPDATE users SET is_active = 0 WHERE auth_source = 'ldap'")
+        log_change(user, "ldap_config", 1, "delete", db=db)
         security_log.info("CONFIG_CHANGED section=ldap_deleted by=%s", user["username"])
         return {"message": "LDAP-Konfiguration geloescht, LDAP-Benutzer deaktiviert"}
 
@@ -158,6 +161,7 @@ async def select_group(data: GroupSelectRequest, user=Depends(get_admin_user)):
             "UPDATE ldap_config SET group_dn = ?, group_name = ? WHERE id = 1",
             (data.group_dn, data.group_name),
         )
+        log_change(user, "ldap_config", 1, "update", {"group_dn": data.group_dn, "group_name": data.group_name}, db=db)
 
     # Sofort Sync ausfuehren
     result = await asyncio.to_thread(sync_ldap_users)
@@ -179,6 +183,7 @@ async def deselect_group(user=Depends(get_admin_user)):
             "UPDATE ldap_config SET group_dn = NULL, group_name = NULL WHERE id = 1"
         )
         db.execute("UPDATE users SET is_active = 0 WHERE auth_source = 'ldap'")
+        log_change(user, "ldap_config", 1, "update", {"group_dn": None}, db=db)
         return {"message": "Gruppenauswahl aufgehoben, LDAP-Benutzer deaktiviert"}
 
 

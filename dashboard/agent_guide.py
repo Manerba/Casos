@@ -91,7 +91,7 @@ def build_agent_metadata(request: Request | None = None, *, mcp_base_url: str | 
     mcp_endpoint = f"{agent_base}/mcp/"
     guide_url = f"{agent_base}/agent-guide.md"
     well_known_url = f"{agent_base}/.well-known/casos-agent.json"
-    admin_url = _with_port(base_url, 8515)
+    admin_url = f"{base_url.rstrip('/')}/?settings=mcp"
     snippet = build_agents_snippet(web_ui, mcp_endpoint)
 
     return {
@@ -276,12 +276,12 @@ Token niemals ins Repo schreiben.
 - Bisheriger MCP-Zugang: `{metadata['mcp']['legacy_endpoint']}` (weiterhin nutzbar)
 - MCP-Transport: `{MCP_TRANSPORT}`
 - MCP-Servername: `{MCP_SERVER_NAME}`
-- Admin-UI fuer MCP-Tokens: `{admin_url}`, Tab `MCP`
+- Einstellungsdialog fuer MCP-Tokens: `{admin_url}`, Abschnitt `MCP`
 
 ## Token-Ablauf
 
-1. Admin-UI oeffnen: `{admin_url}`
-2. Tab `MCP` oeffnen.
+1. Einstellungsdialog oeffnen: `{admin_url}`
+2. Abschnitt `MCP` oeffnen.
 3. Neuen Token erstellen, z.B. `Codex @ Projektname` oder `Claude @ Projektname`.
 4. Token sofort kopieren. Er wird nur einmal angezeigt.
 5. Token nur in die lokale MCP-Konfiguration des Agenten-Clients eintragen.

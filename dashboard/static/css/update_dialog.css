@@ -1,0 +1,48 @@
+/* Layout derived from Tareas 7157218's shared text/update dialog. */
+.update-dialog {
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+    width: min(900px, calc(100vw - 40px));
+    max-width: calc(100vw - 12px);
+    height: min(760px, 90dvh);
+    max-height: 96dvh;
+    overflow: hidden;
+}
+.update-dialog[open] { display: flex; flex-direction: column; }
+.update-dialog::backdrop { background: rgba(0, 0, 0, .55); }
+.update-dialog [hidden] { display: none !important; }
+.update-dialog .control-btn {
+    padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 4px;
+    font-size: 12px; cursor: pointer; background: var(--bg-primary); color: var(--text-primary);
+    white-space: nowrap;
+}
+.update-dialog .control-btn:hover { background: var(--bg-row-hover); }
+.update-dialog .control-btn.primary {
+    background: var(--accent-primary); color: var(--accent-text); border-color: var(--accent-primary);
+}
+.update-dialog .control-btn.primary:hover { background: var(--accent-hover); }
+.update-dialog .control-btn:disabled { opacity: .55; cursor: wait; }
+.update-dialog .control-btn:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.update-dialog-header {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    padding: 12px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+}
+.update-dialog-title { flex: 1 1 200px; min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 16px; }
+.update-dialog-meta { margin: 0; padding: 6px 12px; color: var(--text-secondary); font-size: 12px; }
+.update-dialog-status { margin: 0; padding: 8px 12px; color: var(--color-bearish, #c62828); font-size: 13px; }
+.update-dialog-content { flex: 1; min-height: 0; overflow: auto; display: flex; }
+.update-dialog-content > .markdown-editor {
+    flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; border: 0; border-radius: 0;
+}
+.update-dialog-content .markdown-body, .update-dialog-content .markdown-source {
+    flex: 1; min-height: 0; overflow: auto; resize: none;
+}
+.update-dialog-content .markdown-source { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+    .update-dialog { width: calc(100vw - 12px); height: 96dvh; }
+    .update-dialog-title { flex-basis: 100%; }
+}

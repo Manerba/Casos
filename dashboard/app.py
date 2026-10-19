@@ -1,6 +1,7 @@
 """Casos: flat issues, browser API and MCP on port 8514."""
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -12,8 +13,15 @@ import uvicorn
 
 from dashboard.api_auth import router as auth_router
 from dashboard.api_issues import router as issues_router
-from dashboard.api_mail import mail_user_router
-from dashboard.auth import _extract_user_from_request, get_current_user
+from dashboard.api_updates import router as updates_router
+from dashboard.api_attachments import router as attachments_router
+from dashboard.api_mail import mail_user_router, mail_admin_router
+from dashboard.api_admin import router as admin_router
+from dashboard.api_app import app_config_router
+from dashboard.api_ldap import router as ldap_router
+from dashboard.api_tls import router as tls_router
+from dashboard.api_admin_mcp import router as admin_mcp_router
+from dashboard.auth import _extract_user_from_request, get_current_user, get_admin_user
 from dashboard.errors import ApplicationError
 from dashboard.agent_guide import build_agent_metadata, build_agent_guide_markdown
 from dashboard.mcp_transport import api_csrf_protection, install_mcp, mcp_lifespan
@@ -22,7 +30,11 @@ from dashboard.tls_utils import get_tls_config
 app = FastAPI(title='Casos', lifespan=mcp_lifespan)
 app.include_router(auth_router)
 app.include_router(issues_router)
+app.include_router(updates_router)
+app.include_router(attachments_router)
 app.include_router(mail_user_router)
+for router in (admin_router, app_config_router, ldap_router, tls_router, admin_mcp_router, mail_admin_router):
+    app.include_router(router, dependencies=[Depends(get_admin_user)])
 install_mcp(app)
 app.middleware('http')(api_csrf_protection)
 root = Path(__file__).parent
@@ -58,6 +70,13 @@ async def dashboard_info(user=Depends(get_current_user)):
     return {'version': (root.parent / 'version.txt').read_text().strip(), 'title': 'Casos',
             'description': 'Issues, Updates und lokale Anhänge',
             'components': ['FastAPI', 'SQLite', 'Vanilla JS', 'Markdown', 'MCP']}
+
+
+@app.post('/api/dashboard/restart')
+async def restart_dashboard(user=Depends(get_admin_user)):
+    subprocess.Popen(['systemctl', 'restart', 'casos.service', 'casos-mcp.service'],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return {'status': 'restarting'}
 
 
 @app.get('/.well-known/casos-agent.json')

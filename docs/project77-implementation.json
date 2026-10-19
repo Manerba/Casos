@@ -34,13 +34,14 @@
     "pagination": "{items,offset,limit,total,next_offset}; stable order; descriptions optional for lists",
     "revision": "SHA-256 of format + NUL + source; description writes require base revision; grants revision guards full replacement",
     "events": "issue_events stores status/assignment old_value,new_value as JSON with current actor in same transaction",
-    "attachment_delete": "issue deletion queues storage_name in attachment_gc before metadata cascade; #392 drains retryable garbage queue"
+    "attachment_delete": "queue committed before temporary file creation; Issue deletion triggers GC; startup and every60s retry; locked ongoing uploads skipped",
+    "sorting": "list_issues and GET accept sort_by=id/title/priority/deadline/created_at, sort_direction asc/desc, unassigned bool; global sort before pagination, null deadlines last"
   },
   "ownership": {
     "root": "schema, main app/router integration, core JS, templates, i18n, requirements, version/commits, independent integration review",
-    "capture_analysis": "#390 issue_service, issue_permissions, api_issues, auth, api_auth and test_issues",
-    "attachments_analysis": "preparation #392/#394, parser research; awaiting #390 completion",
-    "settings_ops_analysis": "preparation #395; awaiting #390 completion"
+    "capture_analysis": "391 complete/reviewed;393 prepared, waiting prerequisites",
+    "attachments_analysis": "392 complete/reviewed;394 waiting393",
+    "settings_ops_analysis": "395 final browser checks"
   },
   "checks": [
     {
@@ -52,17 +53,49 @@
       "command": "venv/bin/python -m unittest discover -s tests -p 'test_issue*.py' -v",
       "result": "24 tests OK, 17.309s; coordinator run after final atomic-audit changes",
       "covers": "Issue REST/service rights, auth, revisions, grants, concurrency, transactional audit failure, FK/GC, initialization and real HTTP/CSRF"
+    },
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -p test_updates.py -v",
+      "result": "10 tests OK, 7.041s; root review"
+    },
+    {
+      "command": "venv/bin/python tests/check_update_dialog_ui.py",
+      "result": "Passed; root repeated real HTTP/Cookie/REST/DB/CSP check and viewed mobile screenshot",
+      "evidence": "/tmp/casos-update-dialog-evidence"
+    },
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -p 'test_attachment*.py' -v",
+      "result": "21 tests OK, 21.506s; root review; crash/truncation fixes included"
+    },
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -p test_settings.py -v",
+      "result": "8 tests OK, 7.327s; root review; browser pending"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization tests.test_issue_http tests.test_issues tests.test_issue_sorting tests.test_updates tests.test_attachments tests.test_attachment_auth tests.test_settings -v",
+      "result": "65 tests OK,45.163s; root integrated run",
+      "log": "/tmp/casos-project77-phase2-integrated-tests.log"
+    },
+    {
+      "command": "venv/bin/python tests/check_settings_ui.py",
+      "result": "Root final repeat passed after TLS/SMTP fixes; 11 browser scenarios",
+      "log": "/tmp/casos-project77-395-browser-final.log"
     }
   ],
   "progress": {
-    "390": "reviewed and tested; commit 0.0.1+145 follows",
+    "390": "complete: 0cdd27f / 0.0.1+145; Tareas100",
     "391_400": "not completed",
-    "401": "PL only; open"
+    "401": "PL only; open",
+    "391": "complete implementation and root review; grouped version 0.0.1+146",
+    "392": "complete implementation and root review; grouped version 0.0.1+146",
+    "395": "complete implementation and root review; grouped version 0.0.1+146"
   },
   "constraints": [
     "No Tareas writes except authorized project handoffs/status through MCP",
     "No remote/publishing/production-service activation",
     "Subagents never commit",
     "Complete packages only after coordinator review and recorded tests"
-  ]
+  ],
+  "environment": "Playwright1.64/Chromium156 installed and smoke-tested; extract-msg0.56.1/Pillow12.3.0 installed; runtime data/ still empty",
+  "next": "393 UI and 397 search in parallel agents; root396 MCP;394/398 only after393. Legacy suite replacement/cleanup399 and final400 remain."
 }
