@@ -122,7 +122,7 @@ class TextFileEditor {
                 const meta = this.shell.querySelector('.text-file-meta');
                 meta.textContent = data.created_at || '';
                 meta.hidden = !data.created_at;
-                if (!this.overlay) document.title = `${title} – Tareas`;
+                if (!this.overlay) document.title = `${title} – Casos`;
             }
             // Die Revision des Entwurfs bleibt erhalten: fremde Aenderungen nicht ueberschreiben.
             const draft = snapshot?.editing ? snapshot : null;
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     const title = handoff ? `#${handoff.entryId}` : path.split('/').pop();
-    document.title = `${title} – Tareas`;
+    document.title = `${title} – Casos`;
     const editor = new TextFileEditor(shell, taskId, handoff ? title : path, { handoff });
     const token = location.hash.slice(1);
     if (token && window.opener) {

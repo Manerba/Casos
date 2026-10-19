@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# publish.sh - Tareas .deb-Paket bauen und auf Repo-Server veroeffentlichen
+# publish.sh - Casos .deb-Paket bauen und auf Repo-Server veroeffentlichen
 #              + GitHub-Sync fuer Open-Source-Veroeffentlichung
 #
 # Verwendung:
@@ -16,13 +16,13 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION_FILE="$SCRIPT_DIR/version.txt"
 REPO_SERVER="188.245.43.207"
-REPO_BASE="/var/www/tareas"
+REPO_BASE="/var/www/casos"
 REPO_DIR="$REPO_BASE/repo"
-REPO_URL="http://$REPO_SERVER/tareas/repo"
+REPO_URL="http://$REPO_SERVER/casos/repo"
 GPG_KEY="C818D9020A2F43CEBCE2E7E0BA3D049F6600D868"
-BUILD_DIR="/tmp/tareas-build"
-GITHUB_REPO="Manerba/tareas"
-GITHUB_DIR="/tmp/tareas-github"
+BUILD_DIR="/tmp/casos-build"
+GITHUB_REPO="Manerba/casos"
+GITHUB_DIR="/tmp/casos-github"
 
 # Farben
 RED='\033[0;31m'
@@ -43,29 +43,29 @@ setup_server() {
     ssh root@$REPO_SERVER bash <<'REMOTE_SETUP'
 set -e
 
-REPO_BASE="/var/www/tareas"
+REPO_BASE="/var/www/casos"
 REPO_DIR="$REPO_BASE/repo"
 
 # Verzeichnisstruktur anlegen
 mkdir -p "$REPO_DIR/dists/noble/main/binary-all"
-mkdir -p "$REPO_DIR/pool/main/t/tareas"
+mkdir -p "$REPO_DIR/pool/main/c/casos"
 
 # GPG Public Key exportieren
-gpg --export C818D9020A2F43CEBCE2E7E0BA3D049F6600D868 > "$REPO_DIR/tareas-repo.gpg"
-echo "GPG-Key exportiert nach $REPO_DIR/tareas-repo.gpg"
+gpg --export C818D9020A2F43CEBCE2E7E0BA3D049F6600D868 > "$REPO_DIR/casos-repo.gpg"
+echo "GPG-Key exportiert nach $REPO_DIR/casos-repo.gpg"
 
 # Apache-Config erstellen
-cat > /etc/apache2/conf-available/tareas-repo.conf <<'APACHE_CONF'
-# Tareas APT-Repository und Bootstrap-Script
-Alias /tareas /var/www/tareas
+cat > /etc/apache2/conf-available/casos-repo.conf <<'APACHE_CONF'
+# Casos APT-Repository und Bootstrap-Script
+Alias /casos /var/www/casos
 
-<Directory /var/www/tareas>
+<Directory /var/www/casos>
     Options Indexes FollowSymLinks
     AllowOverride None
     Require all granted
 </Directory>
 
-<Directory /var/www/tareas/repo>
+<Directory /var/www/casos/repo>
     Options Indexes FollowSymLinks
     AllowOverride None
     Require all granted
@@ -73,7 +73,7 @@ Alias /tareas /var/www/tareas
 APACHE_CONF
 
 # Apache-Config aktivieren
-a2enconf tareas-repo
+a2enconf casos-repo
 systemctl reload apache2
 
 echo "Apache-Config aktiviert und Apache neu geladen."
@@ -93,7 +93,7 @@ read_version() {
     VERSION=$(cat "$VERSION_FILE" | tr -d '\n')
     # Fuer .deb: + durch ~ ersetzen (dpkg-kompatibles Format)
     DEB_VERSION=$(echo "$VERSION" | sed 's/+/~/')
-    PACKAGE_NAME="tareas_${DEB_VERSION}_all"
+    PACKAGE_NAME="casos_${DEB_VERSION}_all"
     info "Version: $VERSION (deb: $DEB_VERSION)"
 }
 
@@ -106,7 +106,7 @@ build_package() {
     # Altes Build-Verzeichnis aufraeumen
     rm -rf "$BUILD_DIR"
     mkdir -p "$BUILD_DIR/$PACKAGE_NAME/DEBIAN"
-    mkdir -p "$BUILD_DIR/$PACKAGE_NAME/opt/tareas"
+    mkdir -p "$BUILD_DIR/$PACKAGE_NAME/opt/casos"
 
     PKG_ROOT="$BUILD_DIR/$PACKAGE_NAME"
 
@@ -123,7 +123,7 @@ build_package() {
     chmod 755 "$PKG_ROOT/DEBIAN"
 
     # --- Projektdateien kopieren ---
-    APP_DIR="$PKG_ROOT/opt/tareas"
+    APP_DIR="$PKG_ROOT/opt/casos"
 
     # dashboard/ (Backend, Templates, Static)
     rsync -a --exclude='__pycache__' "$SCRIPT_DIR/dashboard/" "$APP_DIR/dashboard/"
@@ -165,7 +165,7 @@ publish_package() {
     fi
 
     info "Lade Paket auf $REPO_SERVER..."
-    scp "$DEB_FILE" root@$REPO_SERVER:$REPO_DIR/pool/main/t/tareas/
+    scp "$DEB_FILE" root@$REPO_SERVER:$REPO_DIR/pool/main/c/casos/
 
     info "Aktualisiere Repository-Index..."
     ssh root@$REPO_SERVER bash <<REMOTE_INDEX
@@ -183,13 +183,13 @@ gzip -k -f dists/noble/main/binary-all/Packages
 # Release-Datei generieren
 cd dists/noble
 cat > Release <<EOF_RELEASE
-Origin: Tareas
-Label: Tareas
+Origin: Casos
+Label: Casos
 Suite: noble
 Codename: noble
 Architectures: all
 Components: main
-Description: Tareas APT Repository
+Description: Casos APT Repository
 EOF_RELEASE
 
 # Hashes berechnen und anhaengen
@@ -272,7 +272,7 @@ github_init() {
     if ! gh repo view "$GITHUB_REPO" &>/dev/null; then
         gh repo create "$GITHUB_REPO" \
             --public \
-            --description "Self-hosted task and project management tool (FastAPI + Vanilla JS)" \
+            --description "Foundation for a self-hosted ticket system (FastAPI + Vanilla JS)" \
             --license MIT
         info "GitHub-Repository erstellt."
     else
@@ -313,7 +313,7 @@ github_sync() {
     prepare_clean_copy "$GITHUB_DIR"
 
     # Bestehendes GitHub-Repo klonen (nur .git)
-    local TEMP_GIT="/tmp/tareas-github-git"
+    local TEMP_GIT="/tmp/casos-github-git"
     rm -rf "$TEMP_GIT"
     git clone --bare "git@github.com:${GITHUB_REPO}.git" "$TEMP_GIT"
 
@@ -374,7 +374,7 @@ case "${1:-}" in
         info "=== Veroeffentlichung erfolgreich ==="
         info "Version: $VERSION"
         info "Repo:    $REPO_URL"
-        info "Install: curl -s http://$REPO_SERVER/tareas/install.sh | bash"
+        info "Install: curl -s http://$REPO_SERVER/casos/install.sh | bash"
         echo ""
         ;;
 esac

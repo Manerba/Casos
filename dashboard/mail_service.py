@@ -1,5 +1,5 @@
 """
-Tareas - Mail-Service
+Casos - Mail-Service
 SMTP-Versand, Template-Rendering, HTML-Layout.
 """
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 
 def get_app_url() -> str:
     """Baut die App-URL aus server_address (DB) und TLS-Config.
-    Fallback: http://localhost:8504"""
+    Fallback: http://localhost:8514"""
     db = get_db()
     try:
         row = db.execute("SELECT server_address FROM app_config WHERE id = 1").fetchone()
-        address = row["server_address"] if row else "localhost:8504"
+        address = row["server_address"] if row else "localhost:8514"
     finally:
         db.close()
 
@@ -136,7 +136,7 @@ def render_template(event_type: str, placeholders: dict) -> tuple[str, str] | No
 
 
 def build_html_mail(content_text: str) -> str:
-    """Baut einen HTML-Rahmen im Tareas-Design um den Content-Text."""
+    """Baut einen HTML-Rahmen im Casos-Design um den Content-Text."""
     # Zeilenumbrueche zu <br> konvertieren
     content_html = content_text.replace("\n", "<br>")
 
@@ -150,7 +150,7 @@ def build_html_mail(content_text: str) -> str:
         <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
           <tr>
             <td style="background:#2c3e50;padding:16px 24px;color:#ffffff;font-size:18px;font-weight:600;">
-              Tareas
+              Casos
             </td>
           </tr>
           <tr>
@@ -160,7 +160,7 @@ def build_html_mail(content_text: str) -> str:
           </tr>
           <tr>
             <td style="padding:16px 24px;background:#f8f9fa;color:#999999;font-size:12px;border-top:1px solid #e9ecef;">
-              Diese Nachricht wurde automatisch von Tareas gesendet.
+              Diese Nachricht wurde automatisch von Casos gesendet.
             </td>
           </tr>
         </table>

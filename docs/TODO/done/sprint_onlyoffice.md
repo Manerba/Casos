@@ -2,12 +2,12 @@
 
 ## Ziel
 
-Office-Dokumente (docx, xlsx, pptx und Textdateien) direkt in Tareas im Browser bearbeiten. ONLYOFFICE Document Server laeuft als Docker-Container auf dem Tareas-Zielserver. Tareas implementiert einen WOPI-Host, sodass Dokumente aus der Nextcloud-Dateiablage in einem Fullscreen-Overlay-Editor geoeffnet werden koennen.
+Office-Dokumente (docx, xlsx, pptx und Textdateien) direkt in Casos im Browser bearbeiten. ONLYOFFICE Document Server laeuft als Docker-Container auf dem Casos-Zielserver. Casos implementiert einen WOPI-Host, sodass Dokumente aus der Nextcloud-Dateiablage in einem Fullscreen-Overlay-Editor geoeffnet werden koennen.
 
 ## Kontext
 
 - Nextcloud-Dateiablage ist bereits implementiert (WebDAV-Proxy, Baumansicht, Icon-Grid)
-- Dateien liegen auf Nextcloud, Tareas greift via WebDAV darauf zu
+- Dateien liegen auf Nextcloud, Casos greift via WebDAV darauf zu
 - ONLYOFFICE Document Server muss als Docker-Container aufgesetzt werden
 - WOPI (Web Application Open Platform Interface) ist das Protokoll zwischen Editor und Host
 
@@ -16,23 +16,23 @@ Office-Dokumente (docx, xlsx, pptx und Textdateien) direkt in Tareas im Browser 
 | Frage | Antwort |
 |-------|---------|
 | Office-Suite | ONLYOFFICE Docs Community Edition (AGPL v3) |
-| Deployment | Docker-Container auf dem Tareas-Zielserver |
+| Deployment | Docker-Container auf dem Casos-Zielserver |
 | Editor-UI | Fullscreen-Overlay (wie Netzplan) |
-| Protokoll | WOPI zwischen Tareas (Host) und ONLYOFFICE (Client) |
+| Protokoll | WOPI zwischen Casos (Host) und ONLYOFFICE (Client) |
 | Unterstuetzte Formate | docx, xlsx, pptx, odt, ods, odp, txt, csv, md |
 
 ## WOPI-Protokoll Grundlagen
 
-ONLYOFFICE laedt Dokumente ueber WOPI-Endpoints vom Host (Tareas). Der Ablauf:
+ONLYOFFICE laedt Dokumente ueber WOPI-Endpoints vom Host (Casos). Der Ablauf:
 
 1. Benutzer klickt auf eine Datei in der Dateiablage
-2. Tareas generiert einen WOPI-File-Identifier und ein zeitlich begrenztes Access-Token
-3. Tareas oeffnet ein Fullscreen-Overlay mit einem iframe
+2. Casos generiert einen WOPI-File-Identifier und ein zeitlich begrenztes Access-Token
+3. Casos oeffnet ein Fullscreen-Overlay mit einem iframe
 4. Die iframe-URL zeigt auf ONLYOFFICE Document Server mit WOPI-Source-URL als Parameter
-5. ONLYOFFICE ruft die WOPI-Endpoints von Tareas auf, um die Datei zu laden
+5. ONLYOFFICE ruft die WOPI-Endpoints von Casos auf, um die Datei zu laden
 6. Benutzer bearbeitet das Dokument
 7. Beim Speichern ruft ONLYOFFICE den PutFile-Endpoint auf
-8. Tareas schreibt die Datei via WebDAV zurueck nach Nextcloud
+8. Casos schreibt die Datei via WebDAV zurueck nach Nextcloud
 
 ## Anforderungen
 
@@ -42,7 +42,7 @@ ONLYOFFICE laedt Dokumente ueber WOPI-Endpoints vom Host (Tareas). Der Ablauf:
 - Container-Konfiguration:
   - Port: 8090 (oder anderer freier Port, intern 80)
   - Persistentes Volume fuer Logs und Caches
-  - JWT-Secret konfigurieren (Authentifizierung zwischen Tareas und ONLYOFFICE)
+  - JWT-Secret konfigurieren (Authentifizierung zwischen Casos und ONLYOFFICE)
   - WOPI aktivieren (`WOPI_ENABLED=true`)
 - Systemd-Service oder Docker-Compose fuer automatischen Start
 - Im `.deb`-Paket: Docker als Dependency deklarieren, postinst startet den Container
@@ -66,7 +66,7 @@ ONLYOFFICE laedt Dokumente ueber WOPI-Endpoints vom Host (Tareas). Der Ablauf:
 
 ### 3. WOPI-Host Endpoints
 
-Tareas muss folgende WOPI-Endpoints implementieren, die vom ONLYOFFICE Document Server aufgerufen werden:
+Casos muss folgende WOPI-Endpoints implementieren, die vom ONLYOFFICE Document Server aufgerufen werden:
 
 **CheckFileInfo** - `GET /api/wopi/files/{file_id}`
 - Liefert Metadaten ueber die Datei
@@ -76,12 +76,12 @@ Tareas muss folgende WOPI-Endpoints implementieren, die vom ONLYOFFICE Document 
 
 **GetFile** - `GET /api/wopi/files/{file_id}/contents`
 - Liefert den Dateiinhalt als Binary-Stream
-- Tareas laedt die Datei via WebDAV von Nextcloud und streamt sie an ONLYOFFICE
+- Casos laedt die Datei via WebDAV von Nextcloud und streamt sie an ONLYOFFICE
 - Access-Token Validierung
 
 **PutFile** - `POST /api/wopi/files/{file_id}/contents`
 - Empfaengt den geaenderten Dateiinhalt von ONLYOFFICE
-- Tareas schreibt die Datei via WebDAV zurueck nach Nextcloud
+- Casos schreibt die Datei via WebDAV zurueck nach Nextcloud
 - Access-Token Validierung
 
 **Lock/Unlock/RefreshLock** (optional, aber empfohlen):
@@ -97,7 +97,7 @@ Alle WOPI-Endpoints muessen:
 
 ### 4. Token-Management
 
-- Beim Oeffnen einer Datei: Tareas generiert ein kurzlebiges WOPI-Token
+- Beim Oeffnen einer Datei: Casos generiert ein kurzlebiges WOPI-Token
   - Token enthaelt: user_id, task_id, file_path, permissions, expiry
   - Token wird in der DB gespeichert (wopi_tokens-Tabelle)
   - Token wird signiert (HMAC mit dem ONLYOFFICE JWT-Secret oder eigenem Secret)
@@ -125,7 +125,7 @@ Alle WOPI-Endpoints muessen:
 - ONLYOFFICE wird ueber die Document Server API initialisiert:
   - JS-API des Document Servers einbinden (`/web-apps/apps/api/documents/api.js`)
   - `new DocsAPI.DocEditor(containerId, config)` mit:
-    - `document.url`: WOPI-Source-URL (`{tareas_url}/api/wopi/files/{file_id}/contents?access_token={token}`)
+    - `document.url`: WOPI-Source-URL (`{casos_url}/api/wopi/files/{file_id}/contents?access_token={token}`)
     - `document.fileType`: Dateiendung
     - `document.title`: Dateiname
     - `editorConfig.callbackUrl`: URL die ONLYOFFICE nach dem Speichern aufruft
@@ -156,16 +156,16 @@ Erweiterung des Nextcloud-Tabs oder eigener Tab "ONLYOFFICE" in der Admin-UI:
 - ONLYOFFICE Docker-Container muss im `.deb`-Paket beruecksichtigt werden:
   - `docker.io` oder `docker-ce` als empfohlene Dependency (Recommends, nicht Depends - damit Installation ohne Docker moeglich bleibt)
   - `postinst`: Wenn Docker vorhanden, Container starten (oder Hinweis ausgeben)
-  - Docker-Compose-Datei oder Script unter `/opt/tareas/scripts/onlyoffice-setup.sh`
+  - Docker-Compose-Datei oder Script unter `/opt/casos/scripts/onlyoffice-setup.sh`
 - Alternativ: ONLYOFFICE-Setup als separater optionaler Schritt dokumentieren (nicht automatisch im postinst)
 - JWT-Secret: Bei Erstinstallation automatisch generieren und in Config speichern
 
 ### 10. Sicherheit
 
 - WOPI-Tokens sind kurzlebig (8 Stunden) und an Benutzer + Datei gebunden
-- JWT-Signierung zwischen Tareas und ONLYOFFICE (Shared Secret)
+- JWT-Signierung zwischen Casos und ONLYOFFICE (Shared Secret)
 - WOPI-Endpoints pruefen sowohl Token als auch JWT-Header
-- Datei-Zugriff ueber WOPI respektiert die Tareas-Berechtigungen (Projekt-Mitgliedschaft)
+- Datei-Zugriff ueber WOPI respektiert die Casos-Berechtigungen (Projekt-Mitgliedschaft)
 - Benutzer ohne Schreibrecht auf das Projekt: `UserCanWrite=false` in CheckFileInfo -> Read-Only-Modus
 
 ## Reihenfolge
@@ -188,7 +188,7 @@ Erweiterung des Nextcloud-Tabs oder eigener Tab "ONLYOFFICE" in der Admin-UI:
 - Admin-UI: URL und Secret konfigurierbar, Verbindungstest erfolgreich
 - Klick auf .docx in Dateiablage: Fullscreen-Overlay mit Word-Editor oeffnet sich
 - Dokument bearbeiten und speichern: Aenderungen landen ueber WebDAV in Nextcloud
-- Datei ueber SMB/Nextcloud aendern, in Tareas oeffnen: Aktuelle Version wird geladen
+- Datei ueber SMB/Nextcloud aendern, in Casos oeffnen: Aktuelle Version wird geladen
 - .xlsx oeffnen: Tabellen-Editor
 - .pptx oeffnen: Praesentation-Editor
 - .txt/.md oeffnen: Text-Editor

@@ -15,7 +15,7 @@ from dashboard.auth import get_current_user
 
 class ProjectStatusTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-project-status-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-project-status-")
         self.addCleanup(temp.cleanup)
         for name, value in {
             "DB_DIR": Path(temp.name),

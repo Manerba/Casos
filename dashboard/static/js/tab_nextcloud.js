@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - Nextcloud-Tab
+ * Casos Admin - Nextcloud-Tab
  * Nextcloud-Konfiguration (WebDAV-Verbindung)
  */
 

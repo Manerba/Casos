@@ -1,5 +1,5 @@
 """
-Tareas - Admin-API fuer MCP (Tokens, Audit-Log, Kill-Switch).
+Casos - Admin-API fuer MCP (Tokens, Audit-Log, Kill-Switch).
 
 Pfad-Prefix: /api/admin/mcp
 Auth: get_admin_user pro Endpoint.

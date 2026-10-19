@@ -1,5 +1,5 @@
 /**
- * Tareas - Aufgaben-Tab
+ * Casos - Aufgaben-Tab
  * Init, Control-Area, Renderer, Detail-Callbacks, Modal, SubTask-Verwaltung
  * Sprint B: Aufgabenzuweisung, Sichtbarkeit, Notizen
  */

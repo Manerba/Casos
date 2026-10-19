@@ -52,7 +52,7 @@ Event-Typen mit anpassbaren Vorlagen:
 | Faelligkeit erreicht | Deadline ist heute | {aufgabe}, {faelligkeit}, {link} |
 | Statusaenderung | Status einer Aufgabe hat sich geaendert | {aufgabe}, {alter_status}, {neuer_status}, {geaendert_von}, {link} |
 | Kommentar | Neuer Kommentar zu einer Aufgabe | {aufgabe}, {kommentar_von}, {kommentar_text}, {link} |
-| Einladung | Benutzer wird eingeladen, Tareas zu nutzen | {benutzer}, {login_link} |
+| Einladung | Benutzer wird eingeladen, Casos zu nutzen | {benutzer}, {login_link} |
 
 ---
 
@@ -60,7 +60,7 @@ Event-Typen mit anpassbaren Vorlagen:
 
 - In der Benutzerverwaltung (Admin-UI) erhaelt jede Benutzerzeile einen Button "Einladungsmail senden".
 - Vor dem Versand erscheint ein Bestaetigungsdialog ("Sind Sie sicher?") zum Schutz vor versehentlichem Versand.
-- Die Einladungsmail enthaelt einen kurzen, freundlichen Satz, dass der Benutzer eingeladen wurde, Tareas zu nutzen, sowie einen Link zum Login.
+- Die Einladungsmail enthaelt einen kurzen, freundlichen Satz, dass der Benutzer eingeladen wurde, Casos zu nutzen, sowie einen Link zum Login.
 - Versand erfolgt einzeln pro Benutzer (kein Sammelversand).
 
 ---
@@ -110,7 +110,7 @@ Jeder Benutzer kann individuell steuern, welche Benachrichtigungen er erhaelt:
 ### 4.2 HTML-Mail-Template
 
 - Alle Mails werden als HTML versendet.
-- Einfaches, sauberes Layout im Stil des Tareas-Dashboards (Farben, Schriftarten).
+- Einfaches, sauberes Layout im Stil des Casos-Dashboards (Farben, Schriftarten).
 - Der HTML-Rahmen (Header, Footer, Styling) ist fest definiert.
 - Nur Betreff und Inhaltstext sind pro Event-Typ ueber die Admin-UI anpassbar.
 - Zusaetzlich wird eine Plain-Text-Alternative mitgesendet (Multipart).

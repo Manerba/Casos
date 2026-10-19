@@ -6,17 +6,17 @@
 #
 # Laeuft nicht-interaktiv (fuer apt postinst geeignet).
 # Ermittelt Server-IP automatisch und speichert die Config
-# direkt in die Tareas-Datenbank.
+# direkt in die Casos-Datenbank.
 #
 # Docker wird als apt-Dependency automatisch mitinstalliert.
 # ============================================================
 
 set -e
 
-CONTAINER_NAME="onlyoffice-docs"
-PORT=8090
-APP_DIR="${APP_DIR:-/opt/tareas}"
-DB_PATH="$APP_DIR/data/tareas.db"
+CONTAINER_NAME="casos-onlyoffice-docs"
+PORT=8091
+APP_DIR="${APP_DIR:-/opt/casos}"
+DB_PATH="$APP_DIR/data/casos.db"
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
 info()  { echo "[ONLYOFFICE] $1"; }
@@ -107,7 +107,7 @@ else
     info "Container startet moeglicherweise noch im Hintergrund."
 fi
 
-# Config in Tareas-DB speichern
+# Config in Casos-DB speichern
 save_config_to_db
 
 info "Setup abgeschlossen."

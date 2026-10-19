@@ -17,7 +17,7 @@ from dashboard.auth import get_current_user, get_file_user
 
 class TaskPermissionsTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-permissions-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-permissions-")
         self.addCleanup(temp.cleanup)
         for name, value in {"DB_DIR": Path(temp.name), "DB_PATH": Path(temp.name) / "test.db"}.items():
             patcher = patch.object(database, name, value)

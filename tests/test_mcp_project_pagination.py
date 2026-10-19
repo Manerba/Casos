@@ -17,7 +17,7 @@ from dashboard.api_admin_mcp import MCP_TOOLS
 
 class MCPProjectPaginationTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-project-pagination-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-project-pagination-")
         self.addCleanup(temp.cleanup)
         for name, value in {
             "DB_DIR": Path(temp.name),

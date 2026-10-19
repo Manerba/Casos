@@ -51,7 +51,7 @@
 ### Fix 1.6: Cookie client-seitig loeschen bei Logout [Issue #35]
 - **Datei:** `dashboard/static/js/app_core.js`
 - **Aktion:** In `logout()`: Cookie vor dem Redirect loeschen
-- **Pruefung vorher:** Cookie-Name (`tareas_session`) und Path (`/`) aus `auth.py` verifizieren
+- **Pruefung vorher:** Cookie-Name (`casos_session`) und Path (`/`) aus `auth.py` verifizieren
 - **Risiko:** Keins
 
 ### -> Commit nach Phase 1: `./git-commit.sh "Security: escapeAttr, sanitizeHtml, Auth-Depends, localStorage-Validierung, Logout-Cookie"`
@@ -130,15 +130,15 @@
 ## Phase 4: Infrastruktur
 
 ### Fix 4.1: Systemd-Haertung [Issue #28]
-- **Dateien:** `packaging/services/tareas.service`, `packaging/services/tareas-admin.service`, `packaging/services/tareas-ldap-sync.service`
+- **Dateien:** `packaging/services/casos.service`, `packaging/services/casos-admin.service`, `packaging/services/casos-ldap-sync.service`
 - **Aktion:** Haertungs-Direktiven hinzufuegen (NoNewPrivileges, ProtectSystem, PrivateTmp, etc.)
 - **Pruefung vorher:** Pruefen welche Pfade Schreibzugriff brauchen (data/, /var/log/), ob der Service Netzwerk-Zugriff braucht (ja: HTTP)
-- **Risiko:** Mittel - zu restriktive Einstellungen koennten den Service am Starten hindern. Auf dem Test-Server mit `systemctl restart tareas` testen
+- **Risiko:** Mittel - zu restriktive Einstellungen koennten den Service am Starten hindern. Auf dem Test-Server mit `systemctl restart casos` testen
 - **HINWEIS:** Service-Dateien werden erst beim naechsten Deployment aktiv
 
 ### Fix 4.2: Security-Logging [Issue #32]
 - **Dateien:** `dashboard/app.py` oder neue `dashboard/logging_config.py`, diverse `api_*.py`
-- **Aktion:** Security-Logger konfigurieren (/var/log/tareas.log), Log-Aufrufe in Admin-Endpunkten einfuegen
+- **Aktion:** Security-Logger konfigurieren (/var/log/casos.log), Log-Aufrufe in Admin-Endpunkten einfuegen
 - **Pruefung vorher:** Bestehende Logging-Konfiguration verstehen, pruefen ob /var/log/ beschreibbar ist
 - **Risiko:** Gering - zusaetzliches Logging, keine bestehende Logik betroffen
 - **Test:** Login ausfuehren, Log-Datei pruefen
@@ -200,7 +200,7 @@
 - XSS Versuch in Task-Beschreibung (z.B. `<script>alert(1)</script>`) -> wird sanitized
 - Path-Traversal Versuch (z.B. `../../etc/passwd` als Upload-Pfad) -> 400 Fehler
 - Secret-Key Datei Berechtigungen pruefen (0600)
-- Security-Log pruefen (/var/log/tareas.log existiert, enthaelt Eintraege)
+- Security-Log pruefen (/var/log/casos.log existiert, enthaelt Eintraege)
 
 ### -> Commit nach Tests (nur wenn Fixes noetig): `./git-commit.sh "Security: Test-Fixes"`
 
@@ -212,4 +212,4 @@
 - [ ] Alle Tests bestanden
 - [ ] Issue-Tracker in `docs/security-issues.md` vollstaendig aktualisiert
 - [ ] Changelog in `docs/changelog.md` aktualisiert
-- [ ] Service auf Test-Server neu starten: `systemctl restart tareas`
+- [ ] Service auf Test-Server neu starten: `systemctl restart casos`

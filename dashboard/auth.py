@@ -1,5 +1,5 @@
 """
-Tareas - Authentifizierung
+Casos - Authentifizierung
 Hashing, Sessions, Cookie-Signing, FastAPI-Dependencies.
 """
 
@@ -15,7 +15,7 @@ from itsdangerous import URLSafeSerializer, BadSignature
 
 from dashboard.database import get_db
 
-COOKIE_NAME = "tareas_session"
+COOKIE_NAME = "casos_session"
 SESSION_MAX_AGE = 365 * 86400  # 1 Jahr in Sekunden
 SECRET_KEY_PATH = Path(__file__).parent.parent / "data" / "secret.key"
 
@@ -44,7 +44,7 @@ def get_secret_key() -> str:
 
 
 def _get_serializer() -> URLSafeSerializer:
-    return URLSafeSerializer(get_secret_key(), salt="tareas-session")
+    return URLSafeSerializer(get_secret_key(), salt="casos-session")
 
 
 # ============================================================

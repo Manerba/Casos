@@ -57,6 +57,12 @@ fi
 echo ""
 echo "Commit erfolgreich: $NEW_VERSION"
 
+# Ein neuer lokaler Klon kann noch ohne eigenes Remote betrieben werden.
+if [ -z "$(git remote)" ]; then
+    echo "Kein Remote konfiguriert. Commit bleibt lokal."
+    exit 0
+fi
+
 # Push zum Remote
 echo "Pushe zum Remote..."
 git push

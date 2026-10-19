@@ -1,1 +1,1 @@
-"""Tareas Dashboard Package"""
+"""Casos Dashboard Package"""

@@ -2,16 +2,16 @@
 set -e
 
 # Services stoppen und deaktivieren
-systemctl stop tareas.service 2>/dev/null || true
-systemctl stop tareas-admin.service 2>/dev/null || true
-systemctl stop tareas-mcp.service 2>/dev/null || true
-systemctl stop tareas-ldap-sync.timer 2>/dev/null || true
-systemctl stop tareas-ldap-sync.service 2>/dev/null || true
+systemctl stop casos.service 2>/dev/null || true
+systemctl stop casos-admin.service 2>/dev/null || true
+systemctl stop casos-mcp.service 2>/dev/null || true
+systemctl stop casos-ldap-sync.timer 2>/dev/null || true
+systemctl stop casos-ldap-sync.service 2>/dev/null || true
 
-systemctl disable tareas.service 2>/dev/null || true
-systemctl disable tareas-admin.service 2>/dev/null || true
-systemctl disable tareas-mcp.service 2>/dev/null || true
-systemctl disable tareas-ldap-sync.timer 2>/dev/null || true
-systemctl disable tareas-ldap-sync.service 2>/dev/null || true
+systemctl disable casos.service 2>/dev/null || true
+systemctl disable casos-admin.service 2>/dev/null || true
+systemctl disable casos-mcp.service 2>/dev/null || true
+systemctl disable casos-ldap-sync.timer 2>/dev/null || true
+systemctl disable casos-ldap-sync.service 2>/dev/null || true
 
-echo "Tareas Services gestoppt und deaktiviert."
+echo "Casos Services gestoppt und deaktiviert."

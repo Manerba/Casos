@@ -1,5 +1,5 @@
 """
-Tareas - LDAP Synchronisierung
+Casos - LDAP Synchronisierung
 Synchronisiert AD-Gruppenmitglieder mit der lokalen users-Tabelle.
 """
 

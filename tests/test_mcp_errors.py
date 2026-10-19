@@ -22,7 +22,7 @@ from dashboard.mcp_errors import StructuredToolErrors
 
 class MCPErrorTests(unittest.TestCase):
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="tareas-mcp-errors-")
+        temporary = tempfile.TemporaryDirectory(prefix="casos-mcp-errors-")
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         for name, value in (("DB_DIR", self.root), ("DB_PATH", self.root / "test.db")):

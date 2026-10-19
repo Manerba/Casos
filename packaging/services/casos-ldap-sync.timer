@@ -1,5 +1,5 @@
 [Unit]
-Description=Tareas LDAP Sync Timer
+Description=Casos LDAP Sync Timer
 
 [Timer]
 OnBootSec=5min

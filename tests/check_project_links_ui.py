@@ -1,6 +1,6 @@
 """Browser-Integration mit echten REST-Routen und isolierter SQLite-Datenbank.
 
-Benutzt die optionale Playwright-Installation, keine laufende Tareas-Instanz.
+Benutzt die optionale Playwright-Installation, keine laufende Casos-Instanz.
 """
 
 import mimetypes
@@ -22,7 +22,7 @@ from dashboard.auth import get_current_user
 
 
 def main():
-    with tempfile.TemporaryDirectory(prefix='tareas-link-browser-') as tmp, \
+    with tempfile.TemporaryDirectory(prefix='casos-link-browser-') as tmp, \
             patch.object(database, 'DB_DIR', Path(tmp)), \
             patch.object(database, 'DB_PATH', Path(tmp) / 'test.db'), \
             patch.object(api_tasks, 'notify_event', return_value=None):
@@ -72,8 +72,8 @@ def run(user):
         page = browser.new_page(viewport={'width': 1600, 'height': 1000})
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
-        page.route('http://tareas.test/**', serve)
-        page.goto('http://tareas.test/aufgaben')
+        page.route('http://casos.test/**', serve)
+        page.goto('http://casos.test/aufgaben')
         expect(page.locator('.table-header')).to_contain_text('PID')
         page.locator(f'[data-row-id="{parent}"] > .table-row > .expand-icon').click()
         page.locator(f'[data-subtask-id="{subtask}"] .subtask-expand-icon').click()

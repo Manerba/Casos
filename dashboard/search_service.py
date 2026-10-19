@@ -36,7 +36,7 @@ _SOURCES = (
 def _raise_if_fts_missing(exc: sqlite3.OperationalError) -> None:
     if "no such module" in str(exc).lower():
         raise RuntimeError(
-            "Tareas search requires SQLite FTS5 (unicode61). Install a Python/SQLite "
+            "Casos search requires SQLite FTS5 (unicode61). Install a Python/SQLite "
             "build with ENABLE_FTS5, then restart; the search migration was rolled back."
         ) from exc
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Tareas Mail Scheduler Timer
+Description=Casos Mail Scheduler Timer
 
 [Timer]
 OnCalendar=*-*-* 00:01:00

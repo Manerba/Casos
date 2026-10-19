@@ -234,8 +234,8 @@ Neue Styles fuer:
 
 ## 6. Verifikation
 
-1. Service starten: `systemctl restart tareas.service`
-2. Browser: `http://10.0.12.7:8504/aufgaben`
+1. Service starten: `systemctl restart casos.service`
+2. Browser: `http://10.0.12.7:8514/aufgaben`
 3. Pruefen:
    - Neues Projekt erstellen
    - Projekt aufklappen -> Teilaufgaben-Tabelle hat Pos.- und Vorgaenger-Spalte

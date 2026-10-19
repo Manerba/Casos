@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - MCP-Tab
+ * Casos Admin - MCP-Tab
  * Token-Verwaltung, Audit-Log-Viewer, Kill-Switch.
  */
 
@@ -363,9 +363,9 @@ function showTokenOnce(data) {
             </p>
             <pre style="background:var(--bg-secondary,#f5f5f5);padding:8px;border-radius:4px;font-size:11px;overflow:auto">{
   "mcpServers": {
-    "tareas": {
+    "casos": {
       "type": "http",
-      "url": "${escapeHtml((mcpConfig && (mcpConfig.dedicated_server_url || mcpConfig.server_url)) || 'http://localhost:8506/mcp/')}",
+      "url": "${escapeHtml((mcpConfig && (mcpConfig.dedicated_server_url || mcpConfig.server_url)) || 'http://localhost:8516/mcp/')}",
       "headers": { "Authorization": "Bearer ${escapeHtml(tokenStr)}" }
     }
   }

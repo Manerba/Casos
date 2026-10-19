@@ -1,6 +1,6 @@
 """
-Tareas Admin - Benutzerverwaltung
-FastAPI Backend, Port 8505
+Casos Admin - Benutzerverwaltung
+FastAPI Backend, Port 8515
 """
 
 import subprocess
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Tareas Admin", lifespan=lifespan)
+app = FastAPI(title="Casos Admin", lifespan=lifespan)
 
 # Auth-Router OHNE globale Dependency (login muss oeffentlich sein)
 app.include_router(auth_router)
@@ -108,7 +108,7 @@ async def no_cache_static(request, call_next):
 async def restart_dashboard(user=Depends(get_admin_user)):
     """Startet den Dashboard-Service neu (nur Admins)."""
     subprocess.Popen(
-        ["systemctl", "restart", "tareas.service", "tareas-admin.service", "tareas-mcp.service"],
+        ["systemctl", "restart", "casos.service", "casos-admin.service", "casos-mcp.service"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -155,9 +155,9 @@ def main():
     protocol = "https" if use_tls else "http"
 
     print("=" * 50)
-    print("Tareas Admin - Benutzerverwaltung")
+    print("Casos Admin - Benutzerverwaltung")
     print("=" * 50)
-    print(f"URL: {protocol}://0.0.0.0:8505")
+    print(f"URL: {protocol}://0.0.0.0:8515")
     if use_tls:
         print(f"TLS: {tls['cert_path']}")
     print("Strg+C zum Beenden")
@@ -165,7 +165,7 @@ def main():
 
     kwargs = {
         "host": "0.0.0.0",
-        "port": 8505,
+        "port": 8515,
         "log_level": "info",
     }
     if use_tls:

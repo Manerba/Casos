@@ -53,8 +53,8 @@ def main():
         page = browser.new_page(viewport={'width': 1300, 'height': 950})
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
-        page.route('http://tareas.test/**', serve)
-        page.goto('http://tareas.test/')
+        page.route('http://casos.test/**', serve)
+        page.goto('http://casos.test/')
         page.evaluate('data => window.t = key => data[key] || key', json.loads((ROOT / 'dashboard/static/i18n/en.json').read_text()))
         for name in ('expandable_table.js', 'app_core.js', 'vendor/marked.umd.js', 'vendor/turndown.js',
                      'markdown_editor.js', 'tab_aufgaben.js', 'project_links.js', 'task_settings.js'):
@@ -83,7 +83,7 @@ def main():
         expect(page.locator('#permissionRows tr')).to_have_count(2)
         expect(page.locator('.permissions-fixed')).to_contain_text('Owner')
         expect(page.locator('.permissions-fixed')).to_contain_text('Administrators')
-        page.screenshot(path='/tmp/tareas-task-settings-desktop.png')
+        page.screenshot(path='/tmp/casos-task-settings-desktop.png')
         # Opening settings must not expand/collapse the task underneath.
         expect(page.locator('.table-row-wrapper.expanded')).to_have_count(0)
         page.locator('#permissionUserSearch').fill('alice')
@@ -134,7 +134,7 @@ def main():
         for button in page.locator('[data-remove]').all():
             box = button.bounding_box()
             assert box['x'] >= 0 and box['x'] + box['width'] <= 520, box
-        page.screenshot(path='/tmp/tareas-task-settings-mobile.png')
+        page.screenshot(path='/tmp/casos-task-settings-mobile.png')
         page.locator('#taskSettingsCancel').click()
         page.set_viewport_size({'width': 1300, 'height': 950})
 

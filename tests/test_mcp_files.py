@@ -20,7 +20,7 @@ from dashboard.mcp_errors import MCPToolError
 
 class MCPFileTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-mcp-files-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-mcp-files-")
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         for name, value in {"DB_DIR": self.root, "DB_PATH": self.root / "test.db"}.items():

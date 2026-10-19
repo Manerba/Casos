@@ -1,4 +1,4 @@
-"""Gemeinsamer HTTP-Transport und Auth fuer beide Tareas-MCP-Zugaenge."""
+"""Gemeinsamer HTTP-Transport und Auth fuer beide Casos-MCP-Zugaenge."""
 
 import re
 from contextlib import asynccontextmanager

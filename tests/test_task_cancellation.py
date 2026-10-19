@@ -22,7 +22,7 @@ from scripts import mail_scheduler
 
 class TaskCancellationTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-cancellation-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-cancellation-")
         self.addCleanup(temp.cleanup)
         for name, value in {
             "DB_DIR": Path(temp.name),

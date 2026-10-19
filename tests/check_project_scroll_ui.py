@@ -56,8 +56,8 @@ def main():
             page = browser.new_page(viewport={'width': width, 'height': height})
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
-            page.route('http://tareas.test/**', serve)
-            page.goto('http://tareas.test/aufgaben')
+            page.route('http://casos.test/**', serve)
+            page.goto('http://casos.test/aufgaben')
             expect(page.locator('.table-row-wrapper')).to_have_count(len(projects))
 
             def settle():

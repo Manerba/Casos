@@ -18,7 +18,7 @@ from dashboard.auth import get_current_user
 
 class AdminProjectAccessTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-admin-access-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-admin-access-")
         self.addCleanup(temp.cleanup)
         for name, value in {"DB_DIR": Path(temp.name), "DB_PATH": Path(temp.name) / "test.db"}.items():
             patcher = patch.object(database, name, value)

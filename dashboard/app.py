@@ -1,6 +1,6 @@
 """
-Tareas - Aufgabenplanungs-Tool
-FastAPI Backend, Port 8504
+Casos - Basis fuer ein Ticketsystem
+FastAPI Backend, Port 8514
 """
 
 import logging
@@ -11,8 +11,8 @@ from pathlib import Path
 # Sicherstellen, dass 'dashboard' als Package importierbar ist
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Globales Logging: /var/log/tareas.log (Syslog-Format)
-LOG_PATH = "/var/log/tareas.log"
+# Globales Logging: /var/log/casos.log (Syslog-Format)
+LOG_PATH = "/var/log/casos.log"
 _log_formatter = logging.Formatter(
     fmt="%(asctime)s %(name)s[%(process)d]: %(levelname)s %(message)s",
     datefmt="%b %d %H:%M:%S",
@@ -57,7 +57,7 @@ from dashboard.mcp_transport import install_mcp, mcp_lifespan, api_csrf_protecti
 from dashboard.tls_utils import get_tls_config
 
 
-app = FastAPI(title="Tareas", lifespan=mcp_lifespan)
+app = FastAPI(title="Casos", lifespan=mcp_lifespan)
 
 # Auth-Router OHNE globale Dependency (login muss oeffentlich sein)
 app.include_router(auth_router)
@@ -80,7 +80,7 @@ app.include_router(editor_router, dependencies=[Depends(get_current_user)])
 # Mail User-Router MIT auth Dependency
 app.include_router(mail_user_router, dependencies=[Depends(get_current_user)])
 
-# Der bisherige MCP-Endpunkt nutzt denselben Code wie der Dienst auf Port 8506.
+# Der bisherige MCP-Endpunkt nutzt denselben Code wie der Dienst auf Port 8516.
 install_mcp(app)
 
 # Verzeichnisse
@@ -161,8 +161,8 @@ async def dashboard_info(user=Depends(get_current_user)):
 
     return {
         "version": version,
-        "title": "Tareas",
-        "description": "Aufgabenplanungs-Tool auf Basis von FastAPI + Vanilla JS",
+        "title": "Casos",
+        "description": "Basis fuer ein Ticketsystem auf FastAPI + Vanilla JS, derzeit Aufgaben- und Projektplanung",
         "components": [
             {
                 "name": "ExpandableTable",
@@ -263,7 +263,7 @@ async def agent_guide(request: Request):
     )
 
 
-@app.get("/.well-known/tareas-agent.json")
+@app.get("/.well-known/casos-agent.json")
 async def agent_well_known(request: Request):
     """Maschinenlesbare, tokenfreie Agenten-Bootstrap-Information."""
     return build_agent_metadata(request)
@@ -329,9 +329,9 @@ def main():
     protocol = "https" if use_tls else "http"
 
     print("=" * 50)
-    print("Tareas - Aufgabenplanung")
+    print("Casos - Basis fuer ein Ticketsystem")
     print("=" * 50)
-    print(f"URL: {protocol}://0.0.0.0:8504")
+    print(f"URL: {protocol}://0.0.0.0:8514")
     if use_tls:
         print(f"TLS: {tls['cert_path']}")
     print("Strg+C zum Beenden")
@@ -339,7 +339,7 @@ def main():
 
     kwargs = {
         "host": "0.0.0.0",
-        "port": 8504,
+        "port": 8514,
         "log_config": None,  # Eigenes Logging verwenden (nicht uvicorn-default)
     }
     if use_tls:

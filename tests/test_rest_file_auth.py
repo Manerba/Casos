@@ -33,7 +33,7 @@ class RESTFileAuthTests(unittest.TestCase):
         cls.app = app
 
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-rest-file-auth-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-rest-file-auth-")
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         self.patch(database, "DB_DIR", self.root)

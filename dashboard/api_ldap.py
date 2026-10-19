@@ -1,5 +1,5 @@
 """
-Tareas - LDAP Admin API-Router
+Casos - LDAP Admin API-Router
 LDAP-Konfiguration, Gruppen, Synchronisierung.
 """
 

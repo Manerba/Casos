@@ -28,7 +28,7 @@ async function initEditor() {
 
     const fileName = filePath.includes('/') ? filePath.split('/').pop() : filePath;
     document.getElementById('editorTitle').textContent = fileName;
-    document.title = `${fileName} - Tareas`;
+    document.title = `${fileName} - Casos`;
 
     try {
         const resp = await fetch(`/api/tasks/${taskId}/files/edit?path=${encodeURIComponent(filePath)}`);

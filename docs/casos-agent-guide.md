@@ -1,11 +1,13 @@
-# Tareas-Agent-Guide
+# Casos-Agent-Guide
 
-Dieser Guide beschreibt, wie ein neues Projekt Tareas als gemeinsame
+Stand des Klons: Rebrandete technische Referenz fuer den uebernommenen MCP-Funktionsumfang. Eine Casos-Instanz ist noch nicht als Dienst installiert; die URLs zeigen die vorgesehenen Ports. Die Ticket-Spezifikationen werden separat erarbeitet.
+
+Dieser Guide beschreibt, wie ein neues Projekt Casos als gemeinsame
 Planungs- und Audit-Ebene fuer Codex/Claude-Sessions nutzt.
 
 Der Kern ist bewusst einfach:
 
-- Das Projekt dokumentiert die Tareas-Arbeitsweise in `AGENTS.md`.
+- Das Projekt dokumentiert die Casos-Arbeitsweise in `AGENTS.md`.
 - Der echte MCP-Zugriff wird lokal im Agenten-Client konfiguriert.
 - Der MCP-Token gehoert nie ins Repository.
 
@@ -15,36 +17,36 @@ Diesen Text kann der Benutzer in einem neuen Projekt an eine Agenten-Session
 geben:
 
 ```text
-Wir verwenden Tareas zur Projektplanung. Lies den Tareas-Agent-Guide:
-http://10.0.12.7:8504/agent-guide.md
+Wir verwenden Casos zur Projektplanung. Lies den Casos-Agent-Guide:
+http://10.0.12.7:8514/agent-guide.md
 
-Richte dieses Repo danach ein: AGENTS.md ergaenzen, Tareas-MCP pruefen,
-Tareas-Projekt anlegen oder referenzieren, Projekt-ID dokumentieren.
+Richte dieses Repo danach ein: AGENTS.md ergaenzen, Casos-MCP pruefen,
+Casos-Projekt anlegen oder referenzieren, Projekt-ID dokumentieren.
 Token niemals ins Repo schreiben.
 ```
 
-## Gemeinsame Tareas-Instanz
+## Gemeinsame Casos-Instanz
 
-- Web-UI: `http://10.0.12.7:8504/`
-- Agent-Guide: `http://10.0.12.7:8504/agent-guide.md`
-- Agent-Bootstrap-JSON: `http://10.0.12.7:8504/.well-known/tareas-agent.json`
-- MCP-Endpoint: `http://10.0.12.7:8504/mcp/`
-- Separater MCP-Dienst: `http://10.0.12.7:8506/mcp/`
+- Web-UI: `http://10.0.12.7:8514/`
+- Agent-Guide: `http://10.0.12.7:8514/agent-guide.md`
+- Agent-Bootstrap-JSON: `http://10.0.12.7:8514/.well-known/casos-agent.json`
+- MCP-Endpoint: `http://10.0.12.7:8514/mcp/`
+- Separater MCP-Dienst: `http://10.0.12.7:8516/mcp/`
 - MCP-Transport: Streamable HTTP
-- MCP-Servername: `tareas`
-- Admin-UI fuer MCP-Tokens: `http://10.0.12.7:8505`, Tab `MCP`
+- MCP-Servername: `casos`
+- Admin-UI fuer MCP-Tokens: `http://10.0.12.7:8515`, Tab `MCP`
 
-`10.0.12.16:8505` ist in dieser Umgebung Kiron, nicht Tareas.
+`10.0.12.16:8505` ist in dieser Umgebung Kiron, nicht Casos.
 
 Beide MCP-Zugaenge verwenden dieselben Werkzeuge, Tokens und Projektrechte.
-Bestehende Konfigurationen mit Port 8504 bleiben gueltig. Fuer eine separate
-Firewall-Freigabe kann Port 8506 verwendet werden: Dort stehen auch Datei-REST,
-`/agent-guide.md` und `/.well-known/tareas-agent.json` bereit, aber keine Web-UI.
-Dateitransfers koennen damit ebenfalls vollstaendig ueber Port 8506 laufen.
+Bestehende Konfigurationen mit Port 8514 bleiben gueltig. Fuer eine separate
+Firewall-Freigabe kann Port 8516 verwendet werden: Dort stehen auch Datei-REST,
+`/agent-guide.md` und `/.well-known/casos-agent.json` bereit, aber keine Web-UI.
+Dateitransfers koennen damit ebenfalls vollstaendig ueber Port 8516 laufen.
 
-Die laufende Tareas-Instanz ist die kanonische Quelle fuer diesen Guide. Das
+Die laufende Casos-Instanz ist die kanonische Quelle fuer diesen Guide. Das
 Gitea-Repo versioniert die Dokumentation nur; neue Projekte sollen den Guide
-ueber die Tareas-URL lesen, damit keine Gitea-Verfuegbarkeit vorausgesetzt
+ueber die Casos-URL lesen, damit keine Gitea-Verfuegbarkeit vorausgesetzt
 wird.
 
 ## Lokale MCP-Konfiguration
@@ -56,23 +58,23 @@ Agenten-Clients.
 Codex-Beispiel in `/root/.codex/config.toml`:
 
 ```toml
-[mcp_servers.tareas]
-url = "http://10.0.12.7:8504/mcp/"
+[mcp_servers.casos]
+url = "http://10.0.12.7:8514/mcp/"
 http_headers = { Authorization = "Bearer <token>" }
 ```
 
 Claude-Beispiel:
 
 ```bash
-claude mcp add --transport http tareas \
-  http://10.0.12.7:8504/mcp/ \
+claude mcp add --transport http casos \
+  http://10.0.12.7:8514/mcp/ \
   --header "Authorization: Bearer <token>"
 ```
 
 Regeln:
 
 - `<token>` ist ein Platzhalter. Den echten Token nie in Repo-Dateien schreiben.
-- Tokens werden in Tareas unter Admin UI -> MCP erzeugt und nur einmal angezeigt.
+- Tokens werden in Casos unter Admin UI -> MCP erzeugt und nur einmal angezeigt.
 - Der MCP-Bearer gilt fuer `/mcp/` und die REST-Dateioperationen unter
   `/api/tasks/{task_id}/files`. Andere REST-Endpunkte brauchen eine Web-Anmeldung.
 - Wenn die lokale Konfiguration nicht beschreibbar ist, den Benutzer um Setup
@@ -83,30 +85,30 @@ werden, damit die Tools erscheinen.
 
 ## Verifikation
 
-Eine korrekt gestartete Session sieht Tareas-Tools, z.B.:
+Eine korrekt gestartete Session sieht Casos-Tools, z.B.:
 
 ```text
-mcp__tareas__whoami
-mcp__tareas__list_projects
-mcp__tareas__list_projects_page
-mcp__tareas__get_project
-mcp__tareas__get_project_status
-mcp__tareas__patch_description
-mcp__tareas__note.write
-mcp__tareas__note.update
-mcp__tareas__note.delete
-mcp__tareas__handoff.add
-mcp__tareas__handoff.list
-mcp__tareas__handoff.get
-mcp__tareas__handoff.update
-mcp__tareas__handoff.delete
-mcp__tareas__file.list
-mcp__tareas__file.read
-mcp__tareas__file.write
-mcp__tareas__file.append
-mcp__tareas__file.mkdir
-mcp__tareas__file.move
-mcp__tareas__file.delete
+mcp__casos__whoami
+mcp__casos__list_projects
+mcp__casos__list_projects_page
+mcp__casos__get_project
+mcp__casos__get_project_status
+mcp__casos__patch_description
+mcp__casos__note.write
+mcp__casos__note.update
+mcp__casos__note.delete
+mcp__casos__handoff.add
+mcp__casos__handoff.list
+mcp__casos__handoff.get
+mcp__casos__handoff.update
+mcp__casos__handoff.delete
+mcp__casos__file.list
+mcp__casos__file.read
+mcp__casos__file.write
+mcp__casos__file.append
+mcp__casos__file.mkdir
+mcp__casos__file.move
+mcp__casos__file.delete
 ```
 
 Pruefablauf:
@@ -118,7 +120,7 @@ Pruefablauf:
 5. Bei konfigurierter Dateiablage (`file_storage_type` ist `local` oder `webdav`)
    mit `file.list(task_id=...)` die Dateien und effektiven Schreibrechte pruefen.
 
-Wenn keine Tareas-MCP-Tools verfuegbar sind, keine lokale Ersatz-DB und keine
+Wenn keine Casos-MCP-Tools verfuegbar sind, keine lokale Ersatz-DB und keine
 Schattenquelle in einem anderen System anlegen. Erst MCP einrichten oder den
 Benutzer um die lokale Konfiguration bitten.
 
@@ -282,7 +284,7 @@ vom Aufrufer. Leerer Text laesst den Inhalt unveraendert. Die Gesamtdatei darf
 nach Ergaenzung maximal 1 MiB enthalten; fehlende/zu grosse/ungueltige Dateien
 bleiben unveraendert. Lokale Ablage und WebDAV verwenden die gemeinsame
 Prozesssperre ueber Lesen, Pruefen und Schreiben, ebenso wie Upload/Office/Texteditor.
-Direkte externe WebDAV-Schreiber kennen diese Tareas-Sperre nicht.
+Direkte externe WebDAV-Schreiber kennen diese Casos-Sperre nicht.
 Audit und Ergebnis enthalten nur Metadaten, keine Dateiinhalte.
 Nach unklarem Netzwerkfehler zuerst `file.read` pruefen: erneutes Anhaengen ist
 nicht idempotent und kann dieselbe Ergaenzung doppelt einfuegen.
@@ -356,11 +358,11 @@ Andere REST-Endpunkte, Ablagekonfiguration und Office-Editor brauchen weiterhin
 eine Web-Anmeldung.
 
 ```bash
-curl --fail --get 'http://10.0.12.7:8504/api/tasks/<task_id>/files/download' \
+curl --fail --get 'http://10.0.12.7:8514/api/tasks/<task_id>/files/download' \
   --header 'Authorization: Bearer <token>' \
   --data-urlencode 'path=Unterlagen/Plan.pdf' --output Plan.pdf
 
-curl --fail 'http://10.0.12.7:8504/api/tasks/<task_id>/files/upload' \
+curl --fail 'http://10.0.12.7:8514/api/tasks/<task_id>/files/upload' \
   --header 'Authorization: Bearer <token>' \
   --header 'X-Requested-With: XMLHttpRequest' \
   --form 'file=@Plan.pdf'
@@ -371,16 +373,16 @@ curl --fail 'http://10.0.12.7:8504/api/tasks/<task_id>/files/upload' \
 Dieses Snippet in das Zielprojekt uebernehmen und die Platzhalter ersetzen:
 
 ```markdown
-## Tareas-Projektplanung
+## Casos-Projektplanung
 
-Projektplanung laeuft in Tareas. Tareas ist fuer dieses Projekt die gemeinsame
+Projektplanung laeuft in Casos. Casos ist fuer dieses Projekt die gemeinsame
 Planungsoberflaeche fuer Projekte, Sprintpakete, Abhaengigkeiten, Fortschritt
 und Entscheidungen. Codex/Claude greift per MCP darauf zu.
 
-- Web-UI: `http://10.0.12.7:8504/`
-- MCP-Endpoint: `http://10.0.12.7:8504/mcp/`
-- MCP-Server: `tareas`
-- Tareas-Projekt: `<Projektname>` (ID `<project_id>`)
+- Web-UI: `http://10.0.12.7:8514/`
+- MCP-Endpoint: `http://10.0.12.7:8514/mcp/`
+- MCP-Server: `casos`
+- Casos-Projekt: `<Projektname>` (ID `<project_id>`)
 - Erwarteter MCP-User: `<MCP-User-Anzeigename>`
 - Token niemals ins Repo schreiben; nur `<token>` als Platzhalter dokumentieren.
 
@@ -446,32 +448,32 @@ Arbeitsregeln:
   zusaetzlich `X-Requested-With: XMLHttpRequest`. Uploads laufen als Multipart
   mit Feld `file` (maximal 500 MiB), Downloads liefern die Dateibytes.
   Aufgabenrechte, Token-Widerruf und der MCP-Ausschalter gelten auch dort.
-- Gitea-Issues enthalten konkrete Findings/Bugs; Tareas enthaelt
+- Gitea-Issues enthalten konkrete Findings/Bugs; Casos enthaelt
   Zusammenfassung und Issue-IDs/Links.
-- Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Tareas-Notizen,
+- Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Casos-Notizen,
   AGENTS.md, docs/, .env, Logs oder Issues schreiben.
 ```
 
-Eine separate Kopiervorlage liegt in `docs/tareas-agents-snippet.md`.
+Eine separate Kopiervorlage liegt in `docs/casos-agents-snippet.md`.
 
 ## Zielprojekt Einrichten
 
 1. `AGENTS.md` im Zielprojekt lesen oder anlegen.
-2. Abschnitt `Tareas-Projektplanung` aus dem Snippet einfuegen.
+2. Abschnitt `Casos-Projektplanung` aus dem Snippet einfuegen.
 3. Lokale MCP-Verfuegbarkeit pruefen.
 4. Falls MCP fehlt: lokale Client-Konfiguration einrichten, Session neu starten.
-5. Tareas-Projekt per MCP suchen oder anlegen.
+5. Casos-Projekt per MCP suchen oder anlegen.
 6. Projekt-ID und erwarteten MCP-User in `AGENTS.md` dokumentieren.
-7. Sprintpakete als Tareas-Subtasks anlegen.
+7. Sprintpakete als Casos-Subtasks anlegen.
 8. Abhaengigkeiten mit `predecessor_ids` bzw. Dependency-Tools modellieren.
 9. Laengere Implementierungsplaene im Zielprojekt unter `docs/TODOS/` ablegen
-   und dort auf Tareas-Projekt-/Subtask-IDs verweisen.
+   und dort auf Casos-Projekt-/Subtask-IDs verweisen.
 10. Fortschritt, Handoffs und Entscheidungen waehrend der Arbeit per
     `handoff.add` dokumentieren.
 
 ## Fachliche Nutzung
 
-Tareas ist die Steuerungsebene:
+Casos ist die Steuerungsebene:
 
 - Projekte: Epics oder groessere Arbeitsvorhaben.
 - Subtasks: operative Sprintpakete oder klar abgrenzbare Arbeitspakete.
@@ -485,14 +487,14 @@ Tareas ist die Steuerungsebene:
 - Assignments: aktuelle Bearbeitung und Verantwortlichkeit.
 
 Markdown-Dateien im Zielprojekt bleiben sinnvoll fuer laengere Plaene,
-Spezifikationen und Sprint-TODOs. Sie ersetzen Tareas nicht, sondern verlinken
-auf Tareas-IDs.
+Spezifikationen und Sprint-TODOs. Sie ersetzen Casos nicht, sondern verlinken
+auf Casos-IDs.
 
 ## Haeufige Fehler
 
-- Token in `AGENTS.md`, docs, `.env`, Logs oder Tareas-Notizen schreiben.
-- `localhost:8504` in einem Remote-Projekt dokumentieren.
-- Kiron (`10.0.12.16:8505`) statt Tareas verwenden.
+- Token in `AGENTS.md`, docs, `.env`, Logs oder Casos-Notizen schreiben.
+- `localhost:8514` in einem Remote-Projekt dokumentieren.
+- Kiron (`10.0.12.16:8505`) statt Casos verwenden.
 - Bei fehlendem MCP eine lokale Schatten-DB anlegen.
 - Andere REST-Endpunkte als die Dateioperationen mit MCP-Bearer aufrufen.
 - Positionsnummern als Dependency-Gueltigkeit interpretieren.

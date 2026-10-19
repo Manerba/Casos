@@ -1,5 +1,5 @@
 """
-Tareas - LDAP Hilfsfunktionen
+Casos - LDAP Hilfsfunktionen
 Verbindung, Gruppen, Mitglieder, Authentifizierung via ldap3.
 """
 

@@ -1,9 +1,9 @@
 /**
- * Tareas - i18n (Internationalisierung)
+ * Casos - i18n (Internationalisierung)
  * Leichtgewichtiges Custom-i18n ohne externes Framework.
  *
  * Sprachen: DE (Standard), EN, ES, FR, RO, UK, RU
- * Persistenz: localStorage (Key: 'tareas-lang')
+ * Persistenz: localStorage (Key: 'casos-lang')
  * Sprachwechsel: Page Reload
  *
  * API:
@@ -17,7 +17,7 @@
 (function() {
     'use strict';
 
-    const STORAGE_KEY = 'tareas-lang';
+    const STORAGE_KEY = 'casos-lang';
     const DEFAULT_LANG = 'de';
     const AVAILABLE_LANGS = [
         { code: 'de', label: 'Deutsch' },

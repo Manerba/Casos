@@ -106,13 +106,13 @@ def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         context = browser.new_context(viewport={'width': 1920, 'height': 1400})
-        context.route('http://tareas.test/**', serve)
+        context.route('http://casos.test/**', serve)
         context.expose_binding('reportCsp', lambda _source, data: violations.append(data))
         context.add_init_script("""document.addEventListener('securitypolicyviolation', event =>
             window.reportCsp({directive: event.effectiveDirective, blocked: event.blockedURI}));""")
         context.on('page', lambda page: page.on('pageerror', lambda error: errors.append(str(error))))
         page = context.new_page()
-        page.goto('http://tareas.test/aufgaben')
+        page.goto('http://casos.test/aufgaben')
         page.locator('[data-row-id="1"] > .table-row > .expand-icon').click()
         expect(page.locator('.subtask-row')).to_have_count(2)
 
@@ -175,7 +175,7 @@ def main():
         page.locator('#stSplit_2').focus()
         page.keyboard.press('Home')
         assert columns() > initial_columns
-        page.screenshot(path='/tmp/tareas-handoff-grid.png', full_page=True)
+        page.screenshot(path='/tmp/casos-handoff-grid.png', full_page=True)
         before = dimensions(page.locator('#stColumns_2'))
         drag('#stResize_2', dy=100)
         assert abs(dimensions(page.locator('#stColumns_2'))[1] - before[1] - 100) < 1
@@ -274,7 +274,7 @@ def main():
         assert columns() == 1
         assert grid.evaluate('el => el.scrollWidth <= el.clientWidth')
         page.evaluate('document.documentElement.dataset.colorScheme = "dark"')
-        page.screenshot(path='/tmp/tareas-handoff-mobile.png', full_page=True)
+        page.screenshot(path='/tmp/casos-handoff-mobile.png', full_page=True)
 
         # Eigenstaendige Ansicht einer zugewiesenen Teilaufgabe nutzt dasselbe Layout.
         page.set_viewport_size({'width': 1440, 'height': 1100})
@@ -293,7 +293,7 @@ def main():
         assert project_grid.evaluate('el => !el.closest(".project-detail-columns, .subtask-handoff-panel")')
         initial_height = dimensions(project_grid)[1]
         assert project_grid.evaluate("el => getComputedStyle(el).gridTemplateColumns.split(' ').length") >= 2
-        page.locator('#taskNoteEntries_1').screenshot(path='/tmp/tareas-project-handoffs.png')
+        page.locator('#taskNoteEntries_1').screenshot(path='/tmp/casos-project-handoffs.png')
         page.set_viewport_size({'width': 390, 'height': 1000})
         assert project_grid.evaluate("el => getComputedStyle(el).gridTemplateColumns.split(' ').length") == 1
         assert dimensions(project_grid)[1] > initial_height

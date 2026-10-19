@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Integration einer Dateiablage in Tareas ueber die WebDAV-Schnittstelle von Nextcloud. Pro Projekt kann ein Verzeichnis aus Nextcloud verknuepft werden. Die Dateien werden im Detail-Bereich des Projekts neben dem WYSIWYG-Editor in einer umschaltbaren Ansicht (Baumansicht / Icon-Grid) angezeigt. Voller Dateizugriff: Browsen, Oeffnen, Hochladen, Loeschen, Ordner erstellen.
+Integration einer Dateiablage in Casos ueber die WebDAV-Schnittstelle von Nextcloud. Pro Projekt kann ein Verzeichnis aus Nextcloud verknuepft werden. Die Dateien werden im Detail-Bereich des Projekts neben dem WYSIWYG-Editor in einer umschaltbaren Ansicht (Baumansicht / Icon-Grid) angezeigt. Voller Dateizugriff: Browsen, Oeffnen, Hochladen, Loeschen, Ordner erstellen.
 
 ## Kontext
 
@@ -10,7 +10,7 @@ Integration einer Dateiablage in Tareas ueber die WebDAV-Schnittstelle von Nextc
 - Ein Nextcloud-Benutzer besitzt ein Projekt-Wurzelverzeichnis mit mehreren Projektordnern
 - Diese Ordner sind ggf. per Freigabe fuer andere Nextcloud-Benutzer zugaenglich
 - Gleichzeitiger Zugriff ueber SMB moeglich (External Storage oder direkter Share)
-- Tareas verbindet sich als dieser Nextcloud-Benutzer via WebDAV und proxied alle Requests
+- Casos verbindet sich als dieser Nextcloud-Benutzer via WebDAV und proxied alle Requests
 
 ## Entscheidungen
 
@@ -18,7 +18,7 @@ Integration einer Dateiablage in Tareas ueber die WebDAV-Schnittstelle von Nextc
 |-------|---------|
 | Nextcloud-Zugang | Ein Service-Benutzer, Credentials in Admin-UI konfigurierbar |
 | Protokoll | WebDAV (`/remote.php/dav/files/{user}/`) |
-| Backend-Architektur | Tareas-Backend als Proxy (kein direkter Browser-zu-Nextcloud-Zugriff) |
+| Backend-Architektur | Casos-Backend als Proxy (kein direkter Browser-zu-Nextcloud-Zugriff) |
 | Dateizugriff | Lesen + Schreiben (browsen, oeffnen, hochladen, loeschen, Ordner erstellen) |
 | Verzeichniszuordnung | Projekt-Ersteller waehlt Unterverzeichnis aus dem Wurzelverzeichnis |
 | Ansicht | Umschaltbar: Baumansicht (Explorer-Stil) und Icon-Grid (Desktop-Stil) |
@@ -154,7 +154,7 @@ Neuer Tab in der Admin-UI (wie LDAP-Tab).
 ### 7. Dateien oeffnen
 
 - Klick auf Datei: Zwei Optionen je nach Kontext
-  - Standard: Download ueber Tareas-API (`GET /api/tasks/{id}/files/download?path=...`)
+  - Standard: Download ueber Casos-API (`GET /api/tasks/{id}/files/download?path=...`)
   - Alternative: In Nextcloud oeffnen (Link zu `{nextcloud_url}/f/{file_id}` oder `{nextcloud_url}/apps/files/?dir={path}`)
 - Fuer den Nextcloud-Direktlink: WebDAV-PROPFIND liefert die Nextcloud-interne File-ID, daraus kann ein Direktlink gebaut werden
 - Empfehlung: Download als Standard, "In Nextcloud oeffnen" als zusaetzliche Option im Kontextmenue
@@ -205,7 +205,7 @@ Neuer Tab in der Admin-UI (wie LDAP-Tab).
 - Datei/Ordner umbenennen
 - Grosse Dateien: Upload-Fortschritt sichtbar
 - Verschiedene Dateitypen: Korrekte Icons
-- Gleichzeitig ueber SMB eine Datei hinzufuegen -> in Tareas nach Refresh sichtbar
+- Gleichzeitig ueber SMB eine Datei hinzufuegen -> in Casos nach Refresh sichtbar
 - Dark Mode: Alle Elemente korrekt dargestellt
 - Kein Verzeichnis zugeordnet: Dateiablage-Spalte nicht sichtbar
 - Nextcloud nicht konfiguriert: Dropdown und Dateiablage komplett ausgeblendet

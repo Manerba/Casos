@@ -23,7 +23,7 @@ from dashboard.mcp_app import app as dedicated_app
 
 class MCPEndpointTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix='tareas-mcp-endpoints-')
+        temp = tempfile.TemporaryDirectory(prefix='casos-mcp-endpoints-')
         self.addCleanup(temp.cleanup)
         root = Path(temp.name)
         for module, name, value in ((database, 'DB_DIR', root), (database, 'DB_PATH', root / 'test.db'),
@@ -44,7 +44,7 @@ class MCPEndpointTests(unittest.TestCase):
             ).lastrowid
             db.execute('INSERT INTO project_members (project_id,user_id,can_read,can_edit) VALUES (?,?,1,0)',
                        (self.project, self.users['reader']))
-            db.execute("INSERT OR REPLACE INTO app_config (id,server_address) VALUES (1,'tareas.test:8504')")
+            db.execute("INSERT OR REPLACE INTO app_config (id,server_address) VALUES (1,'casos.test:8514')")
         file_storage.ensure_local_directory(self.project)
         self.url = f'/api/tasks/{self.project}/files'
 
@@ -70,7 +70,7 @@ class MCPEndpointTests(unittest.TestCase):
                 'http_version': '1.1', 'method': method, 'scheme': 'http',
                 'path': path, 'raw_path': path.encode(), 'root_path': '', 'query_string': b'',
                 'headers': [(key.lower().encode(), value.encode()) for key, value in headers.items()],
-                'client': ('127.0.0.1', 12345), 'server': ('tareas.test', 8506),
+                'client': ('127.0.0.1', 12345), 'server': ('casos.test', 8516),
             }, receive, send)
 
         asyncio.run(run())
@@ -93,7 +93,7 @@ class MCPEndpointTests(unittest.TestCase):
         headers = self.headers(name)
         response, result = self.rpc(client, 'initialize', {
             'protocolVersion': '2025-11-25', 'capabilities': {},
-            'clientInfo': {'name': 'tareas-test', 'version': '1'},
+            'clientInfo': {'name': 'casos-test', 'version': '1'},
         }, headers)
         headers.update({'Mcp-Session-Id': response.headers['mcp-session-id'], 'MCP-Protocol-Version': result['protocolVersion']})
         ready = client.post('/mcp/', headers=headers, json={'jsonrpc': '2.0', 'method': 'notifications/initialized'})
@@ -108,8 +108,8 @@ class MCPEndpointTests(unittest.TestCase):
         return result.get('structuredContent') or json.loads(result['content'][0]['text'])
 
     def test_both_endpoints_share_all_tools_identity_data_and_file_api(self):
-        for app, port in ((legacy_app, 8504), (dedicated_app, 8506)):
-            with self.subTest(port=port), TestClient(app, base_url=f'http://tareas.test:{port}') as client:
+        for app, port in ((legacy_app, 8514), (dedicated_app, 8516)):
+            with self.subTest(port=port), TestClient(app, base_url=f'http://casos.test:{port}') as client:
                 headers = self.initialize(client)
                 _, tools = self.rpc(client, 'tools/list', {}, headers)
                 self.assertEqual({tool['name'] for tool in tools['tools']}, set(MCP_TOOLS))
@@ -124,16 +124,16 @@ class MCPEndpointTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200, response.text)
                 self.assertEqual(self.call(client, headers, 'file.read', {'task_id': self.project, 'path': 'readme.md'})['content'], f'# REST {port}')
                 guide = self.call(client, headers, 'get_agent_guide')
-                self.assertIn(f'http://tareas.test:{port}/mcp/', json.dumps(guide))
-                self.assertIn(f'http://tareas.test:{port}/api/tasks/', guide['markdown'])
+                self.assertIn(f'http://casos.test:{port}/mcp/', json.dumps(guide))
+                self.assertIn(f'http://casos.test:{port}/api/tasks/', guide['markdown'])
         with closing(database.get_db()) as db:
             logs = db.execute('SELECT actor_type,actor_user_id FROM audit_log').fetchall()
         self.assertTrue(logs)
         self.assertTrue(all(row['actor_type'] == 'mcp' and row['actor_user_id'] == self.users['owner'] for row in logs))
 
     def test_feedback_features_work_together_on_both_endpoints(self):
-        for app, port in ((legacy_app, 8504), (dedicated_app, 8506)):
-            with self.subTest(port=port), TestClient(app, base_url=f'http://tareas.test:{port}') as client:
+        for app, port in ((legacy_app, 8514), (dedicated_app, 8516)):
+            with self.subTest(port=port), TestClient(app, base_url=f'http://casos.test:{port}') as client:
                 headers = self.initialize(client)
                 _, catalog = self.rpc(client, 'tools/list', {}, headers)
                 tools = {tool['name']: tool for tool in catalog['tools']}
@@ -202,10 +202,10 @@ class MCPEndpointTests(unittest.TestCase):
 
     def test_agent_efficiency_workflow_on_both_endpoints(self):
         """A real authenticated workflow composes the new tools on both ASGI apps."""
-        for app, port in ((legacy_app, 8504), (dedicated_app, 8506)):
+        for app, port in ((legacy_app, 8514), (dedicated_app, 8516)):
             with self.subTest(port=port), patch(
                 'dashboard.logging_config.RotatingFileHandler', return_value=logging.NullHandler(),
-            ), TestClient(app, base_url=f'http://tareas.test:{port}') as client:
+            ), TestClient(app, base_url=f'http://casos.test:{port}') as client:
                 owner = self.initialize(client)
                 reader = self.initialize(client, 'reader')
                 initial = self.call(client, owner, 'get_project_status', {
@@ -347,8 +347,8 @@ class MCPEndpointTests(unittest.TestCase):
                 })['content'], 'Start\nPrüfung ✓\n')
 
     def test_project_links_and_progress_lock_on_both_endpoints(self):
-        for app, port in ((legacy_app, 8504), (dedicated_app, 8506)):
-            with self.subTest(port=port), TestClient(app, base_url=f'http://tareas.test:{port}') as client:
+        for app, port in ((legacy_app, 8514), (dedicated_app, 8516)):
+            with self.subTest(port=port), TestClient(app, base_url=f'http://casos.test:{port}') as client:
                 headers = self.initialize(client)
                 parent = self.call(client, headers, 'create_project', {'name': f'Parent {port}'})
                 subtask = self.call(client, headers, 'create_subtask', {'project_id': parent['id'], 'name': 'Parent subtask'})
@@ -547,15 +547,15 @@ class MCPEndpointTests(unittest.TestCase):
                           {'project_id': self.project, 'name': 'Forbidden'}, error=True)
 
     def test_metadata_preserves_legacy_url_and_uses_dedicated_origin_for_files(self):
-        self.assertEqual(_with_port('https://[::1]:8504', 8506), 'https://[::1]:8506')
-        for app, port in ((legacy_app, 8504), (dedicated_app, 8506)):
-            with TestClient(app, base_url=f'http://tareas.test:{port}') as client:
-                metadata = client.get('/.well-known/tareas-agent.json').json()
-            self.assertEqual(metadata['mcp']['endpoint'], f'http://tareas.test:{port}/mcp/')
-            self.assertEqual(metadata['mcp']['legacy_endpoint'], 'http://tareas.test:8504/mcp/')
-            self.assertEqual(metadata['mcp']['dedicated_endpoint'], 'http://tareas.test:8506/mcp/')
-            self.assertEqual(metadata['web_ui'], 'http://tareas.test:8504/')
-            self.assertEqual(metadata['file_api_base_url'], f'http://tareas.test:{port}')
+        self.assertEqual(_with_port('https://[::1]:8514', 8516), 'https://[::1]:8516')
+        for app, port in ((legacy_app, 8514), (dedicated_app, 8516)):
+            with TestClient(app, base_url=f'http://casos.test:{port}') as client:
+                metadata = client.get('/.well-known/casos-agent.json').json()
+            self.assertEqual(metadata['mcp']['endpoint'], f'http://casos.test:{port}/mcp/')
+            self.assertEqual(metadata['mcp']['legacy_endpoint'], 'http://casos.test:8514/mcp/')
+            self.assertEqual(metadata['mcp']['dedicated_endpoint'], 'http://casos.test:8516/mcp/')
+            self.assertEqual(metadata['web_ui'], 'http://casos.test:8514/')
+            self.assertEqual(metadata['file_api_base_url'], f'http://casos.test:{port}')
 
 
 if __name__ == '__main__':

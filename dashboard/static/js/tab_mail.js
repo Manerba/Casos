@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - Mail-Tab
+ * Casos Admin - Mail-Tab
  * SMTP-Konfiguration, Testmail, Mail-Vorlagen
  */
 
@@ -121,8 +121,8 @@ function renderMailConfigSection(hasConfig) {
                     </div>
                     <div class="mail-form-field">
                         <label>${t('mailAdmin.fromName')}</label>
-                        <input type="text" id="mailFromName" value="${escapeAttr(c.from_name || 'Tareas')}"
-                               placeholder="Tareas">
+                        <input type="text" id="mailFromName" value="${escapeAttr(c.from_name || 'Casos')}"
+                               placeholder="Casos">
                     </div>
                 </div>
                 <div class="mail-form-actions">
@@ -232,7 +232,7 @@ async function saveMailConfig() {
     const username = document.getElementById('mailUsername')?.value?.trim() || '';
     const password = document.getElementById('mailPassword')?.value || '';
     const from_address = document.getElementById('mailFromAddress')?.value?.trim();
-    const from_name = document.getElementById('mailFromName')?.value?.trim() || 'Tareas';
+    const from_name = document.getElementById('mailFromName')?.value?.trim() || 'Casos';
 
     if (!smtp_server || !from_address) {
         showNotification(t('mailAdmin.fillRequired'), 'error');

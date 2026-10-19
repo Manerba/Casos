@@ -1,10 +1,24 @@
-# Tareas - Agenten-Kontext
+# Casos - Agenten-Kontext
 
-Stand: 11.10.2026, um Projekt #75 ergaenzt und gegen Repo-Dateien geprueft.
+Stand: 19.10.2026. Casos-Rebranding auf Basis des Quellstands 0.0.1+143.
 
 ## Projektziel
 
-Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis von **FastAPI + Vanilla JS**. Es bietet Aufgaben, Projekte mit Teilaufgaben, Abhaengigkeiten, Netzplan, Teamrechte, Notizen, Dateiablage, Office-Bearbeitung, Benachrichtigungen und Admin-Konfiguration.
+Casos soll ein selbst gehostetes Ticketsystem auf Basis von **FastAPI + Vanilla JS** werden. Das Projekt wurde aus Tareas (Commit `ca5d45d`, Version `0.0.1+143`) geklont und rebrandet. Die Spezifikationen fuer den fachlichen Umbau werden in einer eigenen Session in diesem Projektverzeichnis erarbeitet. Ticketmodelle, Workflows und neue Begriffe sind noch nicht festgelegt.
+
+Der aktuelle Funktionsumfang entspricht weiterhin der uebernommenen Aufgaben- und Projektplanung: Aufgaben, Projekte mit Teilaufgaben, Abhaengigkeiten, Netzplan, Teamrechte, Notizen, Dateiablage, Office-Bearbeitung, Benachrichtigungen und Admin-Konfiguration. Die folgenden technischen Angaben beschreiben diesen Ausgangsstand.
+
+## Eigenstaendiger Klon
+
+- Projektverzeichnis: `/sdb1/nextcloud/data/mir/files/Dev/Casos`.
+- Das Ursprungsprojekt unter `../Tareas` bleibt eigenstaendig. Aenderungen fuer Casos ausschliesslich hier vornehmen.
+- Git-Historie uebernommen, kein Git-Remote eingerichtet. Ein eigenes Remote kann spaeter eingerichtet werden. `git-commit.sh` erstellt ohne Remote nur einen lokalen Commit.
+- Keine produktive Datenbank, Dateien, Secrets, Benutzer oder Integrationskonfigurationen uebernommen. Beim ersten Start entsteht eine frische `data/casos.db`.
+- Eigene Python-Umgebung unter `venv/`. Backend-Tests: `venv/bin/python -m unittest discover -s tests -v`.
+- Haupt-App/Admin/MCP verwenden 8514/8515/8516, Cookie `casos_session`, Dienste `casos*`, Log `/var/log/casos.log`.
+- Dienstdateien sind vorbereitet, aber noch nicht installiert oder aktiviert. Paket-/GitHub-Ziele in `publish.sh` sind ebenfalls noch nicht eingerichtet.
+- Optionales ONLYOFFICE-Setup verwendet den eigenen Container `casos-onlyoffice-docs` auf Port 8091.
+- Historische Changelog-Eintraege und Screenshots dokumentieren den Ausgangsstand von Tareas. Eine Desktop-App wurde nicht geklont.
 
 ## Grundentscheidungen
 
@@ -13,12 +27,12 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 | Backend | Python 3.10+, FastAPI, Uvicorn |
 | Frontend | Vanilla JS, keine Frameworks |
 | Styling | CSS Custom Properties, Light/Dark Theme |
-| Datenbank | SQLite unter `data/tareas.db`, WAL mode, Foreign Keys |
-| Auth | bcrypt + itsdangerous, Cookie-Session `tareas_session` |
+| Datenbank | SQLite unter `data/casos.db`, WAL mode, Foreign Keys |
+| Auth | bcrypt + itsdangerous, Cookie-Session `casos_session` |
 | Credentials at rest | Fernet-Verschluesselung via `dashboard/crypto_utils.py` |
-| Haupt-App | `dashboard/app.py`, Port 8504 |
-| Admin-App | `dashboard/admin_app.py`, Port 8505 |
-| MCP-App | `dashboard/mcp_app.py`, Port 8506, bestehendes `/mcp/` auf 8504 bleibt |
+| Haupt-App | `dashboard/app.py`, Port 8514 |
+| Admin-App | `dashboard/admin_app.py`, Port 8515 |
+| MCP-App | `dashboard/mcp_app.py`, Port 8516, bestehendes `/mcp/` auf 8514 bleibt |
 | Routing | SPA mit History API + Backend-Catch-All |
 | OS | Ubuntu 24.04 LTS |
 
@@ -26,14 +40,14 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 | Komponente | Details |
 |------------|---------|
-| Haupt-Service | `tareas.service`, startet `dashboard/app.py` |
-| Admin-Service | `tareas-admin.service`, startet `dashboard/admin_app.py` |
-| MCP-Service | `tareas-mcp.service`, startet `dashboard/mcp_app.py`, Betriebslogs im Journal |
-| Mail-Scheduler | `tareas-mail-scheduler.timer`, taeglich 00:01 |
-| LDAP-Sync | `tareas-ldap-sync.timer`, 5 Min. nach Boot, danach alle 15 Min. |
-| Lokale Services | `scripts/*.service`, Pfad `/sdb1/nextcloud/data/mir/files/Dev/Tareas` |
-| Paket-Services | `packaging/services/*.service`, Pfad `/opt/tareas`, User `tareas` |
-| Logging | Haupt-App schreibt nach `/var/log/tareas.log`, Fallback stderr |
+| Haupt-Service | `casos.service`, startet `dashboard/app.py` |
+| Admin-Service | `casos-admin.service`, startet `dashboard/admin_app.py` |
+| MCP-Service | `casos-mcp.service`, startet `dashboard/mcp_app.py`, Betriebslogs im Journal |
+| Mail-Scheduler | `casos-mail-scheduler.timer`, taeglich 00:01 |
+| LDAP-Sync | `casos-ldap-sync.timer`, 5 Min. nach Boot, danach alle 15 Min. |
+| Lokale Services | `scripts/*.service`, Pfad `/sdb1/nextcloud/data/mir/files/Dev/Casos` |
+| Paket-Services | `packaging/services/*.service`, Pfad `/opt/casos`, User `casos` |
+| Logging | Haupt-App schreibt nach `/var/log/casos.log`, Fallback stderr |
 | Runtime-Daten | `data/` mit SQLite-DB und `secret.key`, per `.gitignore` ausgeschlossen |
 
 ## Wichtige Features
@@ -80,7 +94,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 ## Datenbank
 
-- DB-Pfad: `dashboard/database.py` setzt `DB_PATH = data/tareas.db`.
+- DB-Pfad: `dashboard/database.py` setzt `DB_PATH = data/casos.db`.
 - `get_db()` aktiviert `PRAGMA foreign_keys = ON` und setzt `sqlite3.Row`.
 - `init_db()` aktiviert `PRAGMA journal_mode=WAL`, erstellt Tabellen und fuehrt Migrationen aus.
 - Wichtige Tabellen: `areas`, `tasks`, `sub_tasks`, `sub_task_dependencies`, `users`, `sessions`, `task_notes`, `sub_task_notes`, `project_members`, Integrations-Configs, `mcp_tokens`, `audit_log`, `mcp_config`.
@@ -102,7 +116,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 ### Admin-App `dashboard/admin_app.py`
 
 - Bindet Admin-Router fuer Benutzer, LDAP, Nextcloud, ONLYOFFICE, Mail, App-Config, TLS und MCP ein.
-- `/api/dashboard/restart` startet `tareas.service`, `tareas-admin.service` und `tareas-mcp.service` neu und ist nur fuer Admins.
+- `/api/dashboard/restart` startet `casos.service`, `casos-admin.service` und `casos-mcp.service` neu und ist nur fuer Admins.
 - HTML-Routen: `/login`, `/`, Catch-All.
 
 ### Router-Dateien
@@ -123,9 +137,9 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 ## MCP
 
-- Port 8506 stellt denselben MCP-Endpunkt `/mcp/` wie Port 8504 bereit. Werkzeuge bleiben ausschliesslich in `mcp_server.py`, HTTP-Mount, Lifespan und Bearer-Auth liegen gemeinsam in `mcp_transport.py`. Beide Dienste greifen direkt auf dieselbe DB zu, brauchen keine Weiterleitung ueber 8504 und nutzen dieselbe TLS-Konfiguration. Bestehende Clients auf 8504 bleiben kompatibel.
-- `mcp_app.py` bietet nur MCP, Datei-REST und tokenfreie Bootstrap-Endpunkte. `file_operations_router` in `api_nextcloud.py` wird mit der Haupt-App geteilt. Auf 8506 prueft `MCPAuthMiddleware` den Datei-REST-Bearer vor dem Einlesen des Request-Bodys, die Dependency `get_mcp_user` prueft danach erneut. Browser-Cookies reichen dort nicht aus. Datei-Uploads auf beiden Ports akzeptieren genau ein Multipart-Dateifeld bis 500 MiB, begrenzen die Dateibytes waehrend des Empfangs ohne Content-Length-Vorabpruefung und schliessen temporaere Dateien auch bei Abbruch/HTTP 413. Allgemeine REST-/Login-/Office-/Admin-/Static-Routen sind auf 8506 nicht eingebunden. Datei-Schreibzugriffe brauchen auf beiden Ports den bestehenden CSRF-Header.
-- Admin-MCP-Konfig behaelt `server_url` fuer 8504 und liefert zusaetzlich `dedicated_server_url` fuer 8506. Neue Kopiervorlagen nutzen 8506. Bootstrap und MCP-Guide verwenden auf dem dedizierten Zugang dessen Adresse auch fuer Datei-REST, ohne Web-/Admin-URLs umzubiegen. Laufende Transport-Sessions gelten jeweils nur fuer ihren Dienst.
+- Port 8516 stellt denselben MCP-Endpunkt `/mcp/` wie Port 8514 bereit. Werkzeuge bleiben ausschliesslich in `mcp_server.py`, HTTP-Mount, Lifespan und Bearer-Auth liegen gemeinsam in `mcp_transport.py`. Beide Dienste greifen direkt auf dieselbe DB zu, brauchen keine Weiterleitung ueber 8514 und nutzen dieselbe TLS-Konfiguration. Bestehende Clients auf 8514 bleiben kompatibel.
+- `mcp_app.py` bietet nur MCP, Datei-REST und tokenfreie Bootstrap-Endpunkte. `file_operations_router` in `api_nextcloud.py` wird mit der Haupt-App geteilt. Auf 8516 prueft `MCPAuthMiddleware` den Datei-REST-Bearer vor dem Einlesen des Request-Bodys, die Dependency `get_mcp_user` prueft danach erneut. Browser-Cookies reichen dort nicht aus. Datei-Uploads auf beiden Ports akzeptieren genau ein Multipart-Dateifeld bis 500 MiB, begrenzen die Dateibytes waehrend des Empfangs ohne Content-Length-Vorabpruefung und schliessen temporaere Dateien auch bei Abbruch/HTTP 413. Allgemeine REST-/Login-/Office-/Admin-/Static-Routen sind auf 8516 nicht eingebunden. Datei-Schreibzugriffe brauchen auf beiden Ports den bestehenden CSRF-Header.
+- Admin-MCP-Konfig behaelt `server_url` fuer 8514 und liefert zusaetzlich `dedicated_server_url` fuer 8516. Neue Kopiervorlagen nutzen 8516. Bootstrap und MCP-Guide verwenden auf dem dedizierten Zugang dessen Adresse auch fuer Datei-REST, ohne Web-/Admin-URLs umzubiegen. Laufende Transport-Sessions gelten jeweils nur fuer ihren Dienst.
 - `dashboard/mcp_server.py` definiert FastMCP mit Tools fuer Projekte, Subtasks, Dependencies, Notes, Suche, Users, Areas, Selbstzuweisung und `whoami`.
 - `dashboard/task_validation.py` definiert gemeinsame REST-/MCP-Regeln: Status nur `offen`, `in_arbeit`, `erledigt`, `abgebrochen`, Teilaufgabenfortschritt strikt ganzzahlig von 0 bis 100. `task_status.py` leitet den Projektstatus fuer REST und MCP gemeinsam aus vollstaendig erledigten Teilaufgaben ab. Leere Projekte und Projekte ohne erledigte Teilaufgabe bleiben `offen`, einige erledigte Teilaufgaben ergeben `in_arbeit`, alle ergeben `erledigt`. `abgebrochen` hat Vorrang, normale Aufgaben behalten manuelle Statuswerte. Die Ableitung veraendert keine gespeicherten Daten.
 - `list_projects_page` bietet kompakte Projektlisten mit `offset`, `limit` (Standard 50, maximal 500), optional `include_description` und `next_offset`. Sichtbarkeit und effektiver Status werden vor der Pagination gefiltert, Sortierung nach Prioritaet, Erstellzeit und ID absteigend. `list_projects` behaelt seine bisherige Listenantwort, `get_project` liefert Details.
@@ -148,7 +162,7 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 
 ## Frontend-Konventionen
 
-- Haupt-App zeigt die Aufgabenliste ohne Tab-Leiste in `dashboard/templates/index.html`. Der kompakte Header ist 44px hoch, der Titel `Tareas` verlinkt zur Aufgabenliste. Standardsortierung: angezeigte ID absteigend, inklusive positiver Teilaufgaben-IDs bei Pseudozeilen.
+- Haupt-App zeigt die Aufgabenliste ohne Tab-Leiste in `dashboard/templates/index.html`. Der kompakte Header ist 44px hoch, der Titel `Casos` verlinkt zur Aufgabenliste. Standardsortierung: angezeigte ID absteigend, inklusive positiver Teilaufgaben-IDs bei Pseudozeilen.
 - Der Haupttabellenkopf bleibt beim Scrollen unter Header und Filterleiste angeheftet. In der Listenansicht entfaellt der obere Innenabstand des Inhaltscontainers, damit der Kopf schon ab dem ersten Scrollschritt seine Position haelt. `app_core.js` misst die Hoehen der Leisten per `ResizeObserver` und setzt `--task-table-header-top`, damit auch umgebrochene oder ausgeblendete Filterleisten beruecksichtigt werden.
 - Admin-App hat Tabs `allgemein`, `benutzer`, `ldap`, `nextcloud`, `onlyoffice`, `mail`, `tls`, `mcp`.
 - `dashboard/static/js/app_core.js` enthaelt Theme, Settings, 401-Interceptor, CSRF-Header, Routing, DOM-Caching, Notifications, Modal- und Sanitizer-Helfer.
@@ -215,10 +229,10 @@ Tareas ist ein selbst gehostetes Aufgaben- und Projektplanungs-Tool auf Basis vo
 ## Projektstruktur
 
 ```text
-Tareas/
+Casos/
 |-- dashboard/
-|   |-- app.py                  # Haupt-App, Port 8504
-|   |-- admin_app.py            # Admin-App, Port 8505
+|   |-- app.py                  # Haupt-App, Port 8514
+|   |-- admin_app.py            # Admin-App, Port 8515
 |   |-- api_*.py                # API-Router
 |   |-- database.py             # SQLite Schema/Migrationen
 |   |-- db_utils.py             # DB-Context-Manager und SQL-Helper
@@ -254,7 +268,7 @@ Das Script:
 1. Inkrementiert die Build-Nummer in `version.txt`.
 2. Staged alle Aenderungen mit `git add -A`.
 3. Erstellt einen Commit mit Version-Prefix, z.B. `0.0.1+98: Beschreibung`.
-4. Pusht zum Remote.
+4. Pusht zum konfigurierten Remote; ohne Remote bleibt der Commit lokal.
 
 Regeln:
 - Vor jedem Push immer `docs/changelog.md` aktualisieren.
@@ -262,22 +276,12 @@ Regeln:
 - Zeitstempel immer mit Uhrzeit: `DD.MM.YYYY HH:MM`, nicht nur Datum.
 - Kategorien konsistent halten, z.B. `Feature`, `Aenderung`, `Bugfix`, `Security`, `Docs`, `Refactoring`, `Infra`.
 
-## Zwei-Umgebungen-Konvention
+## Entwicklungsumgebung
 
-| | Hauptprojekt | Desktop-App |
-|---|---|---|
-| Umgebung | Bash auf Ubuntu 24.04 Server | PowerShell auf Windows 11 |
-| Repo | `mir/Tareas` | `mir/Tareas-Desktop` |
-| Pfad | `Tareas/` | `Tareas/clients/desktop/` |
-| Commit | `./git-commit.sh "msg"` | `clients/desktop/git-commit.sh` |
-| Changelog | `docs/changelog.md` | `clients/desktop/docs/changelog.md` |
-
-Regeln:
-- Bash/Linux bedeutet Hauptprojekt. Nur Hauptprojekt-Dateien aendern.
-- PowerShell/Windows bedeutet ausschliesslich Desktop-App. Dann `clients/desktop/CLAUDE.md` lesen und nur unter `clients/desktop/` arbeiten.
-- `clients/` ist per `.gitignore` ausgeschlossen und als eigenes Repo zu behandeln.
+- Dieses Repo ist das Hauptprojekt fuer Bash auf Ubuntu 24.04 Server.
+- Es gibt derzeit keine Casos-Desktop-App und kein eingerichtetes Casos-Remote.
+- `clients/` bleibt per `.gitignore` ausgeschlossen. Eventuelle kuenftige Clients sind als eigene Repos mit eigenen Anweisungen zu behandeln.
 - Entwickler-PC ist Windows 11 und verbindet sich per SSH; Projektverzeichnis ist per SMB erreichbar.
-- EXE-Builds/PyInstaller fuer Desktop koennen direkt auf dem Windows-PC laufen.
 
 ## Benutzer-Praeferenzen
 

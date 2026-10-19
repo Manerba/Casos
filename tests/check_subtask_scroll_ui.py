@@ -57,8 +57,8 @@ def main():
             page = browser.new_page(viewport={'width': width, 'height': height})
             errors = []
             page.on('pageerror', lambda error: errors.append(str(error)))
-            page.route('http://tareas.test/**', serve)
-            page.goto('http://tareas.test/aufgaben')
+            page.route('http://casos.test/**', serve)
+            page.goto('http://casos.test/aufgaben')
             project_row = page.locator('[data-row-id="1"]')
             project_row.locator(':scope > .table-row > .expand-icon').click()
             expect(page.locator('.subtask-row')).to_have_count(len(subtasks))

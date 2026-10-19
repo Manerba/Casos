@@ -1,5 +1,5 @@
 """
-Tareas - TLS Hilfsfunktionen
+Casos - TLS Hilfsfunktionen
 Config-Lesen und Zertifikats-Validierung.
 """
 

@@ -1,5 +1,5 @@
 """
-Tareas - WebDAV-Modul fuer Nextcloud-Integration.
+Casos - WebDAV-Modul fuer Nextcloud-Integration.
 Kommunikation mit Nextcloud via WebDAV (httpx).
 """
 

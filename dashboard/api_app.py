@@ -1,5 +1,5 @@
 """
-Tareas - API-Router fuer App-Konfiguration (Server-Adresse etc.).
+Casos - API-Router fuer App-Konfiguration (Server-Adresse etc.).
 """
 
 from fastapi import APIRouter, Depends

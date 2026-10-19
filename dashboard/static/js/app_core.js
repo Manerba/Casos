@@ -1,5 +1,5 @@
 /**
- * Tareas - Core Module
+ * Casos - Core Module
  * Initialisierung, Theme, Settings, Tabs, URL-Routing, Notifications
  */
 
@@ -219,7 +219,7 @@ async function logout() {
     } catch (e) {
         // Ignorieren
     }
-    document.cookie = 'tareas_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'casos_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     window.location.href = '/login';
 }
 

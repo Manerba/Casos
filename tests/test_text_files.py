@@ -66,7 +66,7 @@ def _save_in_process(db_dir, task, user, revision, content, operation, ready, st
 
 class TextFileTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-text-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-text-")
         self.addCleanup(temp.cleanup)
         root = Path(temp.name)
         for name, value in (("DB_DIR", root), ("DB_PATH", root / "test.db")):

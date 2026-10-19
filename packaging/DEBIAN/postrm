@@ -1,22 +1,22 @@
 #!/bin/bash
 set -e
 
-APP_DIR="/opt/tareas"
-SERVICE_USER="tareas"
+APP_DIR="/opt/casos"
+SERVICE_USER="casos"
 
 # Service-Dateien entfernen
-rm -f /etc/systemd/system/tareas.service
-rm -f /etc/systemd/system/tareas-admin.service
-rm -f /etc/systemd/system/tareas-mcp.service
-rm -f /etc/systemd/system/tareas-ldap-sync.service
-rm -f /etc/systemd/system/tareas-ldap-sync.timer
+rm -f /etc/systemd/system/casos.service
+rm -f /etc/systemd/system/casos-admin.service
+rm -f /etc/systemd/system/casos-mcp.service
+rm -f /etc/systemd/system/casos-ldap-sync.service
+rm -f /etc/systemd/system/casos-ldap-sync.timer
 systemctl daemon-reload
 
 if [ "$1" = "purge" ]; then
     # ONLYOFFICE Docker-Container entfernen
     if command -v docker &> /dev/null; then
-        docker stop onlyoffice-docs 2>/dev/null || true
-        docker rm onlyoffice-docs 2>/dev/null || true
+        docker stop casos-onlyoffice-docs 2>/dev/null || true
+        docker rm casos-onlyoffice-docs 2>/dev/null || true
         echo "ONLYOFFICE-Container entfernt."
     fi
 

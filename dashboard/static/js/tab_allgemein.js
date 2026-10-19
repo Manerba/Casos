@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - Allgemein-Tab
+ * Casos Admin - Allgemein-Tab
  * Server-Adresse und allgemeine App-Konfiguration
  */
 

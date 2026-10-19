@@ -1,4 +1,4 @@
-# Security Code Review - Tareas Projekt
+# Security Code Review - Casos Projekt
 
 **Datum:** 2026-02-14
 **Scope:** Vollstaendiges Code-Review aller Backend- und Frontend-Dateien
@@ -50,7 +50,7 @@
 | 25 | Medium | Auth | Path-Traversal: doppeltes unquote | api_nextcloud.py:53 | False Positive |
 | 26 | Medium | File | Fehlende Dateityp-Validierung Upload | api_nextcloud.py:299 | Akzeptiert (WebDAV) |
 | 27 | Medium | Infra | Dependencies nicht gepinnt | requirements.txt | Done: Minimum-Versionen (0.0.1+79) |
-| 28 | Medium | Infra | Fehlende Systemd-Haertung | tareas.service | Done: Systemd-Haertung (0.0.1+81) |
+| 28 | Medium | Infra | Fehlende Systemd-Haertung | casos.service | Done: Systemd-Haertung (0.0.1+81) |
 | 29 | Medium | Infra | Credentials in Klartext in DB | diverse api_*.py | Done: Fernet-Verschluesselung (0.0.1+80) |
 | 30 | Medium | DoS | Keine Pagination auf Task-Endpunkten | api_tasks.py:228 | Akzeptiert (Frontend-Pag.) |
 | 31 | Low | DoS | Topo-Sortierung ohne Iterations-Limit | api_tasks.py:150 | Akzeptiert |
@@ -347,7 +347,7 @@ Secret-Key-Datei wird mit Default-Berechtigungen erstellt und ist fuer alle Syst
 
 ### INFRA-01: Fehlende Systemd-Haertung [MEDIUM]
 
-**Dateien:** `packaging/services/tareas.service`, `packaging/services/tareas-admin.service`
+**Dateien:** `packaging/services/casos.service`, `packaging/services/casos-admin.service`
 
 Fehlende Sicherheits-Direktiven:
 - `NoNewPrivileges=true`

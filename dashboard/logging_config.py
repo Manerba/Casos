@@ -5,12 +5,12 @@ from logging.handlers import RotatingFileHandler
 import os
 
 LOG_DIR = "/var/log"
-LOG_FILE = os.path.join(LOG_DIR, "tareas.log")
+LOG_FILE = os.path.join(LOG_DIR, "casos.log")
 
 
 def setup_security_logger():
     """Konfiguriert den Security-Logger mit RotatingFileHandler."""
-    logger = logging.getLogger("tareas.security")
+    logger = logging.getLogger("casos.security")
     logger.setLevel(logging.INFO)
 
     # Nicht doppelt konfigurieren
@@ -40,4 +40,4 @@ def setup_security_logger():
 
 def get_security_logger():
     """Gibt den Security-Logger zurueck."""
-    return logging.getLogger("tareas.security")
+    return logging.getLogger("casos.security")

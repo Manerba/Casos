@@ -19,7 +19,7 @@ SOURCE = '# Scope\n\n- **Keep this**\n\n```html\n<div>Example & data</div>\n```\
 
 class MarkdownContentTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix='tareas-markdown-')
+        temp = tempfile.TemporaryDirectory(prefix='casos-markdown-')
         self.addCleanup(temp.cleanup)
         for name, value in {'DB_DIR': Path(temp.name), 'DB_PATH': Path(temp.name) / 'test.db'}.items():
             patcher = patch.object(database, name, value)

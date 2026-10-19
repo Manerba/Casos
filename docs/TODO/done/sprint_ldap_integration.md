@@ -2,11 +2,11 @@
 
 ## Ziel
 
-Active-Directory-Anbindung ueber LDAP. Benutzer einer konfigurierbaren AD-Gruppe werden automatisch als Tareas-Benutzer synchronisiert und koennen sich mit ihren AD-Zugangsdaten anmelden. Lokale Benutzer (Admin) bleiben als Fallback erhalten.
+Active-Directory-Anbindung ueber LDAP. Benutzer einer konfigurierbaren AD-Gruppe werden automatisch als Casos-Benutzer synchronisiert und koennen sich mit ihren AD-Zugangsdaten anmelden. Lokale Benutzer (Admin) bleiben als Fallback erhalten.
 
 ## Kontext
 
-- Admin-UI laeuft auf Port 8505 (`dashboard/admin_app.py`, Service `tareas-admin.service`)
+- Admin-UI laeuft auf Port 8515 (`dashboard/admin_app.py`, Service `casos-admin.service`)
 - Admin-UI hat einen Tab "Benutzerverwaltung" (`tab_benutzer.js`)
 - Auth-System: bcrypt-Passwoerter, Signed Session Cookies (365 Tage), `users`-Tabelle
 - Login-Endpoint: `POST /api/auth/login` in `api_auth.py`, prueft aktuell nur lokale DB
@@ -83,7 +83,7 @@ Neues Modul fuer die Synchronisierung:
   - Importiert `ldap_sync.sync_ldap_users()`
   - Fuehrt Sync aus und loggt Ergebnis
   - Wird per systemd-Timer oder Crontab aufgerufen
-- Systemd-Timer: `scripts/tareas-ldap-sync.timer` + `scripts/tareas-ldap-sync.service`
+- Systemd-Timer: `scripts/casos-ldap-sync.timer` + `scripts/casos-ldap-sync.service`
   - Timer liest Intervall NICHT aus DB (zu komplex), stattdessen festes Intervall (z.B. alle 15 Minuten)
   - Das Script selbst prueft ob genuegend Zeit seit last_sync_at vergangen ist (basierend auf sync_interval_minutes aus DB)
   - Alternativ: Einfacher Crontab-Eintrag statt systemd-Timer (pragmatischer)

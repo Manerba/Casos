@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - ONLYOFFICE-Tab
+ * Casos Admin - ONLYOFFICE-Tab
  * ONLYOFFICE Document Server Konfiguration
  */
 
@@ -50,7 +50,7 @@ function renderOoConfigSection(hasConfig) {
                     <div class="ldap-form-field">
                         <label>${t('ooAdmin.serverUrl')}</label>
                         <input type="text" id="ooServerUrl" value="${escapeAttr(c.server_url || '')}"
-                               placeholder="http://localhost:8090">
+                               placeholder="http://localhost:8091">
                     </div>
                 </div>
                 <div class="ldap-form-row">

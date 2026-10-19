@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - Benutzer-Tab
+ * Casos Admin - Benutzer-Tab
  * Benutzerverwaltung mit ExpandableTable
  */
 

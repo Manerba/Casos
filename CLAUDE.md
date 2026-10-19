@@ -1,8 +1,10 @@
-# Tareas - Projektkontext
+# Casos - Projektkontext
 
 ## Projektziel
 
-Aufgabenplanungs-Tool auf Basis von **FastAPI + Vanilla JS**. Basiert auf dem Dashboard-Template und bietet eine Web-Oberflaeche fuer Aufgabenverwaltung und -planung.
+Casos soll ein Ticketsystem auf Basis von **FastAPI + Vanilla JS** werden. Ausgangspunkt ist der rebrandete Klon von Tareas, Commit `ca5d45d` (Version `0.0.1+143`). Der aktuelle Funktionsumfang ist noch Aufgaben- und Projektplanung. Die Spezifikationen fuer den Ticket-Umbau werden erst in einer eigenen Session hier erarbeitet.
+
+Den aktuellen technischen Kontext und den Stand des Klons beschreibt `AGENTS.md`. Casos verwendet eigene Ports 8514/8515/8516, `data/casos.db`, Cookie `casos_session` und Dienste `casos*`. Keine produktiven Daten oder Secrets wurden uebernommen, kein Remote eingerichtet und keine Dienste installiert. Aenderungen ausschliesslich unter `/sdb1/nextcloud/data/mir/files/Dev/Casos` vornehmen.
 
 ## Entscheidungen
 
@@ -11,7 +13,7 @@ Aufgabenplanungs-Tool auf Basis von **FastAPI + Vanilla JS**. Basiert auf dem Da
 | Backend | FastAPI (Python) |
 | Frontend | Vanilla JS (kein Framework) |
 | Styling | CSS Custom Properties (Light/Dark Theme) |
-| Port | 8504 |
+| Port | 8514 |
 | Routing | SPA mit History API + Catch-All im Backend |
 
 ## Infrastruktur
@@ -19,9 +21,9 @@ Aufgabenplanungs-Tool auf Basis von **FastAPI + Vanilla JS**. Basiert auf dem Da
 | Komponente | Details |
 |------------|---------|
 | OS | Ubuntu 24.04 |
-| Dashboard | Port 8504 |
-| Admin | Port 8505 |
-| Service | `tareas.service` |
+| Dashboard | Port 8514 |
+| Admin | Port 8515 |
+| Service | `casos.service` |
 
 ---
 
@@ -67,9 +69,9 @@ SPA-Routing mit `history.pushState()`. Backend hat Catch-All-Route fuer direkten
 ## Projektstruktur
 
 ```
-Tareas/
+Casos/
 ├── dashboard/
-│   ├── app.py                  # FastAPI Backend (Port 8504)
+│   ├── app.py                  # FastAPI Backend (Port 8514)
 │   ├── components/
 │   │   ├── __init__.py
 │   │   ├── expandable_table.py # Generische Tabellen-Komponente
@@ -86,7 +88,7 @@ Tareas/
 │   └── templates/
 │       └── index.html          # SPA-Einstiegspunkt
 ├── scripts/
-│   └── tareas.service          # Systemd-Service
+│   └── casos.service          # Systemd-Service
 ├── git-commit.sh               # Auto-Version + Commit + Push
 ├── version.txt                 # Version (MAJOR.MINOR.PATCH+BUILD)
 ├── requirements.txt            # Python-Dependencies
@@ -108,7 +110,7 @@ Das Script:
 1. Inkrementiert Build-Nummer in `version.txt`
 2. Staged alle Aenderungen (`git add -A`)
 3. Commit mit Version-Prefix (z.B. `0.0.1+1: Beschreibung`)
-4. Push zum Remote
+4. Push zum konfigurierten Remote; ohne Remote bleibt der Commit lokal
 
 ---
 
@@ -121,19 +123,9 @@ Das Script:
 
 ---
 
-## Zwei-Umgebungen-Konvention
+## Entwicklungsumgebung
 
-| | Hauptprojekt (dieses Repo) | Desktop-App |
-|---|---|---|
-| **Umgebung** | Bash auf Ubuntu 24.04 Server | PowerShell auf Windows 11 |
-| **Repo** | `mir/Tareas` | `mir/Tareas-Desktop` |
-| **Pfad** | `Tareas/` | `Tareas/clients/desktop/` |
-| **Commit** | `./git-commit.sh "msg"` | `clients/desktop/git-commit.sh` |
-| **Changelog** | `docs/changelog.md` | `clients/desktop/docs/changelog.md` |
-
-**Regel:** Wenn Claude Code in einer Bash/Linux-Umgebung laeuft, geht es um das Hauptprojekt. `clients/` ist per `.gitignore` ausgeschlossen und ein eigenes Repo.
-
-**Regel:** Wenn Claude Code in einer PowerShell/Windows-Umgebung laeuft, geht es **ausschliesslich** um die Desktop-App. Dann `clients/desktop/CLAUDE.md` lesen und befolgen. Nur Dateien unter `clients/desktop/` aendern, dessen `git-commit.sh` und `docs/changelog.md` verwenden.
+Dieses Repo ist das Hauptprojekt fuer Bash auf Ubuntu 24.04 Server. Eine Casos-Desktop-App existiert derzeit nicht. `clients/` ist per `.gitignore` ausgeschlossen; kuenftige Clients sind eigenstaendige Repos mit eigenen Anweisungen.
 
 ---
 

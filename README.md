@@ -1,6 +1,8 @@
-# Tareas
+# Casos
 
-A self-hosted task and project management tool built with **FastAPI** and **Vanilla JavaScript**. Tareas is optimized for collaboration with AI agents: agents can work with projects, subtasks, notes, dependencies, and assignments through the built-in MCP server while all write actions stay attributable and auditable.
+Casos is the foundation for a self-hosted ticket system built with **FastAPI** and **Vanilla JavaScript**. It was cloned and rebranded from Tareas at commit `ca5d45d` (version `0.0.1+143`). Ticket-system specifications will be developed in a separate session in this project directory; the current implementation still provides task and project management, including its MCP interface.
+
+The independent checkout lives at `/sdb1/nextcloud/data/mir/files/Dev/Casos`. It retains the Git history but has no remote configured. Production data, credentials, integrations, and the separate desktop repository were not copied. Casos uses ports **8514** (web), **8515** (admin), and **8516** (MCP), database `data/casos.db`, cookie `casos_session`, and services named `casos*`. Service files are prepared but have not been installed or activated.
 
 ## Features
 
@@ -16,11 +18,13 @@ A self-hosted task and project management tool built with **FastAPI** and **Vani
 - **Email Notifications** - SMTP integration with configurable templates for assignments, status changes, deadlines
 - **AI Agent Collaboration** - Built-in MCP server for project/task automation by AI agents with token-based access
 - **TLS Support** - Optional HTTPS with certificate management via Admin UI
-- **Admin Panel** - Separate admin interface (Port 8505) for user management, LDAP, Nextcloud, ONLYOFFICE, mail, TLS, and MCP configuration
+- **Admin Panel** - Separate admin interface (Port 8515) for user management, LDAP, Nextcloud, ONLYOFFICE, mail, TLS, and MCP configuration
 - **Light/Dark Theme** - CSS Custom Properties with persistent preference
 - **APT Package** - Install via `.deb` package on Ubuntu/Debian
 
-## Screenshots
+## Inherited screenshots
+
+These screenshots document the original Tareas baseline; they are not previews of the planned ticket system.
 
 **Project view** — Rich text description, Nextcloud file browser, inline editing
 ![Project View](docs/Screenshot-Projekt.png)
@@ -33,20 +37,21 @@ A self-hosted task and project management tool built with **FastAPI** and **Vani
 
 ## Installation
 
-### Option 1: APT Package (Recommended)
+### Option 1: APT Package (not published yet)
+
+The packaging scripts have been renamed for Casos. A Casos APT repository has not yet been set up. Once one is published, installation can use:
 
 ```bash
-curl -s https://your-repo-server/tareas/install.sh | bash
+curl -s https://your-repo-server/casos/install.sh | bash
 ```
 
-This sets up the APT repository and installs Tareas with all dependencies.
+For local development, use the existing checkout below.
 
 ### Option 2: Manual Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/Manerba/tareas.git
-cd tareas
+# Open the local checkout (no Casos remote has been configured yet)
+cd /sdb1/nextcloud/data/mir/files/Dev/Casos
 
 # Create virtual environment
 python3 -m venv venv
@@ -59,7 +64,7 @@ pip install -r requirements.txt
 python dashboard/app.py
 ```
 
-The dashboard is available at `http://localhost:8504`.
+The dashboard is available at `http://localhost:8514`.
 
 > **Note:** Tested on Ubuntu 24.04 Server (standard installation).
 
@@ -68,16 +73,17 @@ The dashboard is available at `http://localhost:8504`.
 After manual installation, copy the service files:
 
 ```bash
-cp scripts/tareas.service /etc/systemd/system/
-cp scripts/tareas-admin.service /etc/systemd/system/
-cp scripts/tareas-mcp.service /etc/systemd/system/
+mkdir -p data
+cp scripts/casos.service /etc/systemd/system/
+cp scripts/casos-admin.service /etc/systemd/system/
+cp scripts/casos-mcp.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now tareas tareas-admin tareas-mcp
+systemctl enable --now casos casos-admin casos-mcp
 ```
 
 ## Configuration
 
-All configuration is managed through the **Admin Panel** at `http://localhost:8505`:
+All configuration is managed through the **Admin Panel** at `http://localhost:8515`:
 
 | Feature | Admin Tab | Description |
 |---------|-----------|-------------|
@@ -92,7 +98,7 @@ All configuration is managed through the **Admin Panel** at `http://localhost:85
 
 ### Project view
 
-The task list defaults to descending ID order. The **Tareas** link in the compact
+The task list defaults to descending ID order. The **Casos** link in the compact
 header returns to the task list. The column headings stay visible below the
 header and filter bar while scrolling, including when the filters wrap onto
 multiple lines.
@@ -140,7 +146,7 @@ predecessor list or remove the redundant link before adding the new connection.
 ### File storage
 
 Open a task or project and choose **Dateiablage**. Select **Lokale Dateiablage**
-to create its own directory on the Tareas server, or **WebDAV-Verzeichnis** to
+to create its own directory on the Casos server, or **WebDAV-Verzeichnis** to
 select an existing directory from the configured Nextcloud share. Local storage
 works without a Nextcloud configuration. Both options support the file browser
 and ONLYOFFICE editing when ONLYOFFICE is configured.
@@ -164,7 +170,7 @@ style when saving. Binary files, unsupported encodings and larger files remain
 available for download. Saves check the loaded revision and report a conflict if
 the file has changed; the editor stays in edit mode and retains the draft.
 Revision checks and writes use a shared process lock in the file storage layer,
-including saves on ports 8504/8506, MCP writes and uploads. This lock lasts only
+including saves on ports 8514/8516, MCP writes and uploads. This lock lasts only
 for the save operation; opening or editing a file does not reserve it.
 Text editing uses
 `GET`/`PUT /api/tasks/{id}/files/text?path=...` with the existing file permissions,
@@ -172,7 +178,7 @@ CSRF protection and audit logging. A PUT supplies `content` and the `revision`
 returned by GET.
 
 Local files are stored in `data/files/task-<ID>/` relative to the installation
-directory (`/opt/tareas/data/files/` for the Debian package). Directory names stay
+directory (`/opt/casos/data/files/` for the Debian package). Directory names stay
 stable when tasks are renamed. Files are served through authenticated APIs using
 the task/project permissions. Include `data/files/` along with the database in
 backups; this directory is excluded from Git and fits the existing systemd write
@@ -191,23 +197,23 @@ reopening active Office editors.
 
 ### MCP Server
 
-Tareas exposes a Model Context Protocol (MCP) server at `/mcp/` for AI agents and
+Casos exposes a Model Context Protocol (MCP) server at `/mcp/` for AI agents and
 remote coding assistants, using Streamable HTTP via FastMCP. The dedicated
-`tareas-mcp.service` listens on port `8506`. The existing endpoint on port `8504`
+`casos-mcp.service` listens on port `8516`. The existing endpoint on port `8514`
 remains available, so connected agents do not need to change their configuration.
 Both services share the same tool definitions, authentication, tokens, database,
 project permissions, audit log and global MCP switch.
 
-Port `8506` exposes MCP, the project file REST API, `/agent-guide.md` and
-`/.well-known/tareas-agent.json`. It serves no web UI, login, admin UI or general
+Port `8516` exposes MCP, the project file REST API, `/agent-guide.md` and
+`/.well-known/casos-agent.json`. It serves no web UI, login, admin UI or general
 task REST API. File requests on this port require a MCP Bearer token even if a
 browser session cookie is present. Tokens are checked before reading the request
-body and checked again after receiving an upload. This lets a firewall expose only port `8506`
-while keeping UI ports `8504` and `8505` internal. The dedicated service uses the
+body and checked again after receiving an upload. This lets a firewall expose only port `8516`
+while keeping UI ports `8514` and `8515` internal. The dedicated service uses the
 same TLS configuration and certificate as the main app. Use HTTPS for external
 access; installation does not change firewall rules.
 
-The Admin MCP tab shows both addresses and uses port `8506` in new connection
+The Admin MCP tab shows both addresses and uses port `8516` in new connection
 examples. Agent guides requested through the dedicated service also use its
 address for REST file transfers. The services can restart independently; active
 MCP transport sessions belong to the endpoint where they were established.
@@ -288,15 +294,15 @@ takes precedence over a session cookie.
 Other REST endpoints, storage configuration and the Office editor still require
 a browser session.
 
-For using Tareas as the planning layer in another repository, see
-[Tareas Agent Guide](docs/tareas-agent-guide.md). The guide includes the
+For using Casos as the planning layer in another repository, see
+[Casos Agent Guide](docs/casos-agent-guide.md). The guide includes the
 recommended `AGENTS.md` snippet, Codex/Claude MCP setup, verification steps,
 and secret-handling rules.
 
-Running Tareas instances also expose token-free bootstrap endpoints directly:
+Running Casos instances also expose token-free bootstrap endpoints directly:
 
 - `GET /agent-guide.md` - Markdown guide for agents and humans
-- `GET /.well-known/tareas-agent.json` - machine-readable URLs, MCP metadata, and `AGENTS.md` snippet
+- `GET /.well-known/casos-agent.json` - machine-readable URLs, MCP metadata, and `AGENTS.md` snippet
 
 ### Efficient agent workflows
 
@@ -333,7 +339,7 @@ row reload. Legacy full-text writes without revision remain unconditional.
 `file.append(task_id, path, content)` appends exact UTF-8 to an existing file,
 preserving its BOM and existing bytes, with a 1 MiB total limit. No automatic
 newline, UTF-16, binary input or creation. Local and WebDAV appends share the
-process lock with other Tareas saves. External WebDAV writers do not use that
+process lock with other Casos saves. External WebDAV writers do not use that
 lock. After an uncertain network failure, read before retrying to avoid duplicates.
 
 `search(query, limit=20, project_id=None, types=None, since=None)` now uses FTS5:
@@ -343,31 +349,31 @@ It ranks all content types together and returns bounded context around matches.
 ISO8601 with a timezone; notes use update time, other content creation time.
 Rights and filters apply before the limit. `snippet` stays plain text;
 `snippet_html` adds escaped highlighting. This replaces legacy substring LIKE
-semantics. The [Agent Guide](docs/tareas-agent-guide.md) documents syntax,
+semantics. The [Agent Guide](docs/casos-agent-guide.md) documents syntax,
 compatibility, limits, errors and index maintenance in detail.
 
 SQLite must provide FTS5/unicode61. Startup installs/backfills the search index
 atomically; triggers cover updates and cascading deletions. Repeated startup is
-safe, and missing FTS5 produces a clear startup error. Back up `data/tareas.db`
+safe, and missing FTS5 produces a clear startup error. Back up `data/casos.db`
 before upgrades. Administrators can rebuild the index with
 `dashboard.search_service.rebuild_search_index(db)` inside `db_transaction()`.
 
 ### Default Credentials
 
-On first start, create an admin user via the admin panel. The first user created automatically gets admin privileges.
+On first start, a fresh database is created with the initial local administrator `admin` / `admin`. Change this password after signing in. No users or credentials from the original application are included.
 
 ### Database
 
-Tareas uses **SQLite** with WAL mode. The database is stored at `data/tareas.db` and created automatically on first start. No external database server required.
+Casos uses **SQLite** with WAL mode. The database is stored at `data/casos.db` and created automatically on first start. No external database server required.
 
 ## Architecture
 
 ```
-Tareas/
+Casos/
 ├── dashboard/
-│   ├── app.py              # Main FastAPI app (Port 8504)
-│   ├── admin_app.py         # Admin FastAPI app (Port 8505)
-│   ├── mcp_app.py           # Dedicated MCP and file API (Port 8506)
+│   ├── app.py              # Main FastAPI app (Port 8514)
+│   ├── admin_app.py         # Admin FastAPI app (Port 8515)
+│   ├── mcp_app.py           # Dedicated MCP and file API (Port 8516)
 │   ├── mcp_transport.py     # Shared MCP transport, lifecycle and authentication
 │   ├── api_*.py             # API routers (tasks, auth, teams, etc.)
 │   ├── mcp_server.py        # MCP tools for AI agents
@@ -402,9 +408,9 @@ Tareas/
 ```bash
 # Run in development mode
 source venv/bin/activate
-python dashboard/app.py        # Main app on :8504
-python dashboard/admin_app.py  # Admin app on :8505
-python dashboard/mcp_app.py    # Dedicated MCP on :8506; :8504/mcp/ stays available
+python dashboard/app.py        # Main app on :8514
+python dashboard/admin_app.py  # Admin app on :8515
+python dashboard/mcp_app.py    # Dedicated MCP on :8516; :8514/mcp/ stays available
 ```
 
 ### Adding a New Tab

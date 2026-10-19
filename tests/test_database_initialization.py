@@ -18,7 +18,7 @@ def _initialize_worker(db_dir, ready, start, results, pause_sql=None,
                        paused=None, resume=None):
     """Run a real initialization in a separate process, optionally pausing SQL."""
     database.DB_DIR = Path(db_dir)
-    database.DB_PATH = database.DB_DIR / "tareas.db"
+    database.DB_PATH = database.DB_DIR / "casos.db"
     connect = sqlite3.connect
 
     class PausingConnection(sqlite3.Connection):
@@ -46,10 +46,10 @@ def _initialize_worker(db_dir, ready, start, results, pause_sql=None,
 
 class DatabaseInitializationTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-init-test-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-init-test-")
         self.addCleanup(temp.cleanup)
         self.db_dir = Path(temp.name) / "data"
-        self.db_path = self.db_dir / "tareas.db"
+        self.db_path = self.db_dir / "casos.db"
         for name, value in {"DB_DIR": self.db_dir, "DB_PATH": self.db_path}.items():
             patcher = patch.object(database, name, value)
             patcher.start()

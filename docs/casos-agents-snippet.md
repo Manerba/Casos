@@ -1,22 +1,24 @@
-# Tareas AGENTS.md Snippet
+# Casos AGENTS.md Snippet
+
+Vorlage fuer eine spaetere Casos-Instanz. Im initialen Klon sind noch keine Dienste oder MCP-Clients eingerichtet.
 
 Kopiere diesen Abschnitt in die `AGENTS.md` eines Zielprojekts und ersetze die
 Platzhalter.
 
-Der MCP-Endpoint kann auch `http://10.0.12.7:8506/mcp/` sein. Der separate Dienst
-nutzt dieselben Tokens und Rechte; bestehende Verbindungen auf 8504 bleiben gueltig.
+Der MCP-Endpoint kann auch `http://10.0.12.7:8516/mcp/` sein. Der separate Dienst
+nutzt dieselben Tokens und Rechte; bestehende Verbindungen auf 8514 bleiben gueltig.
 
 ```markdown
-## Tareas-Projektplanung
+## Casos-Projektplanung
 
-Projektplanung laeuft in Tareas. Tareas ist fuer dieses Projekt die gemeinsame
+Projektplanung laeuft in Casos. Casos ist fuer dieses Projekt die gemeinsame
 Planungsoberflaeche fuer Projekte, Sprintpakete, Abhaengigkeiten, Fortschritt
 und Entscheidungen. Codex/Claude greift per MCP darauf zu.
 
-- Web-UI: `http://10.0.12.7:8504/`
-- MCP-Endpoint: `http://10.0.12.7:8504/mcp/`
-- MCP-Server: `tareas`
-- Tareas-Projekt: `<Projektname>` (ID `<project_id>`)
+- Web-UI: `http://10.0.12.7:8514/`
+- MCP-Endpoint: `http://10.0.12.7:8514/mcp/`
+- MCP-Server: `casos`
+- Casos-Projekt: `<Projektname>` (ID `<project_id>`)
 - Erwarteter MCP-User: `<MCP-User-Anzeigename>`
 - Token niemals ins Repo schreiben; nur `<token>` als Platzhalter dokumentieren.
 
@@ -82,8 +84,8 @@ Arbeitsregeln:
   zusaetzlich `X-Requested-With: XMLHttpRequest`. Uploads laufen als Multipart
   mit Feld `file` (maximal 500 MiB), Downloads liefern die Dateibytes.
   Aufgabenrechte, Token-Widerruf und der MCP-Ausschalter gelten auch dort.
-- Gitea-Issues enthalten konkrete Findings/Bugs; Tareas enthaelt
+- Gitea-Issues enthalten konkrete Findings/Bugs; Casos enthaelt
   Zusammenfassung und Issue-IDs/Links.
-- Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Tareas-Notizen,
+- Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Casos-Notizen,
   AGENTS.md, docs/, .env, Logs oder Issues schreiben.
 ```

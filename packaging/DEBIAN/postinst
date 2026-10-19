@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-APP_DIR="/opt/tareas"
+APP_DIR="/opt/casos"
 DATA_DIR="$APP_DIR/data"
 VENV_DIR="$APP_DIR/venv"
-SERVICE_USER="tareas"
+SERVICE_USER="casos"
 
 # System-User erstellen (falls nicht vorhanden)
 if ! id "$SERVICE_USER" &>/dev/null; then
@@ -27,27 +27,27 @@ fi
 echo "Python-Dependencies installiert."
 
 # Service-Dateien kopieren
-cp "$APP_DIR/scripts/tareas.service" /etc/systemd/system/tareas.service
-cp "$APP_DIR/scripts/tareas-admin.service" /etc/systemd/system/tareas-admin.service
-cp "$APP_DIR/scripts/tareas-mcp.service" /etc/systemd/system/tareas-mcp.service
-cp "$APP_DIR/scripts/tareas-ldap-sync.service" /etc/systemd/system/tareas-ldap-sync.service
-cp "$APP_DIR/scripts/tareas-ldap-sync.timer" /etc/systemd/system/tareas-ldap-sync.timer
+cp "$APP_DIR/scripts/casos.service" /etc/systemd/system/casos.service
+cp "$APP_DIR/scripts/casos-admin.service" /etc/systemd/system/casos-admin.service
+cp "$APP_DIR/scripts/casos-mcp.service" /etc/systemd/system/casos-mcp.service
+cp "$APP_DIR/scripts/casos-ldap-sync.service" /etc/systemd/system/casos-ldap-sync.service
+cp "$APP_DIR/scripts/casos-ldap-sync.timer" /etc/systemd/system/casos-ldap-sync.timer
 
 # Dateiberechtigungen setzen
 chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
 
 # Systemd neu laden und Services aktivieren
 systemctl daemon-reload
-systemctl enable tareas.service
-systemctl enable tareas-admin.service
-systemctl enable tareas-mcp.service
-systemctl enable tareas-ldap-sync.timer
+systemctl enable casos.service
+systemctl enable casos-admin.service
+systemctl enable casos-mcp.service
+systemctl enable casos-ldap-sync.timer
 
 # Services (neu)starten
-systemctl restart tareas.service
-systemctl restart tareas-admin.service
-systemctl restart tareas-mcp.service
-systemctl restart tareas-ldap-sync.timer
+systemctl restart casos.service
+systemctl restart casos-admin.service
+systemctl restart casos-mcp.service
+systemctl restart casos-ldap-sync.timer
 
 # Docker-Daemon sicherstellen (wurde als Dependency installiert)
 systemctl enable docker.service 2>/dev/null || true
@@ -61,8 +61,8 @@ if [ -x "$APP_DIR/scripts/onlyoffice-setup.sh" ]; then
 fi
 
 echo ""
-echo "=== Tareas Installation abgeschlossen ==="
-echo "  App:   http://$(hostname -I | awk '{print $1}'):8504/"
-echo "  Admin: http://$(hostname -I | awk '{print $1}'):8505/"
-echo "  MCP:   http://$(hostname -I | awk '{print $1}'):8506/mcp/ (auch weiter auf Port 8504)"
+echo "=== Casos Installation abgeschlossen ==="
+echo "  App:   http://$(hostname -I | awk '{print $1}'):8514/"
+echo "  Admin: http://$(hostname -I | awk '{print $1}'):8515/"
+echo "  MCP:   http://$(hostname -I | awk '{print $1}'):8516/mcp/ (auch weiter auf Port 8514)"
 echo ""

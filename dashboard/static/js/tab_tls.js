@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - TLS-Tab
+ * Casos Admin - TLS-Tab
  * TLS/HTTPS Konfiguration
  */
 
@@ -138,14 +138,14 @@ function renderTlsConfigSection(hasConfig, isActive) {
                     <div class="ldap-form-field">
                         <label>${t('tls.certPath')}</label>
                         <input type="text" id="tlsCertPath" value="${escapeAttr(c.cert_path || '')}"
-                               placeholder="/etc/ssl/certs/tareas.pem">
+                               placeholder="/etc/ssl/certs/casos.pem">
                     </div>
                 </div>
                 <div class="ldap-form-row">
                     <div class="ldap-form-field">
                         <label>${t('tls.keyPath')}</label>
                         <input type="text" id="tlsKeyPath" value="${escapeAttr(c.key_path || '')}"
-                               placeholder="/etc/ssl/private/tareas-key.pem">
+                               placeholder="/etc/ssl/private/casos-key.pem">
                     </div>
                 </div>
                 <div class="ldap-form-row">
@@ -175,8 +175,8 @@ function renderTlsGuideSection() {
             <div class="ldap-status-info" style="opacity: 0.9;">
                 <strong>${t('tls.selfSigned')}</strong>
                 <pre style="margin: 8px 0; padding: 8px; background: var(--bg-secondary); border-radius: 4px; overflow-x: auto; font-size: 12px;">openssl req -x509 -newkey rsa:4096 -nodes \\
-  -keyout /etc/ssl/private/tareas-key.pem \\
-  -out /etc/ssl/certs/tareas.pem \\
+  -keyout /etc/ssl/private/casos-key.pem \\
+  -out /etc/ssl/certs/casos.pem \\
   -days 365 -subj "/CN=example.com"</pre>
             </div>
             <div class="ldap-status-info" style="margin-top: 8px; opacity: 0.9;">

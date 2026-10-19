@@ -1,5 +1,5 @@
 /**
- * Tareas - ONLYOFFICE Editor Integration
+ * Casos - ONLYOFFICE Editor Integration
  * Oeffnet Dateien in einem neuen Browser-Tab
  */
 

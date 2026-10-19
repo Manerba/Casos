@@ -36,7 +36,7 @@ def _append_worker(root, task_id, text, start, ready, results):
 
 class AppendAndReasonTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix='tareas-append-reason-')
+        temp = tempfile.TemporaryDirectory(prefix='casos-append-reason-')
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         for key, value in {'DB_DIR': self.root, 'DB_PATH': self.root / 'test.db'}.items():

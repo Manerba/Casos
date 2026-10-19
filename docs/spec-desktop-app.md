@@ -1,8 +1,10 @@
-# Tareas Desktop App - Spezifikation
+# Casos Desktop App - Spezifikation
+
+> Uebernommene Desktop-Spezifikation des Ursprungsprojekts. Eine Casos-Desktop-App wurde weder geklont noch beauftragt; Anforderungen fuer Casos werden separat festgelegt.
 
 ## Projektziel
 
-Einzelbenutzer-Desktop-Anwendung fuer Windows, die das Tareas-Frontend in einem nativen Fenster rendert. Die App kann entweder mit einer lokalen SQLite-Datenbank (Standalone) oder als Client fuer einen Tareas-Server betrieben werden.
+Einzelbenutzer-Desktop-Anwendung fuer Windows, die das Casos-Frontend in einem nativen Fenster rendert. Die App kann entweder mit einer lokalen SQLite-Datenbank (Standalone) oder als Client fuer einen Casos-Server betrieben werden.
 
 ---
 
@@ -11,7 +13,7 @@ Einzelbenutzer-Desktop-Anwendung fuer Windows, die das Tareas-Frontend in einem 
 ### Einordnung im Gesamtprojekt
 
 ```
-Tareas/                          <-- Git-Repo 1 (Server/Enterprise)
+Casos/                          <-- Git-Repo 1 (Server/Enterprise)
 ├── dashboard/                   <-- Haupt-Frontend + Backend
 ├── clients/                     <-- von Hauptrepo via .gitignore ignoriert
 │   ├── desktop/                 <-- Git-Repo 2 (diese App)
@@ -46,7 +48,7 @@ clients/desktop/
 │   └── icon.ico                 <-- App-Icon (Platzhalter, wird manuell erstellt)
 ├── installer/
 │   └── setup.iss                <-- Inno Setup Script
-├── tareas-desktop.spec          <-- PyInstaller-Konfiguration
+├── casos-desktop.spec          <-- PyInstaller-Konfiguration
 ├── git-commit.sh                <-- Commit-Script (kopiert Dashboard-Dateien + Version + Push)
 ├── version.txt
 ├── requirements.txt
@@ -82,7 +84,7 @@ clients/desktop/
 - Dateiablage-Feature verfuegbar (lokale/SMB-Pfade)
 - Keine Benutzer-Authentifizierung (Einzelbenutzer)
 
-### Client (Verbindung zu Tareas-Server) - Sprint 2
+### Client (Verbindung zu Casos-Server) - Sprint 2
 
 - Kein lokaler Server, API-Calls gehen an konfigurierten Remote-Server
 - Benutzer-Authentifizierung erforderlich (JWT-Token)
@@ -102,14 +104,14 @@ clients/desktop/
 
 Die Installation erfolgt zweistufig:
 
-1. **Inno Setup** packt den Inhalt von `dist/Tareas/` als Installationsdatei und entpackt die Dateien nach `%LocalAppData%\Tareas\app\`
-2. **Inno Setup ruft `Tareas.exe --install` auf** - die App selbst uebernimmt die Konfiguration
+1. **Inno Setup** packt den Inhalt von `dist/Casos/` als Installationsdatei und entpackt die Dateien nach `%LocalAppData%\Casos\app\`
+2. **Inno Setup ruft `Casos.exe --install` auf** - die App selbst uebernimmt die Konfiguration
 
 Vorteil: Die Konfigurations-UI nutzt das eigene Frontend (konsistentes Design) statt Inno Setup Pascal-Pages.
 
 ### Setup-Wizard (`--install` Modus)
 
-Wenn `Tareas.exe` mit `--install` gestartet wird, zeigt die App einen Setup-Wizard:
+Wenn `Casos.exe` mit `--install` gestartet wird, zeigt die App einen Setup-Wizard:
 
 1. Sprachauswahl (Deutsch / Englisch)
 2. Desktop-Verknuepfung anlegen? (ja/nein)
@@ -118,7 +120,7 @@ Wenn `Tareas.exe` mit `--install` gestartet wird, zeigt die App einen Setup-Wiza
 5. (Sprint 2) Server-URL (nur bei Client-Modus)
 
 Der Wizard schreibt alle Entscheidungen in `settings.json` und registriert die App bei Windows:
-- Startmenue-Eintrag (damit Tareas in der Taskleisten-Suche erscheint)
+- Startmenue-Eintrag (damit Casos in der Taskleisten-Suche erscheint)
 - Desktop-Verknuepfung (falls gewaehlt)
 - Autostart Registry-Key (falls gewaehlt)
 
@@ -126,7 +128,7 @@ Nach Abschluss startet die App normal.
 
 ### Installationspfad
 
-Alles unter `%LocalAppData%\Tareas\`:
+Alles unter `%LocalAppData%\Casos\`:
 
 - Keine Admin-Rechte erforderlich (weder Installation noch Updates)
 - Kein UAC-Prompt
@@ -137,14 +139,14 @@ Alles unter `%LocalAppData%\Tareas\`:
 ## Verzeichnisstruktur im Benutzerprofil
 
 ```
-%LocalAppData%\Tareas\
-├── app\                         <-- Programmdateien (Tareas.exe etc.)
+%LocalAppData%\Casos\
+├── app\                         <-- Programmdateien (Casos.exe etc.)
 ├── data\
-│   └── tareas.db                <-- SQLite-Datenbank (nur Standalone-Modus)
+│   └── casos.db                <-- SQLite-Datenbank (nur Standalone-Modus)
 ├── config\
 │   └── settings.json            <-- Alle Einstellungen (dateibasiert, keine Registry)
 └── logs\
-    └── tareas.log               <-- Anwendungs-Log (mit Rotation)
+    └── casos.log               <-- Anwendungs-Log (mit Rotation)
 ```
 
 ---
@@ -159,7 +161,7 @@ Alles unter `%LocalAppData%\Tareas\`:
 
 ### System Tray (pystray)
 
-- Tray-Icon mit Tooltip "Tareas"
+- Tray-Icon mit Tooltip "Casos"
 - Doppelklick auf Tray-Icon: Fenster oeffnen
 - Rechtsklick-Menue: Oeffnen / Einstellungen / Beenden
 
@@ -236,7 +238,7 @@ Konfigurierbare Einstellungen:
 ### Winget-Kompatibilitaet
 
 - Das Projekt liefert ein Winget-Manifest mit
-- `winget upgrade Tareas` funktioniert unabhaengig von der Auto-Update-Funktion
+- `winget upgrade Casos` funktioniert unabhaengig von der Auto-Update-Funktion
 - Fuer User, die ihr Patchmanagement ueber Winget abwickeln
 - Beide Update-Wege existieren parallel und schliessen sich nicht gegenseitig aus
 
@@ -271,7 +273,7 @@ Konfigurierbare Einstellungen:
 ### Build-Pipeline
 
 Das Repository enthaelt die komplette Build-Pipeline:
-- `tareas-desktop.spec` - PyInstaller-Konfiguration
+- `casos-desktop.spec` - PyInstaller-Konfiguration
 - `installer/setup.iss` - Inno Setup Script
 - Aus dem geklonten Repo kann direkt der Installer gebaut werden
 
@@ -283,7 +285,7 @@ Das Repository enthaelt die komplette Build-Pipeline:
 
 ### Uebersicht
 
-Im Client-Modus verbindet sich die Desktop-App mit einem Tareas-Server. Es laeuft kein lokaler
+Im Client-Modus verbindet sich die Desktop-App mit einem Casos-Server. Es laeuft kein lokaler
 FastAPI-Server. Alle API-Calls gehen an den konfigurierten Remote-Server. Das Frontend ist
 identisch zur Web-Version, inklusive server-seitiger Dateiablage.
 
@@ -302,7 +304,7 @@ identisch zur Web-Version, inklusive server-seitiger Dateiablage.
 Bei Verbindungsverlust zum Server arbeitet die App mit einem lokalen Cache weiter.
 
 **Cache-Speicher:**
-- Lokale SQLite-Datenbank als Cache (`%LocalAppData%\Tareas\cache\offline.db`)
+- Lokale SQLite-Datenbank als Cache (`%LocalAppData%\Casos\cache\offline.db`)
 - Spiegelt die zuletzt vom Server geladenen Daten
 - Wird bei jeder erfolgreichen Server-Antwort aktualisiert
 

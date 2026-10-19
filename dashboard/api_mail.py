@@ -1,5 +1,5 @@
 """
-Tareas - API-Router fuer Mail-Konfiguration, Templates und Preferences.
+Casos - API-Router fuer Mail-Konfiguration, Templates und Preferences.
 """
 
 from typing import Optional
@@ -40,7 +40,7 @@ class MailConfigSave(BaseModel):
     username: str = ""
     password: str = ""
     from_address: str
-    from_name: str = "Tareas"
+    from_name: str = "Casos"
 
 
 class TemplateUpdate(BaseModel):

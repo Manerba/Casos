@@ -1,5 +1,5 @@
 """
-Tareas - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
+Casos - API-Router fuer Aufgaben, Teilaufgaben und Bereiche.
 """
 
 import asyncio

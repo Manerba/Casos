@@ -70,8 +70,8 @@ def main():
         page = browser.new_page(viewport={'width': 1440, 'height': 1100})
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))
-        page.route('http://tareas.test/**', serve)
-        page.goto('http://tareas.test/aufgaben')
+        page.route('http://casos.test/**', serve)
+        page.goto('http://casos.test/aufgaben')
         page.locator('[data-row-id="1"] > .table-row > .expand-icon').click()
         expect(page.locator('.subtask-row')).to_have_count(5)
 

@@ -1,5 +1,5 @@
 """
-Tareas - Audit-Log fuer Aenderungen an Aufgaben/Teilaufgaben/Notes/Dependencies.
+Casos - Audit-Log fuer Aenderungen an Aufgaben/Teilaufgaben/Notes/Dependencies.
 
 Persistiert WHO did WHAT, WHEN, WHERE und (optional) ein JSON-Diff der Aenderungen.
 Wird aus REST-Endpunkten und MCP-Tools aufgerufen. Reads werden NICHT geloggt

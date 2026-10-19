@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tareas - Mail Scheduler
+Casos - Mail Scheduler
 Wird per systemd-Timer taeglich aufgerufen.
 Versendet Faelligkeits-Mails (heute faellig + Vorwarnung).
 """

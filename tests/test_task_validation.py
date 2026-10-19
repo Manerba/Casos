@@ -24,7 +24,7 @@ INVALID_PROGRESS = (-1, 101, 1000000, 0.5, 50.0, True, False, "50", "", [], {})
 
 class TaskValidationTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-validation-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-validation-")
         self.addCleanup(temp.cleanup)
         for name, value in {
             "DB_DIR": Path(temp.name), "DB_PATH": Path(temp.name) / "test.db",

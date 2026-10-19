@@ -1,5 +1,5 @@
 """
-Tareas - SQLite Datenbank
+Casos - SQLite Datenbank
 Schema, Initialisierung und Verbindungsmanagement.
 """
 
@@ -9,7 +9,7 @@ from contextlib import closing
 from pathlib import Path
 
 DB_DIR = Path(__file__).parent.parent / "data"
-DB_PATH = DB_DIR / "tareas.db"
+DB_PATH = DB_DIR / "casos.db"
 
 DEFAULT_AREAS = ["Entwicklung", "Design", "Planung", "Testing", "Allgemein"]
 
@@ -309,7 +309,7 @@ def _initialize_db(conn: sqlite3.Connection):
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS app_config (
             id INTEGER PRIMARY KEY,
-            server_address TEXT NOT NULL DEFAULT 'localhost:8504'
+            server_address TEXT NOT NULL DEFAULT 'localhost:8514'
         );
     """)
 
@@ -343,7 +343,7 @@ def _initialize_db(conn: sqlite3.Connection):
             username TEXT DEFAULT '',
             password TEXT DEFAULT '',
             from_address TEXT NOT NULL,
-            from_name TEXT DEFAULT 'Tareas',
+            from_name TEXT DEFAULT 'Casos',
             created_at TEXT DEFAULT (datetime('now'))
         );
 
@@ -444,17 +444,17 @@ def _initialize_db(conn: sqlite3.Connection):
     if tmpl_count == 0:
         default_templates = [
             ("task_assigned", "Aufgabe zugewiesen: {task_name}",
-             "Hallo {recipient_name},\n\nDir wurde die Aufgabe \"{task_name}\" von {actor_name} zugewiesen.\n\nDeadline: {deadline}\nPrioritaet: {priority}\n\nViele Gruesse\nTareas\n\n{app_url}"),
+             "Hallo {recipient_name},\n\nDir wurde die Aufgabe \"{task_name}\" von {actor_name} zugewiesen.\n\nDeadline: {deadline}\nPrioritaet: {priority}\n\nViele Gruesse\nCasos\n\n{app_url}"),
             ("status_change", "Status geaendert: {task_name}",
-             "Hallo {recipient_name},\n\nDer Status der Aufgabe \"{task_name}\" wurde von {actor_name} auf \"{new_status}\" geaendert.\n\nViele Gruesse\nTareas\n\n{app_url}"),
+             "Hallo {recipient_name},\n\nDer Status der Aufgabe \"{task_name}\" wurde von {actor_name} auf \"{new_status}\" geaendert.\n\nViele Gruesse\nCasos\n\n{app_url}"),
             ("deadline_reached", "Faelligkeit heute: {task_name}",
-             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist heute faellig.\n\nBitte pruefe den aktuellen Stand.\n\nViele Gruesse\nTareas\n\n{app_url}"),
+             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist heute faellig.\n\nBitte pruefe den aktuellen Stand.\n\nViele Gruesse\nCasos\n\n{app_url}"),
             ("deadline_warning", "Faelligkeit in {days_before} Tagen: {task_name}",
-             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist in {days_before} Tagen faellig (Deadline: {deadline}).\n\nViele Gruesse\nTareas\n\n{app_url}"),
-            ("invite", "Einladung zu Tareas",
-             "Hallo {recipient_name},\n\nDu wurdest zu Tareas eingeladen.\n\nBenutzername: {username}\nURL: {app_url}\n\nBitte melde dich an und aendere dein Passwort.\n\nViele Gruesse\nTareas"),
-            ("test", "Testmail von Tareas",
-             "Dies ist eine Testmail von Tareas.\n\nWenn du diese Mail erhaeltst, funktioniert der Mailversand korrekt."),
+             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist in {days_before} Tagen faellig (Deadline: {deadline}).\n\nViele Gruesse\nCasos\n\n{app_url}"),
+            ("invite", "Einladung zu Casos",
+             "Hallo {recipient_name},\n\nDu wurdest zu Casos eingeladen.\n\nBenutzername: {username}\nURL: {app_url}\n\nBitte melde dich an und aendere dein Passwort.\n\nViele Gruesse\nCasos"),
+            ("test", "Testmail von Casos",
+             "Dies ist eine Testmail von Casos.\n\nWenn du diese Mail erhaeltst, funktioniert der Mailversand korrekt."),
         ]
         for event_type, subject, body_text in default_templates:
             conn.execute(

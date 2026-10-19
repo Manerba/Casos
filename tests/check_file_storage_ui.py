@@ -53,8 +53,8 @@ def main():
         page = browser.new_page(viewport={"width": 1440, "height": 1000})
         errors = []
         page.on("pageerror", lambda exc: errors.append(str(exc)))
-        page.route("http://tareas.test/**", serve)
-        page.goto("http://tareas.test/")
+        page.route("http://casos.test/**", serve)
+        page.goto("http://casos.test/")
         translations = json.loads((ROOT / "dashboard/static/i18n/en.json").read_text())
         page.evaluate("""translations => window.t = (key, params = {}) => {
             let text = translations[key] || key;

@@ -20,7 +20,7 @@ from dashboard.project_views import (
 
 class ProjectViewTests(unittest.TestCase):
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="tareas-project-views-")
+        temporary = tempfile.TemporaryDirectory(prefix="casos-project-views-")
         self.addCleanup(temporary.cleanup)
         for name, value in (("DB_DIR", Path(temporary.name)), ("DB_PATH", Path(temporary.name) / "test.db")):
             patcher = patch.object(database, name, value)

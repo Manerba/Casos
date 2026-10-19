@@ -22,7 +22,7 @@ SOURCE = '# Übersicht\n\n**Prüfung** & <xml> ✓\nEin Ziel.\n'
 
 class DescriptionRevisionTests(unittest.TestCase):
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix='tareas-description-')
+        temp = tempfile.TemporaryDirectory(prefix='casos-description-')
         self.addCleanup(temp.cleanup)
         for name, value in {'DB_DIR': Path(temp.name), 'DB_PATH': Path(temp.name) / 'test.db'}.items():
             patcher = patch.object(database, name, value)

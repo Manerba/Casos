@@ -1,12 +1,12 @@
 [Unit]
-Description=Tareas - Aufgabenplanung (FastAPI)
+Description=Casos Admin - Benutzerverwaltung (FastAPI)
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/sdb1/nextcloud/data/mir/files/Dev/Tareas
-ExecStart=/sdb1/nextcloud/data/mir/files/Dev/Tareas/venv/bin/python dashboard/app.py
+WorkingDirectory=/sdb1/nextcloud/data/mir/files/Dev/Casos
+ExecStart=/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/bin/python dashboard/admin_app.py
 Restart=always
 RestartSec=5
 
@@ -15,7 +15,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=true
-ReadWritePaths=/sdb1/nextcloud/data/mir/files/Dev/Tareas/data /var/log
+ReadWritePaths=/sdb1/nextcloud/data/mir/files/Dev/Casos/data /var/log
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 ProtectKernelTunables=yes
 ProtectControlGroups=yes

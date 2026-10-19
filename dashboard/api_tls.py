@@ -1,5 +1,5 @@
 """
-Tareas - TLS Admin API-Router
+Casos - TLS Admin API-Router
 TLS-Konfiguration: Zertifikate verwalten, aktivieren/deaktivieren.
 """
 

@@ -1,4 +1,4 @@
-"""Eigenstaendiger Tareas-Agentendienst, Port 8506, ohne Web-/Admin-Oberflaeche."""
+"""Eigenstaendiger Casos-Agentendienst, Port 8516, ohne Web-/Admin-Oberflaeche."""
 
 import logging
 import sys
@@ -17,7 +17,7 @@ from dashboard.mcp_transport import install_mcp, mcp_lifespan, api_csrf_protecti
 from dashboard.tls_utils import get_tls_config
 
 
-app = FastAPI(title="Tareas MCP", lifespan=mcp_lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="Casos MCP", lifespan=mcp_lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 install_mcp(app, dedicated=True)
 app.include_router(file_operations_router)
 # Middleware prueft MCP-Bearer vor dem Body; Dependency prueft danach erneut.
@@ -35,7 +35,7 @@ async def security_headers(request, call_next):
     return response
 
 
-@app.get("/.well-known/tareas-agent.json")
+@app.get("/.well-known/casos-agent.json")
 async def agent_metadata(request: Request):
     return build_agent_metadata(request, mcp_base_url=str(request.base_url).rstrip("/"))
 
@@ -48,7 +48,7 @@ async def agent_guide(request: Request):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(levelname)s %(message)s")
     tls = get_tls_config()
-    kwargs = {"host": "0.0.0.0", "port": 8506}
+    kwargs = {"host": "0.0.0.0", "port": 8516}
     if tls and tls["enabled"]:
         kwargs.update(ssl_certfile=tls["cert_path"], ssl_keyfile=tls["key_path"])
     uvicorn.run(app, **kwargs)

@@ -1,7 +1,7 @@
 """
 Tokenfreier Bootstrap-Guide fuer Agenten-Integration.
 
-Die Daten werden zur Laufzeit aus der Tareas-Konfiguration abgeleitet, damit
+Die Daten werden zur Laufzeit aus der Casos-Konfiguration abgeleitet, damit
 neue Projekte nicht von externen Repos oder statischen Kopien abhaengen.
 """
 
@@ -16,8 +16,8 @@ from fastapi import Request
 from dashboard.db_utils import db_query
 
 
-DEFAULT_ADDRESS = "localhost:8504"
-MCP_SERVER_NAME = "tareas"
+DEFAULT_ADDRESS = "localhost:8514"
+MCP_SERVER_NAME = "casos"
 MCP_TRANSPORT = "streamable_http"
 current_agent_base_url: ContextVar[str | None] = ContextVar("current_agent_base_url", default=None)
 
@@ -84,18 +84,18 @@ def build_agent_metadata(request: Request | None = None, *, mcp_base_url: str | 
     base_url = public_base_url(request)
     agent_base = mcp_base_url or current_agent_base_url.get()
     if agent_base and not _get_configured_address():
-        base_url = _with_port(agent_base, 8504)
-    dedicated_endpoint = f"{agent_base or _with_port(base_url, 8506)}/mcp/"
+        base_url = _with_port(agent_base, 8514)
+    dedicated_endpoint = f"{agent_base or _with_port(base_url, 8516)}/mcp/"
     agent_base = agent_base or base_url
     web_ui = f"{base_url}/"
     mcp_endpoint = f"{agent_base}/mcp/"
     guide_url = f"{agent_base}/agent-guide.md"
-    well_known_url = f"{agent_base}/.well-known/tareas-agent.json"
-    admin_url = _with_port(base_url, 8505)
+    well_known_url = f"{agent_base}/.well-known/casos-agent.json"
+    admin_url = _with_port(base_url, 8515)
     snippet = build_agents_snippet(web_ui, mcp_endpoint)
 
     return {
-        "name": "Tareas",
+        "name": "Casos",
         "description": "Shared project planning and audit layer for AI-agent collaboration.",
         "web_ui": web_ui,
         "file_api_base_url": agent_base,
@@ -113,20 +113,20 @@ def build_agent_metadata(request: Request | None = None, *, mcp_base_url: str | 
         },
         "client_examples": {
             "codex_config_toml": (
-                "[mcp_servers.tareas]\n"
+                "[mcp_servers.casos]\n"
                 f"url = \"{mcp_endpoint}\"\n"
                 "http_headers = { Authorization = \"Bearer <token>\" }"
             ),
             "claude_command": (
-                f"claude mcp add --transport http tareas {mcp_endpoint} "
+                f"claude mcp add --transport http casos {mcp_endpoint} "
                 "--header \"Authorization: Bearer <token>\""
             ),
         },
         "agents_md_snippet": snippet,
         "rules": [
             "Store the real MCP token only in the local agent-client configuration.",
-            "Never write tokens or secrets to AGENTS.md, docs, .env files, logs, issues, or Tareas notes.",
-            "Use Tareas MCP as the single point of truth for project planning.",
+            "Never write tokens or secrets to AGENTS.md, docs, .env files, logs, issues, or Casos notes.",
+            "Use Casos MCP as the single point of truth for project planning.",
             "Use list_projects_page for compact paginated lists, following next_offset until null; load descriptions and subtasks with get_project. list_projects keeps its legacy list response.",
             "Status values are offen, in_arbeit, erledigt and abgebrochen; subtask progress is an integer from 0 to 100. Project status is derived from completed subtasks, with cancellation taking precedence.",
             "create_project/update_project accept parent_subtask_id (PID) to link one child project per parent subtask. update_project(parent_subtask_id=0) unlinks. Both sides need edit access, no permission inheritance or cycles. Parent progress is the share of completed child subtasks, rounded down, empty=0. It propagates through all ancestors. Subtasks expose child_project_id/progress_automatic; writing linked status_percent fails with linked_project_progress_readonly. Unlinking/deleting the child keeps the last percentage; deleting the parent only detaches child projects.",
@@ -155,16 +155,16 @@ def build_agent_metadata(request: Request | None = None, *, mcp_base_url: str | 
 
 
 def build_agents_snippet(web_ui: str, mcp_endpoint: str) -> str:
-    return f"""## Tareas-Projektplanung
+    return f"""## Casos-Projektplanung
 
-Projektplanung laeuft in Tareas. Tareas ist fuer dieses Projekt die gemeinsame
+Projektplanung laeuft in Casos. Casos ist fuer dieses Projekt die gemeinsame
 Planungsoberflaeche fuer Projekte, Sprintpakete, Abhaengigkeiten, Fortschritt
 und Entscheidungen. Codex/Claude greift per MCP darauf zu.
 
 - Web-UI: `{web_ui}`
 - MCP-Endpoint: `{mcp_endpoint}`
 - MCP-Server: `{MCP_SERVER_NAME}`
-- Tareas-Projekt: `<Projektname>` (ID `<project_id>`)
+- Casos-Projekt: `<Projektname>` (ID `<project_id>`)
 - Erwarteter MCP-User: `<MCP-User-Anzeigename>`
 - Token niemals ins Repo schreiben; nur `<token>` als Platzhalter dokumentieren.
 
@@ -230,9 +230,9 @@ Arbeitsregeln:
   zusaetzlich `X-Requested-With: XMLHttpRequest`. Uploads laufen als Multipart
   mit Feld `file` (maximal 500 MiB), Downloads liefern die Dateibytes.
   Aufgabenrechte, Token-Widerruf und der MCP-Ausschalter gelten auch dort.
-- Gitea-Issues enthalten konkrete Findings/Bugs; Tareas enthaelt
+- Gitea-Issues enthalten konkrete Findings/Bugs; Casos enthaelt
   Zusammenfassung und Issue-IDs/Links.
-- Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Tareas-Notizen,
+- Keine Secrets, Tokens, Passwoerter oder privaten Schluessel in Casos-Notizen,
   AGENTS.md, docs/, .env, Logs oder Issues schreiben."""
 
 
@@ -246,29 +246,29 @@ def build_agent_guide_markdown(metadata: dict[str, Any]) -> str:
     claude_command = metadata["client_examples"]["claude_command"]
     snippet = metadata["agents_md_snippet"]
 
-    return f"""# Tareas Agent Guide
+    return f"""# Casos Agent Guide
 
-Dieser Guide beschreibt, wie ein neues Projekt Tareas als gemeinsame
+Dieser Guide beschreibt, wie ein neues Projekt Casos als gemeinsame
 Planungs- und Audit-Ebene fuer Codex/Claude-Sessions nutzt.
 
 Der Kern:
 
-- Das Projekt dokumentiert die Tareas-Arbeitsweise in `AGENTS.md`.
+- Das Projekt dokumentiert die Casos-Arbeitsweise in `AGENTS.md`.
 - Der echte MCP-Zugriff wird lokal im Agenten-Client konfiguriert.
 - Der MCP-Token gehoert nie ins Repository.
 
 ## Kurzprompt fuer neue Projekte
 
 ```text
-Wir verwenden Tareas zur Projektplanung. Lies den Tareas-Agent-Guide:
+Wir verwenden Casos zur Projektplanung. Lies den Casos-Agent-Guide:
 {guide_url}
 
-Richte dieses Repo danach ein: AGENTS.md ergaenzen, Tareas-MCP pruefen,
-Tareas-Projekt anlegen oder referenzieren, Projekt-ID dokumentieren.
+Richte dieses Repo danach ein: AGENTS.md ergaenzen, Casos-MCP pruefen,
+Casos-Projekt anlegen oder referenzieren, Projekt-ID dokumentieren.
 Token niemals ins Repo schreiben.
 ```
 
-## Tareas-Instanz
+## Casos-Instanz
 
 - Web-UI: `{web_ui}`
 - MCP-Endpoint: `{mcp_endpoint}`
@@ -287,7 +287,7 @@ Token niemals ins Repo schreiben.
 5. Token nur in die lokale MCP-Konfiguration des Agenten-Clients eintragen.
 
 Der Token darf nicht in `AGENTS.md`, docs, `.env`, Logs, Issues oder
-Tareas-Notizen gespeichert werden.
+Casos-Notizen gespeichert werden.
 
 ## Lokale MCP-Konfiguration
 
@@ -308,30 +308,30 @@ werden, damit die Tools erscheinen.
 
 ## Verifikation
 
-Eine korrekt gestartete Session sieht Tareas-Tools, z.B.:
+Eine korrekt gestartete Session sieht Casos-Tools, z.B.:
 
 ```text
-mcp__tareas__whoami
-mcp__tareas__list_projects
-mcp__tareas__list_projects_page
-mcp__tareas__get_project
-mcp__tareas__get_project_status
-mcp__tareas__patch_description
-mcp__tareas__note.write
-mcp__tareas__note.update
-mcp__tareas__note.delete
-mcp__tareas__handoff.add
-mcp__tareas__handoff.list
-mcp__tareas__handoff.get
-mcp__tareas__handoff.update
-mcp__tareas__handoff.delete
-mcp__tareas__file.list
-mcp__tareas__file.read
-mcp__tareas__file.write
-mcp__tareas__file.append
-mcp__tareas__file.mkdir
-mcp__tareas__file.move
-mcp__tareas__file.delete
+mcp__casos__whoami
+mcp__casos__list_projects
+mcp__casos__list_projects_page
+mcp__casos__get_project
+mcp__casos__get_project_status
+mcp__casos__patch_description
+mcp__casos__note.write
+mcp__casos__note.update
+mcp__casos__note.delete
+mcp__casos__handoff.add
+mcp__casos__handoff.list
+mcp__casos__handoff.get
+mcp__casos__handoff.update
+mcp__casos__handoff.delete
+mcp__casos__file.list
+mcp__casos__file.read
+mcp__casos__file.write
+mcp__casos__file.append
+mcp__casos__file.mkdir
+mcp__casos__file.move
+mcp__casos__file.delete
 ```
 
 Pruefablauf:
@@ -343,7 +343,7 @@ Pruefablauf:
 5. Bei konfigurierter Dateiablage (`file_storage_type` ist `local` oder `webdav`)
    mit `file.list(task_id=...)` die Dateien und effektiven Schreibrechte pruefen.
 
-Wenn keine Tareas-MCP-Tools verfuegbar sind, keine lokale Ersatz-DB und keine
+Wenn keine Casos-MCP-Tools verfuegbar sind, keine lokale Ersatz-DB und keine
 Schattenquelle in einem anderen System anlegen. Erst MCP einrichten oder den
 Benutzer um lokale Konfiguration bitten.
 
@@ -507,7 +507,7 @@ vom Aufrufer. Leerer Text laesst den Inhalt unveraendert. Die Gesamtdatei darf
 nach Ergaenzung maximal 1 MiB enthalten; fehlende/zu grosse/ungueltige Dateien
 bleiben unveraendert. Lokale Ablage und WebDAV verwenden die gemeinsame
 Prozesssperre ueber Lesen, Pruefen und Schreiben, ebenso wie Upload/Office/Texteditor.
-Direkte externe WebDAV-Schreiber kennen diese Tareas-Sperre nicht.
+Direkte externe WebDAV-Schreiber kennen diese Casos-Sperre nicht.
 Audit und Ergebnis enthalten nur Metadaten, keine Dateiinhalte.
 Nach unklarem Netzwerkfehler zuerst `file.read` pruefen: erneutes Anhaengen ist
 nicht idempotent und kann dieselbe Ergaenzung doppelt einfuegen.
@@ -600,15 +600,15 @@ curl --fail '{file_api}/api/tasks/<task_id>/files/upload' \\
 ## Zielprojekt Einrichten
 
 1. `AGENTS.md` im Zielprojekt lesen oder anlegen.
-2. Abschnitt `Tareas-Projektplanung` aus dem Snippet einfuegen.
+2. Abschnitt `Casos-Projektplanung` aus dem Snippet einfuegen.
 3. Lokale MCP-Verfuegbarkeit pruefen.
 4. Falls MCP fehlt: lokale Client-Konfiguration einrichten, Session neu starten.
-5. Tareas-Projekt per MCP suchen oder anlegen.
+5. Casos-Projekt per MCP suchen oder anlegen.
 6. Projekt-ID und erwarteten MCP-User in `AGENTS.md` dokumentieren.
-7. Sprintpakete als Tareas-Subtasks anlegen.
+7. Sprintpakete als Casos-Subtasks anlegen.
 8. Abhaengigkeiten mit `predecessor_ids` bzw. Dependency-Tools modellieren.
 9. Laengere Implementierungsplaene im Zielprojekt unter `docs/TODOS/` ablegen
-   und dort auf Tareas-Projekt-/Subtask-IDs verweisen.
+   und dort auf Casos-Projekt-/Subtask-IDs verweisen.
 10. Fortschritt, Handoffs und Entscheidungen per `handoff.add` dokumentieren.
 
 ## Fachliche Nutzung
@@ -625,14 +625,14 @@ curl --fail '{file_api}/api/tasks/<task_id>/files/upload' \\
 - Assignments: aktuelle Bearbeitung und Verantwortlichkeit.
 
 Markdown-Dateien im Zielprojekt bleiben sinnvoll fuer laengere Plaene,
-Spezifikationen und Sprint-TODOs. Sie ersetzen Tareas nicht, sondern verlinken
-auf Tareas-IDs.
+Spezifikationen und Sprint-TODOs. Sie ersetzen Casos nicht, sondern verlinken
+auf Casos-IDs.
 
 ## Haeufige Fehler
 
-- Token in `AGENTS.md`, docs, `.env`, Logs oder Tareas-Notizen schreiben.
-- `localhost:8504` in einem Remote-Projekt dokumentieren.
-- Kiron (`10.0.12.16:8505`) statt Tareas verwenden.
+- Token in `AGENTS.md`, docs, `.env`, Logs oder Casos-Notizen schreiben.
+- `localhost:8514` in einem Remote-Projekt dokumentieren.
+- Kiron (`10.0.12.16:8505`) statt Casos verwenden.
 - Bei fehlendem MCP eine lokale Schatten-DB anlegen.
 - Andere REST-Endpunkte als die Dateioperationen mit MCP-Bearer aufrufen.
 - Positionsnummern als Dependency-Gueltigkeit interpretieren.

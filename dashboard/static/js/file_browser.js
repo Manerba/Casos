@@ -1,5 +1,5 @@
 /**
- * Tareas - Dateiablage (File Browser)
+ * Casos - Dateiablage (File Browser)
  * Baumansicht und Icon-Grid fuer lokale und WebDAV-Dateien.
  */
 

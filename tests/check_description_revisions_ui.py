@@ -59,8 +59,8 @@ def main():
         browser = pw.chromium.launch()
         page = browser.new_page()
         page.on('pageerror', lambda error: errors.append(str(error)))
-        page.route('http://tareas.test/**', serve)
-        page.goto('http://tareas.test/')
+        page.route('http://casos.test/**', serve)
+        page.goto('http://casos.test/')
         page.evaluate('(translations) => window.t = key => translations[key] || key', json.loads((ROOT/'dashboard/static/i18n/en.json').read_text()))
         for name in ['app_core.js', 'vendor/marked.umd.js', 'vendor/turndown.js', 'markdown_editor.js', 'text_file_editor.js', 'tab_aufgaben.js']:
             page.add_script_tag(content=(ROOT/'dashboard/static/js'/name).read_text())

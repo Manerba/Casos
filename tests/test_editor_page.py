@@ -31,7 +31,7 @@ class EditorPageTests(unittest.TestCase):
         cls.app = app
 
     def setUp(self):
-        temp = tempfile.TemporaryDirectory(prefix="tareas-editor-")
+        temp = tempfile.TemporaryDirectory(prefix="casos-editor-")
         self.addCleanup(temp.cleanup)
         root = Path(temp.name)
         for obj, name, value in ((database, "DB_DIR", root), (database, "DB_PATH", root / "test.db"),

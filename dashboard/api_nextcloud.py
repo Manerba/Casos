@@ -1,5 +1,5 @@
 """
-Tareas - Nextcloud API-Router
+Casos - Nextcloud API-Router
 Nextcloud-Konfiguration und Dateioperationen fuer lokale und WebDAV-Ablagen.
 """
 

@@ -1,17 +1,17 @@
 #!/bin/bash
 #
-# Tareas - Einzeiler-Installation
+# Casos - Einzeiler-Installation
 #
-# Verwendung: curl -s http://188.245.43.207/tareas/install.sh | bash
+# Verwendung: curl -s http://188.245.43.207/casos/install.sh | bash
 #
 
 set -e
 
 REPO_SERVER="188.245.43.207"
-REPO_URL="http://$REPO_SERVER/tareas/repo"
-GPG_KEY_URL="$REPO_URL/tareas-repo.gpg"
-KEYRING_PATH="/etc/apt/keyrings/tareas-repo.gpg"
-SOURCES_LIST="/etc/apt/sources.list.d/tareas.list"
+REPO_URL="http://$REPO_SERVER/casos/repo"
+GPG_KEY_URL="$REPO_URL/casos-repo.gpg"
+KEYRING_PATH="/etc/apt/keyrings/casos-repo.gpg"
+SOURCES_LIST="/etc/apt/sources.list.d/casos.list"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,18 +35,18 @@ else
     error "Konnte Betriebssystem nicht erkennen."
 fi
 
-info "Installiere Tareas auf Ubuntu 24.04..."
+info "Installiere Casos auf Ubuntu 24.04..."
 
 # GPG-Key herunterladen (falls Armor-Format: automatisch konvertieren)
 info "Lade GPG-Key herunter..."
 mkdir -p /etc/apt/keyrings
-curl -fsSL "$GPG_KEY_URL" -o /tmp/tareas-repo-key.tmp
-if file /tmp/tareas-repo-key.tmp | grep -q "PGP public key"; then
-    cp /tmp/tareas-repo-key.tmp "$KEYRING_PATH"
+curl -fsSL "$GPG_KEY_URL" -o /tmp/casos-repo-key.tmp
+if file /tmp/casos-repo-key.tmp | grep -q "PGP public key"; then
+    cp /tmp/casos-repo-key.tmp "$KEYRING_PATH"
 else
-    gpg --dearmor -o "$KEYRING_PATH" /tmp/tareas-repo-key.tmp
+    gpg --dearmor -o "$KEYRING_PATH" /tmp/casos-repo-key.tmp
 fi
-rm -f /tmp/tareas-repo-key.tmp
+rm -f /tmp/casos-repo-key.tmp
 
 # APT-Quelle hinzufuegen
 info "Fuege APT-Quelle hinzu..."
@@ -56,15 +56,15 @@ echo "deb [signed-by=$KEYRING_PATH] $REPO_URL noble main" > "$SOURCES_LIST"
 info "Aktualisiere Paketlisten..."
 apt-get update -qq
 
-info "Installiere Tareas..."
-apt-get install -y tareas
+info "Installiere Casos..."
+apt-get install -y casos
 
 echo ""
-info "=== Tareas erfolgreich installiert ==="
-info "  App:   http://$(hostname -I | awk '{print $1}'):8504/"
-info "  Admin: http://$(hostname -I | awk '{print $1}'):8505/"
-info "  MCP:   http://$(hostname -I | awk '{print $1}'):8506/mcp/ (auch weiter auf Port 8504)"
+info "=== Casos erfolgreich installiert ==="
+info "  App:   http://$(hostname -I | awk '{print $1}'):8514/"
+info "  Admin: http://$(hostname -I | awk '{print $1}'):8515/"
+info "  MCP:   http://$(hostname -I | awk '{print $1}'):8516/mcp/ (auch weiter auf Port 8514)"
 info "  Login: admin / admin"
 echo ""
-info "Updates: apt update && apt upgrade tareas"
+info "Updates: apt update && apt upgrade casos"
 echo ""

@@ -2,14 +2,14 @@
 
 ## Ziel
 
-Login-System mit Session-Cookies und eine Admin-Oberflaeche auf Port 8505 zur Benutzerverwaltung. Nach diesem Sprint kann sich kein Benutzer mehr ohne Anmeldung Aufgaben ansehen.
+Login-System mit Session-Cookies und eine Admin-Oberflaeche auf Port 8515 zur Benutzerverwaltung. Nach diesem Sprint kann sich kein Benutzer mehr ohne Anmeldung Aufgaben ansehen.
 
 ## Kontext
 
-- Bestehende App: FastAPI auf Port 8504, SQLite (`data/tareas.db`), Vanilla JS SPA
+- Bestehende App: FastAPI auf Port 8514, SQLite (`data/casos.db`), Vanilla JS SPA
 - Import-Pattern: `sys.path.insert(0, ...)` in app.py, absolute Imports (`from dashboard.xxx import ...`)
 - Komponenten: ExpandableTable, KPI-Widgets, Theme-System, Notification, DOM-Caching, WYSIWYG-Editor, MsgBox
-- Service: `tareas.service` (`venv/bin/python dashboard/app.py`)
+- Service: `casos.service` (`venv/bin/python dashboard/app.py`)
 
 ## Entscheidungen (vom Benutzer bestaetigt)
 
@@ -20,8 +20,8 @@ Login-System mit Session-Cookies und eine Admin-Oberflaeche auf Port 8505 zur Be
 | Passwort-Hashing | bcrypt (oder argon2 falls verfuegbar) |
 | Initiale Passwoerter | Admin setzt Passwort beim Erstellen eines Benutzers |
 | Passwort aendern | Ja, im Settings-Dropdown der Haupt-App (Modal-Dialog) |
-| Admin-UI Architektur | Geteilte DB + gleicher Static-Ordner, eigener Port 8505 |
-| Admin-Login | Eigener Login-Screen mit Titel "Tareas Admin", initial admin/admin (hartcodiert oder DB-Eintrag) |
+| Admin-UI Architektur | Geteilte DB + gleicher Static-Ordner, eigener Port 8515 |
+| Admin-Login | Eigener Login-Screen mit Titel "Casos Admin", initial admin/admin (hartcodiert oder DB-Eintrag) |
 
 ## Anforderungen
 
@@ -50,13 +50,13 @@ Login-System mit Session-Cookies und eine Admin-Oberflaeche auf Port 8505 zur Be
 - Nach erfolgreichem Login: Weiterleitung zum Aufgaben-Tab
 - Fehlermeldung bei falschem Login
 
-### 4. Admin-UI (Port 8505)
+### 4. Admin-UI (Port 8515)
 
 - Eigene FastAPI-App: `dashboard/admin_app.py`
-- Eigener systemd-Service: `tareas-admin.service`
+- Eigener systemd-Service: `casos-admin.service`
 - Teilt DB und Static-Ordner mit der Haupt-App
 - Eigenes HTML-Template: `dashboard/templates/admin.html`
-- Eigener Login-Bildschirm mit Titel "Tareas Admin" (gleicher Login-Mechanismus, aber nur is_admin=true darf rein)
+- Eigener Login-Bildschirm mit Titel "Casos Admin" (gleicher Login-Mechanismus, aber nur is_admin=true darf rein)
 - Ein Tab: "Benutzerverwaltung"
 
 ### 5. Benutzerverwaltung (Admin-UI Frontend)
@@ -83,7 +83,7 @@ Login-System mit Session-Cookies und eine Admin-Oberflaeche auf Port 8505 zur Be
 ### 7. Infrastruktur
 
 - `requirements.txt`: bcrypt hinzufuegen
-- `scripts/tareas-admin.service`: Neuer systemd-Service fuer Admin-UI auf Port 8505
+- `scripts/casos-admin.service`: Neuer systemd-Service fuer Admin-UI auf Port 8515
 - Secret Key: In `data/secret.key` gespeichert (beim ersten Start automatisch generiert, in .gitignore)
 
 ## Reihenfolge

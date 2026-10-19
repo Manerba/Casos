@@ -1,7 +1,7 @@
 """
-Tareas - MCP-Server (Model Context Protocol)
+Casos - MCP-Server (Model Context Protocol)
 
-Exponiert Tareas-Funktionen als MCP-Tools fuer remote Claude-Code-Instanzen.
+Exponiert Casos-Funktionen als MCP-Tools fuer remote Claude-Code-Instanzen.
 Wird ueber mcp_transport.py an /mcp/ in app.py und mcp_app.py eingebunden.
 
 Authentifizierung: Bearer-Token (gemeinsame Middleware setzt request.state.mcp_user).
@@ -166,14 +166,14 @@ def _subtask_with_predecessors(db, subtask_id: int) -> dict:
 # ============================================================
 
 mcp = FastMCP(
-    name="Tareas",
+    name="Casos",
     middleware=[StructuredToolErrors()],
     mask_error_details=True,
     # Pydantic validiert dieselben Tooltypen im Middleware-Kontext. Die optionale
     # vorgelagerte JSON-Schema-Pruefung des SDK liefert nur Freitextfehler.
     strict_input_validation=False,
     instructions=(
-        "Tareas-Aufgabenverwaltung. Du bist als eigener MCP-User in der DB "
+        "Casos-Aufgabenverwaltung. Du bist als eigener MCP-User in der DB "
         "registriert; alle Aenderungen werden im Audit-Log protokolliert. "
         "Aufgaben (Projekte) haben Teilaufgaben (Subtasks) mit optionalen "
         "Abhaengigkeiten. Felder: description = Spec/Anforderung, notes = "
@@ -186,7 +186,7 @@ mcp = FastMCP(
 
 @mcp.tool
 def get_agent_guide() -> dict:
-    """Liefert die tokenfreie Tareas-Nutzungsanleitung inkl. URLs und AGENTS.md-Snippet."""
+    """Liefert die tokenfreie Casos-Nutzungsanleitung inkl. URLs und AGENTS.md-Snippet."""
     metadata = build_agent_metadata()
     return {
         "metadata": metadata,
@@ -1366,7 +1366,7 @@ def _file_context(task_id: int, path: str, *, write: bool = False, allow_empty: 
         # unveraendert. get_task_storage hat die aktuellen Rechte schon geprueft.
         raise MCPToolError(
             exc.code,
-            f"{exc.message}. In der Tareas-Weboberflaeche die Aufgabe/das Projekt "
+            f"{exc.message}. In der Casos-Weboberflaeche die Aufgabe/das Projekt "
             "oeffnen und ueber den Button 'Dateiablage' eine lokale Ablage oder "
             "WebDAV zuordnen. Bei bestehender Ablage liegt die Konfiguration im "
             "Header des Dateibrowsers. WebDAV muss zuvor von einem Admin "
@@ -1467,7 +1467,7 @@ def file_append(task_id: int, path: str, content: str) -> dict:
     Lokal/WebDAV, optionaler vorhandener UTF-8-BOM bleibt erhalten. Kein
     automatischer Zeilenumbruch, kein UTF-16/Base64, keine Neuanlage.
     Gesamtdatei nach Ergaenzung maximal 1 MiB. Leerer Text aendert keinen Inhalt.
-    Parallele Tareas-Schreibwege teilen dieselbe Prozesssperre. Nach unklarem
+    Parallele Casos-Schreibwege teilen dieselbe Prozesssperre. Nach unklarem
     Netzwerkfehler vor Wiederholung mit file.read pruefen: nicht idempotent.
     """
     user, storage, path = _file_context(task_id, path, write=True)

@@ -21,7 +21,7 @@ from dashboard.mcp_errors import MCPToolError
 
 class ProjectLinkTests(unittest.TestCase):
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="tareas-project-links-")
+        temporary = tempfile.TemporaryDirectory(prefix="casos-project-links-")
         self.addCleanup(temporary.cleanup)
         for name, value in {"DB_DIR": Path(temporary.name), "DB_PATH": Path(temporary.name) / "test.db"}.items():
             patcher = patch.object(database, name, value)

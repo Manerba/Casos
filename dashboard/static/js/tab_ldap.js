@@ -1,5 +1,5 @@
 /**
- * Tareas Admin - LDAP-Tab
+ * Casos Admin - LDAP-Tab
  * LDAP-Konfiguration und AD-Gruppen-Verwaltung
  */
 

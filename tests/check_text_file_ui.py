@@ -107,13 +107,13 @@ def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         context = browser.new_context(viewport={'width': 1440, 'height': 1000})
-        context.route('http://tareas.test/**', serve)
+        context.route('http://casos.test/**', serve)
         context.add_init_script("""document.addEventListener('securitypolicyviolation', event =>
             window.reportCsp({directive: event.effectiveDirective, blocked: event.blockedURI}));""")
         context.expose_binding('reportCsp', lambda _source, data: violations.append(data))
         context.on('page', lambda new_page: new_page.on('pageerror', lambda error: errors.append(str(error))))
         page = context.new_page()
-        page.goto('http://tareas.test/')
+        page.goto('http://casos.test/')
         dialog = page.locator('.text-file-shell')
 
         def open_file(name, view='tree'):
@@ -317,9 +317,9 @@ def main():
         dialog.locator('[data-md-action="cancel"]').click()
         close()
         direct = context.new_page()
-        direct.goto('http://tareas.test/text-editor?taskId=1&path=run.sh')
+        direct.goto('http://casos.test/text-editor?taskId=1&path=run.sh')
         expect(direct.locator('.text-file-plain')).to_have_text(files['run.sh'])
-        direct.goto('http://tareas.test/text-editor')
+        direct.goto('http://casos.test/text-editor')
         expect(direct.locator('main')).to_contain_text('Parameter')
         assert errors == [], errors
         assert violations == [], violations

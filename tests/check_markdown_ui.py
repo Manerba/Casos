@@ -4,7 +4,7 @@ Requires the optional Playwright test dependency and its Chromium browser:
     python -m pip install playwright
     python -m playwright install chromium
     python tests/check_markdown_ui.py
-No running Tareas instance or production data is used.
+No running Casos instance or production data is used.
 """
 
 import json
@@ -64,8 +64,8 @@ def main():
         page = browser.new_page(viewport={'width': 1440, 'height': 1100})
         errors = []
         page.on('pageerror', lambda exc: errors.append(str(exc)))
-        page.route('http://tareas.test/**', serve)
-        page.goto('http://tareas.test/')
+        page.route('http://casos.test/**', serve)
+        page.goto('http://casos.test/')
         translations = json.loads((ROOT / 'dashboard/static/i18n/en.json').read_text())
         page.evaluate('(translations) => window.t = key => translations[key] || key', translations)
         for name in ['expandable_table.js', 'wysiwyg_editor.js', 'app_core.js',

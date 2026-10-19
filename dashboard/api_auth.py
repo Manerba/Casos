@@ -1,5 +1,5 @@
 """
-Tareas - Auth API-Router
+Casos - Auth API-Router
 Login, Logout, Me, Passwort-Aenderung.
 """
 

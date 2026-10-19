@@ -1,4 +1,4 @@
-"""Gemeinsame Validierung fuer Tareas-Aufgabentypen."""
+"""Gemeinsame Validierung fuer Casos-Aufgabentypen."""
 
 ALLOWED_TASK_TYPES = {"aufgabe", "projekt"}
 

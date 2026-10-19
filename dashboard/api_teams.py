@@ -1,5 +1,5 @@
 """
-Tareas - API-Router fuer Freigaben von Aufgaben und Projekten.
+Casos - API-Router fuer Freigaben von Aufgaben und Projekten.
 """
 
 import hashlib

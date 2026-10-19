@@ -88,7 +88,7 @@
 - Daraus den Origin extrahieren (Schema + Host + Port)
 - In der CSP `https: http:` und `*` durch den konkreten OnlyOffice-Origin ersetzen (z.B. `script-src 'self' 'unsafe-inline' http://onlyoffice-host:8080`)
 - Fallback: Wenn keine OnlyOffice-Config vorhanden, restriktive Default-CSP verwenden (`'self'` only)
-- WICHTIG: Keine hardcoded IPs/Hosts - die URL muss aus der DB kommen, da Tareas auf verschiedenen Servern installiert werden kann
+- WICHTIG: Keine hardcoded IPs/Hosts - die URL muss aus der DB kommen, da Casos auf verschiedenen Servern installiert werden kann
 - Performance: OnlyOffice-URL cachen (nicht bei jedem Request DB abfragen), Cache invalidieren wenn Config geaendert wird
 
 ---
@@ -195,12 +195,12 @@
 
 **Status:** Fix - Haertungs-Direktiven hinzufuegen.
 
-**Anweisung:** In allen drei Service-Dateien (`tareas.service`, `tareas-admin.service`, `tareas-ldap-sync.service`) unter `[Service]` folgende Direktiven hinzufuegen:
+**Anweisung:** In allen drei Service-Dateien (`casos.service`, `casos-admin.service`, `casos-ldap-sync.service`) unter `[Service]` folgende Direktiven hinzufuegen:
 - `NoNewPrivileges=true` - verhindert Privilege Escalation
 - `ProtectSystem=strict` - Dateisystem read-only ausser explizit erlaubte Pfade
 - `ProtectHome=yes` - kein Zugriff auf /home, /root
 - `PrivateTmp=true` - eigenes /tmp Verzeichnis
-- `ReadWritePaths=/opt/tareas/data` - Schreibzugriff nur auf data-Verzeichnis
+- `ReadWritePaths=/opt/casos/data` - Schreibzugriff nur auf data-Verzeichnis
 - `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6` - nur noetige Netzwerk-Protokolle
 - `ProtectKernelTunables=yes` - kein Zugriff auf /proc/sys etc.
 - `ProtectControlGroups=yes` - kein cgroups-Zugriff
@@ -212,7 +212,7 @@
 **Status:** Fix - Dediziertes Security-Log hinzufuegen.
 
 **Anweisung:**
-- Separaten Security-Logger konfigurieren, der nach `/var/log/tareas.log` schreibt (Syslog-Format: Timestamp, Level, User, Aktion)
+- Separaten Security-Logger konfigurieren, der nach `/var/log/casos.log` schreibt (Syslog-Format: Timestamp, Level, User, Aktion)
 - Logger in `app.py` oder einer neuen `logging_config.py` konfigurieren (FileHandler, Formatter im Syslog-Stil)
 - Folgende Aktionen loggen (jeweils mit User-ID/Username):
   - Login (erfolgreich + fehlgeschlagen, inkl. IP)
@@ -223,7 +223,7 @@
   - Service-Restart (admin_app.py)
   - Rate-Limit ausgeloest
 - Log-Rotation: via logrotate oder Python RotatingFileHandler
-- Systemd-Service: `ReadWritePaths` um `/var/log/` erweitern (oder `/var/log/tareas.log`)
+- Systemd-Service: `ReadWritePaths` um `/var/log/` erweitern (oder `/var/log/casos.log`)
 
 ---
 
@@ -232,7 +232,7 @@
 **Status:** Fix - Cookie client-seitig loeschen.
 
 **Anweisung:** In `app_core.js`, Funktion `logout()`:
-- Im `catch`-Block (und auch im Erfolgsfall, vor dem Redirect) den Session-Cookie client-seitig loeschen: `document.cookie = 'tareas_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';`
+- Im `catch`-Block (und auch im Erfolgsfall, vor dem Redirect) den Session-Cookie client-seitig loeschen: `document.cookie = 'casos_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';`
 - Damit ist sichergestellt, dass der Cookie auch bei Netzwerk-Fehlern entfernt wird
 
 ---

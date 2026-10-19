@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tareas - LDAP Sync Cron-Script
+Casos - LDAP Sync Cron-Script
 Wird per systemd-Timer oder Crontab aufgerufen.
 Prueft ob genug Zeit seit dem letzten Sync vergangen ist.
 """

@@ -1,12 +1,13 @@
 [Unit]
-Description=Tareas Admin - Benutzerverwaltung (FastAPI)
+Description=Casos MCP - Agentenschnittstelle (Port 8516)
 After=network.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/sdb1/nextcloud/data/mir/files/Dev/Tareas
-ExecStart=/sdb1/nextcloud/data/mir/files/Dev/Tareas/venv/bin/python dashboard/admin_app.py
+User=casos
+Group=casos
+WorkingDirectory=/opt/casos
+ExecStart=/opt/casos/venv/bin/python dashboard/mcp_app.py
 Restart=always
 RestartSec=5
 
@@ -15,7 +16,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=true
-ReadWritePaths=/sdb1/nextcloud/data/mir/files/Dev/Tareas/data /var/log
+ReadWritePaths=/opt/casos/data /var/log
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 ProtectKernelTunables=yes
 ProtectControlGroups=yes
