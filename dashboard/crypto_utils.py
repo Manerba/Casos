@@ -47,10 +47,8 @@ def migrate_plaintext_credentials():
     from dashboard.db_utils import db_query, db_transaction, validate_identifier, ALLOWED_TABLES, ALLOWED_COLUMNS
 
     fields_to_encrypt = [
-        ("nextcloud_config", "password"),
         ("ldap_config", "bind_password"),
         ("mail_config", "password"),
-        ("onlyoffice_config", "jwt_secret"),
     ]
 
     migrated = 0

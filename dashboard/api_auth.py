@@ -125,13 +125,12 @@ async def login(data: LoginRequest, request: Request):
     auth_source = row["auth_source"] if "auth_source" in row.keys() else "local"
     is_active = row["is_active"] if "is_active" in row.keys() else 1
 
-    if auth_source == "ldap":
-        # LDAP-Benutzer: Pruefen ob aktiv
-        if not is_active:
-            logger.warning("Login fehlgeschlagen: LDAP-Benutzer '%s' deaktiviert", data.username)
-            security_log.warning("LOGIN_FAILED user=%s ip=%s", data.username, client_ip)
-            raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
+    if not is_active or auth_source == "mcp":
+        _record_fail(rate_key)
+        security_log.warning("LOGIN_FAILED user=%s ip=%s", data.username, client_ip)
+        raise HTTPException(status_code=401, detail=LOGIN_FAILED_MSG)
 
+    if auth_source == "ldap":
         # LDAP-Config laden und Authentifizierung
         with db_query() as config_db:
             config_row = config_db.execute("SELECT * FROM ldap_config WHERE id = 1").fetchone()

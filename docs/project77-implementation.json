@@ -1,0 +1,68 @@
+{
+  "project_id": 77,
+  "role": "Implementation coordinator; independent acceptance #401 belongs to PL",
+  "base_commit": "fc6a34d",
+  "base_version": "0.0.1+144",
+  "source_capture_commit": "71572183649a3c358ebf0c03fbe36b6d0d684fd0",
+  "specification": "project77-spec.json (snapshot read 2026-10-19; Tareas remains authoritative)",
+  "initial_state": {
+    "git_clean": true,
+    "runtime_data_empty": true,
+    "remote_configured": false
+  },
+  "identity": {
+    "id": 28,
+    "username": "mcp_22",
+    "display_name": "Codex @ Tareas"
+  },
+  "baseline": {
+    "command": "venv/bin/python -m unittest discover -s tests -v",
+    "tests": 219,
+    "seconds": 302.381,
+    "result": "OK; pre-conversion baseline only",
+    "log": "/tmp/casos-project77-baseline-tests.log"
+  },
+  "contract": {
+    "schema": "dashboard/issue_schema.sql",
+    "runtime": "CASOS_DATA_DIR overrides repo/data; refuse unknown or Tareas schema without deleting data",
+    "rights": "all active users read; creator/assignee/admin/explicit editors edit and contribute; creator/admin manage assignment, grants and deletion; no MCP identity privilege",
+    "permissions_service": "require_active_user(db,user); require_issue_access(db,issue_id,user,action='read')->(row,rights)",
+    "issue_service": "get_issue(issue_id,user); list_issues(user,offset=0,limit=50,status=None,assigned_to=None,include_description=False); create_issue(data,user,reason=None); update_issue(issue_id,data,user,reason=None); delete_issue(issue_id,user,reason=None)",
+    "patch_service": "patch_issue_description(issue_id,user,revision,operation,text,old_text=None,reason=None)",
+    "grants": "get_editors(issue_id,user); set_editors(issue_id,user_ids,user,revision,reason=None)",
+    "rest": "/api/issues; /api/issues/{issue_id}; /description PATCH; /editors GET/PUT; /api/users/list",
+    "pagination": "{items,offset,limit,total,next_offset}; stable order; descriptions optional for lists",
+    "revision": "SHA-256 of format + NUL + source; description writes require base revision; grants revision guards full replacement",
+    "events": "issue_events stores status/assignment old_value,new_value as JSON with current actor in same transaction",
+    "attachment_delete": "issue deletion queues storage_name in attachment_gc before metadata cascade; #392 drains retryable garbage queue"
+  },
+  "ownership": {
+    "root": "schema, main app/router integration, core JS, templates, i18n, requirements, version/commits, independent integration review",
+    "capture_analysis": "#390 issue_service, issue_permissions, api_issues, auth, api_auth and test_issues",
+    "attachments_analysis": "preparation #392/#394, parser research; awaiting #390 completion",
+    "settings_ops_analysis": "preparation #395; awaiting #390 completion"
+  },
+  "checks": [
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -p test_issue_initialization.py -v",
+      "result": "4 tests OK, 2.660s",
+      "covers": "fresh start/restart, FK integrity, simultaneous processes, transactional failure, unchanged legacy DB"
+    },
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -p 'test_issue*.py' -v",
+      "result": "24 tests OK, 17.309s; coordinator run after final atomic-audit changes",
+      "covers": "Issue REST/service rights, auth, revisions, grants, concurrency, transactional audit failure, FK/GC, initialization and real HTTP/CSRF"
+    }
+  ],
+  "progress": {
+    "390": "reviewed and tested; commit 0.0.1+145 follows",
+    "391_400": "not completed",
+    "401": "PL only; open"
+  },
+  "constraints": [
+    "No Tareas writes except authorized project handoffs/status through MCP",
+    "No remote/publishing/production-service activation",
+    "Subagents never commit",
+    "Complete packages only after coordinator review and recorded tests"
+  ]
+}

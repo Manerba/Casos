@@ -1,353 +1,96 @@
-"""
-Casos - Basis fuer ein Ticketsystem
-FastAPI Backend, Port 8514
-"""
-
+"""Casos: flat issues, browser API and MCP on port 8514."""
 import logging
-import logging.handlers
+import os
 import sys
 from pathlib import Path
-
-# Sicherstellen, dass 'dashboard' als Package importierbar ist
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Globales Logging: /var/log/casos.log (Syslog-Format)
-LOG_PATH = "/var/log/casos.log"
-_log_formatter = logging.Formatter(
-    fmt="%(asctime)s %(name)s[%(process)d]: %(levelname)s %(message)s",
-    datefmt="%b %d %H:%M:%S",
-)
-try:
-    _file_handler = logging.handlers.RotatingFileHandler(
-        LOG_PATH, maxBytes=5_000_000, backupCount=3, encoding="utf-8",
-    )
-    _file_handler.setFormatter(_log_formatter)
-except PermissionError:
-    # Fallback: stderr wenn /var/log nicht beschreibbar
-    _file_handler = logging.StreamHandler(sys.stderr)
-    _file_handler.setFormatter(_log_formatter)
-
-# Root-Logger konfigurieren (alle dashboard.* Module erben davon)
-_root_logger = logging.getLogger()
-_root_logger.setLevel(logging.INFO)
-_root_logger.addHandler(_file_handler)
-
-# Uvicorn-Logger auf denselben Handler umleiten
-for _uv_name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
-    _uv_logger = logging.getLogger(_uv_name)
-    _uv_logger.handlers.clear()
-    _uv_logger.addHandler(_file_handler)
-    _uv_logger.propagate = False
-
-from fastapi import FastAPI, Depends, Request
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, PlainTextResponse
 import uvicorn
 
-from dashboard.agent_guide import build_agent_guide_markdown, build_agent_metadata
-from dashboard.csp_utils import get_onlyoffice_origin
-from dashboard.api_tasks import router as tasks_router
 from dashboard.api_auth import router as auth_router
-from dashboard.api_teams import router as teams_router
-from dashboard.api_nextcloud import files_router as nextcloud_files_router
-from dashboard.api_onlyoffice import wopi_router, editor_router
+from dashboard.api_issues import router as issues_router
 from dashboard.api_mail import mail_user_router
-from dashboard.auth import get_current_user, _extract_user_from_request
-from dashboard.mcp_transport import install_mcp, mcp_lifespan, api_csrf_protection
+from dashboard.auth import _extract_user_from_request, get_current_user
+from dashboard.errors import ApplicationError
+from dashboard.agent_guide import build_agent_metadata, build_agent_guide_markdown
+from dashboard.mcp_transport import api_csrf_protection, install_mcp, mcp_lifespan
 from dashboard.tls_utils import get_tls_config
 
-
-app = FastAPI(title="Casos", lifespan=mcp_lifespan)
-
-# Auth-Router OHNE globale Dependency (login muss oeffentlich sein)
+app = FastAPI(title='Casos', lifespan=mcp_lifespan)
 app.include_router(auth_router)
-
-# Tasks-Router MIT auth Dependency
-app.include_router(tasks_router, dependencies=[Depends(get_current_user)])
-
-# Teams-Router MIT auth Dependency
-app.include_router(teams_router, dependencies=[Depends(get_current_user)])
-
-# Datei-Endpunkte pruefen Session/MCP-Bearer selbst, Nextcloud-Browse bleibt Session-basiert.
-app.include_router(nextcloud_files_router)
-
-# ONLYOFFICE WOPI-Router OHNE auth (Token-basiert)
-app.include_router(wopi_router)
-
-# ONLYOFFICE Editor-Router MIT auth Dependency
-app.include_router(editor_router, dependencies=[Depends(get_current_user)])
-
-# Mail User-Router MIT auth Dependency
-app.include_router(mail_user_router, dependencies=[Depends(get_current_user)])
-
-# Der bisherige MCP-Endpunkt nutzt denselben Code wie der Dienst auf Port 8516.
+app.include_router(issues_router)
+app.include_router(mail_user_router)
 install_mcp(app)
-
-# Verzeichnisse
-static_dir = Path(__file__).parent / "static"
-templates_dir = Path(__file__).parent / "templates"
-project_root = Path(__file__).parent.parent
-
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+app.middleware('http')(api_csrf_protection)
+root = Path(__file__).parent
+app.mount('/static', StaticFiles(directory=root / 'static'), name='static')
 
 
-app.middleware("http")(api_csrf_protection)
+@app.exception_handler(ApplicationError)
+async def application_error(request, exc):
+    body = {'detail': exc.detail, 'code': exc.code}
+    if exc.field:
+        body['field'] = exc.field
+    if exc.fields:
+        body['fields'] = exc.fields
+    return JSONResponse(body, status_code=exc.status_code)
 
 
-@app.middleware("http")
-async def security_headers(request: Request, call_next):
-    """Security-Header: CSP, X-Frame-Options, X-Content-Type-Options."""
+@app.middleware('http')
+async def security_headers(request, call_next):
     response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    if request.url.path.startswith("/editor"):
-        # OnlyOffice Editor: CSP dynamisch aus DB-Konfiguration bauen
-        origin = get_onlyoffice_origin()
-        if origin:
-            response.headers["Content-Security-Policy"] = (
-                f"default-src 'self'; "
-                f"script-src 'self' 'unsafe-inline' {origin}; "
-                f"style-src 'self' 'unsafe-inline' {origin}; "
-                f"connect-src 'self' {origin}; "
-                f"frame-src {origin}; "
-                f"img-src 'self' data: {origin}; "
-                f"font-src 'self' {origin} data:;"
-            )
-        else:
-            # Kein OnlyOffice konfiguriert: restriktive CSP
-            response.headers["Content-Security-Policy"] = (
-                "default-src 'self'; "
-                "script-src 'self'; "
-                "style-src 'self' 'unsafe-inline';"
-            )
-        # Editor braucht iframe vom Document Server -> SAMEORIGIN statt DENY
-        response.headers["X-Frame-Options"] = "SAMEORIGIN"
-    else:
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers.setdefault("Content-Security-Policy", (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob:; "
-            "connect-src 'self'; "
-            "frame-src 'none';"
-        ))
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'same-origin'
+    response.headers.setdefault('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+    if request.url.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'no-cache'
+    elif request.url.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-store'
     return response
 
 
-@app.middleware("http")
-async def no_cache_static(request, call_next):
-    """Statische Dateien: Browser muss immer beim Server revalidieren."""
-    response = await call_next(request)
-    if request.url.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "no-cache"
-    return response
-
-
-# ============================================================
-# API-Endpunkte (muessen VOR dem Catch-All definiert werden)
-# ============================================================
-
-@app.get("/api/dashboard/info")
+@app.get('/api/dashboard/info')
 async def dashboard_info(user=Depends(get_current_user)):
-    """
-    Template-Informationen und Entwickler-Hilfe.
-    """
-    # Version aus version.txt lesen
-    version = "0.0.0"
-    version_file = project_root / "version.txt"
-    if version_file.exists():
-        version = version_file.read_text().strip()
-
-    return {
-        "version": version,
-        "title": "Casos",
-        "description": "Basis fuer ein Ticketsystem auf FastAPI + Vanilla JS, derzeit Aufgaben- und Projektplanung",
-        "components": [
-            {
-                "name": "ExpandableTable",
-                "description": "Sortierbare, filterbare Tabelle mit aufklappbaren Detail-Rows",
-                "features": [
-                    "Spalten-Konfiguration (Breite, Renderer, Sortierung)",
-                    "Filter (Select, Input, Buttons, Wildcard-Suche)",
-                    "Pagination (konfigurierbare Seitengroessen)",
-                    "Aufklappbare Detail-Rows mit Feldern und Sektionen",
-                    "Sticky Header",
-                    "CSS-Grid-basiertes Layout",
-                ],
-            },
-            {
-                "name": "KPI-Cards / Widget-Dashboard",
-                "description": "Dashboard-Widgets mit KPI-Karten und Tabellen",
-                "features": [
-                    "KPI-Karten mit Icon, Wert, Titel, Farb-Regeln",
-                    "KPI-Sektionen (gruppierte Karten)",
-                    "KPI-Tabellen (kompakte Darstellung)",
-                    "Widget-Dashboard mit parallelem Daten-Laden",
-                    "Formate: number, percent, currency, text",
-                ],
-            },
-            {
-                "name": "Theme-System",
-                "description": "Light/Dark-Theme mit CSS Custom Properties",
-                "features": [
-                    "Persistenz via localStorage",
-                    "CSS-Variablen fuer alle Farben",
-                    "Theme-Toggle im Settings-Dropdown",
-                    "Custom Event 'themeChanged' fuer Komponenten",
-                ],
-            },
-            {
-                "name": "Notification-System",
-                "description": "Toast-Benachrichtigungen (info, success, error)",
-                "features": [
-                    "showNotification(message, type)",
-                    "Auto-Hide nach 3 Sekunden",
-                    "Typen: info, success, error",
-                ],
-            },
-            {
-                "name": "DOM-Caching",
-                "description": "Tab-Inhalte werden beim Wechsel im Speicher gehalten",
-                "features": [
-                    "DocumentFragment-basiertes Caching",
-                    "Scroll-Position wird wiederhergestellt",
-                    "Filter-Zustaende bleiben erhalten",
-                    "Gleicher Tab nochmal = Force-Refresh",
-                ],
-            },
-            {
-                "name": "URL-Routing",
-                "description": "SPA-Routing mit Browser-History-API",
-                "features": [
-                    "Clientseitiges Routing mit pushState",
-                    "Browser-Zurueck/Vorwaerts funktioniert",
-                    "Direkte URLs moeglich (Catch-All im Backend)",
-                    "Rechtsklick -> In neuem Tab oeffnen",
-                ],
-            },
-        ],
-        "how_to_add_tab": {
-            "steps": [
-                "1. JS-Datei erstellen: dashboard/static/js/tab_example.js",
-                "2. Init-Funktion definieren: async function initExampleTab() { ... }",
-                "3. In app_core.js: Tab in switchTab() registrieren",
-                "4. In index.html: Tab-Link in <nav class='tabs'> + <script>-Include",
-                "5. Optional: API-Endpunkt in app.py hinzufuegen",
-                "6. Optional: Tabellen-Config mit ExpandableTable definieren",
-            ],
-            "example": "Siehe expandable_table.js und kpi_grid.js als Referenz",
-        },
-        "api_structure": {
-            "pattern": "/api/{resource}",
-            "examples": [
-                "GET /api/dashboard/info - Diese Info-Seite",
-                "POST /api/dashboard/restart - Server neu starten",
-            ],
-            "conventions": [
-                "GET fuer Lesen, POST fuer Erstellen, PUT fuer Aendern, DELETE fuer Loeschen",
-                "Antwort immer als JSON",
-                "Fehler als { 'error': 'Beschreibung' }",
-            ],
-        },
-    }
+    return {'version': (root.parent / 'version.txt').read_text().strip(), 'title': 'Casos',
+            'description': 'Issues, Updates und lokale Anhänge',
+            'components': ['FastAPI', 'SQLite', 'Vanilla JS', 'Markdown', 'MCP']}
 
 
-@app.get("/agent-guide.md", response_class=PlainTextResponse)
-async def agent_guide(request: Request):
-    """Tokenfreier Bootstrap-Guide fuer Agenten und neue Projekte."""
-    metadata = build_agent_metadata(request)
-    return PlainTextResponse(
-        build_agent_guide_markdown(metadata),
-        media_type="text/markdown; charset=utf-8",
-    )
-
-
-@app.get("/.well-known/casos-agent.json")
-async def agent_well_known(request: Request):
-    """Maschinenlesbare, tokenfreie Agenten-Bootstrap-Information."""
+@app.get('/.well-known/casos-agent.json')
+async def agent_metadata(request: Request):
     return build_agent_metadata(request)
 
 
-# ============================================================
-# HTML-Routen (Catch-All fuer SPA-Routing, NACH API-Routen)
-# ============================================================
+@app.get('/agent-guide.md', response_class=PlainTextResponse)
+async def agent_guide(request: Request):
+    return PlainTextResponse(build_agent_guide_markdown(build_agent_metadata(request)), media_type='text/markdown; charset=utf-8')
 
-@app.get("/login", response_class=HTMLResponse)
+
+@app.get('/login')
 async def login_page():
-    """Login-Seite."""
-    return FileResponse(templates_dir / "login.html")
+    return FileResponse(root / 'templates/login.html')
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get('/')
+@app.get('/issues/{issue_id:int}')
 async def index(request: Request):
-    """Startseite - bei fehlendem Login -> Redirect zu /login."""
-    user = _extract_user_from_request(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=302)
-    return FileResponse(templates_dir / "index.html")
-
-
-@app.get("/editor", response_class=HTMLResponse)
-async def editor_page(request: Request):
-    """ONLYOFFICE Editor-Seite (eigener Tab)."""
-    user = _extract_user_from_request(request)
-    if not user:
-        return RedirectResponse(url="/login", status_code=302)
-    return FileResponse(templates_dir / "editor.html")
-
-
-@app.get("/text-editor", response_class=HTMLResponse)
-@app.get("/handoff", response_class=HTMLResponse)
-async def text_editor_page(request: Request):
-    """Nativer Markdown-/Texteditor und Handoffs im separaten Fenster."""
     if not _extract_user_from_request(request):
-        return RedirectResponse(url="/login", status_code=302)
-    return FileResponse(templates_dir / "text_editor.html", headers={
-        "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'none';",
-    })
+        return RedirectResponse('/login', status_code=302)
+    return FileResponse(root / 'templates/index.html')
 
-
-@app.get("/{path:path}", response_class=HTMLResponse)
-async def catch_all(path: str, request: Request = None):
-    """Catch-All fuer clientseitiges Routing (SPA)."""
-    if request:
-        user = _extract_user_from_request(request)
-        if not user:
-            return RedirectResponse(url="/login", status_code=302)
-    return FileResponse(templates_dir / "index.html")
-
-
-# ============================================================
-# Start
-# ============================================================
 
 def main():
-    """Dashboard starten."""
+    logging.basicConfig(level=logging.INFO)
     tls = get_tls_config()
-    use_tls = tls and tls["enabled"]
-    protocol = "https" if use_tls else "http"
-
-    print("=" * 50)
-    print("Casos - Basis fuer ein Ticketsystem")
-    print("=" * 50)
-    print(f"URL: {protocol}://0.0.0.0:8514")
-    if use_tls:
-        print(f"TLS: {tls['cert_path']}")
-    print("Strg+C zum Beenden")
-    print("=" * 50)
-
-    kwargs = {
-        "host": "0.0.0.0",
-        "port": 8514,
-        "log_config": None,  # Eigenes Logging verwenden (nicht uvicorn-default)
-    }
-    if use_tls:
-        kwargs["ssl_certfile"] = tls["cert_path"]
-        kwargs["ssl_keyfile"] = tls["key_path"]
-
+    kwargs = {'host': os.environ.get('CASOS_HOST', '0.0.0.0'), 'port': int(os.environ.get('CASOS_PORT', '8514'))}
+    if tls and tls['enabled']:
+        kwargs.update(ssl_certfile=tls['cert_path'], ssl_keyfile=tls['key_path'])
     uvicorn.run(app, **kwargs)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

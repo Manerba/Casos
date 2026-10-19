@@ -7,17 +7,16 @@ import hashlib
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import bcrypt
 from fastapi import HTTPException, Request, Response
 from itsdangerous import URLSafeSerializer, BadSignature
 
-from dashboard.database import get_db
+from dashboard.database import DB_DIR, get_db
 
 COOKIE_NAME = "casos_session"
 SESSION_MAX_AGE = 365 * 86400  # 1 Jahr in Sekunden
-SECRET_KEY_PATH = Path(__file__).parent.parent / "data" / "secret.key"
+SECRET_KEY_PATH = DB_DIR / "secret.key"
 
 
 # ============================================================
@@ -56,7 +55,11 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except (ValueError, TypeError):
+        # MCP identities have no password hash and cannot log in by cookie.
+        return False
 
 
 # ============================================================
@@ -71,6 +74,9 @@ def create_session(user_id: int) -> str:
     )
     db = get_db()
     try:
+        db.execute("BEGIN IMMEDIATE")
+        if not db.execute("SELECT 1 FROM users WHERE id = ? AND is_active = 1 AND auth_source != 'mcp'", (user_id,)).fetchone():
+            raise HTTPException(status_code=401, detail="Anmeldung fehlgeschlagen")
         db.execute(
             "INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)",
             (user_id, token, expires_at),
@@ -90,7 +96,7 @@ def validate_session(token: str) -> dict | None:
                       u.email, u.is_admin, u.auth_source
                FROM sessions s
                JOIN users u ON s.user_id = u.id
-               WHERE s.token = ? AND s.expires_at > datetime('now')""",
+               WHERE s.token = ? AND s.expires_at > datetime('now') AND u.is_active = 1 AND u.auth_source != 'mcp'""",
             (token,),
         ).fetchone()
         if not row:
@@ -226,7 +232,8 @@ def validate_mcp_bearer(token: str) -> dict | None:
                       u.email, u.is_admin, u.auth_source
                FROM mcp_tokens t
                JOIN users u ON t.user_id = u.id
-               WHERE t.token_hash = ? AND t.revoked_at IS NULL""",
+               WHERE t.token_hash = ? AND t.revoked_at IS NULL AND u.is_active = 1
+                 AND EXISTS (SELECT 1 FROM mcp_config WHERE id = 1 AND enabled = 1)""",
             (token_hash,),
         ).fetchone()
         if not row:

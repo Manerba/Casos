@@ -1,0 +1,240 @@
+{
+  "project_id": 77,
+  "subtasks": [
+    392,
+    394
+  ],
+  "researched_on": "2026-10-19",
+  "status": "Vorbereitung; keine Implementierung und keine Parser-/Browserprüfungen ausgeführt",
+  "specification": "docs/project77-spec.json vollständig gelesen einschließlich aller Subtasks; Implementierung wartet auf #390",
+  "decision": {
+    "msg_package": "extract-msg==0.56.1",
+    "image_package": "Pillow==12.3.0",
+    "rationale": "extract-msg deckt MSG-Mailkopf, Unicode, Text/HTML/RTF und eingebettete Anhänge mit gepflegter Veröffentlichung ab. Pillow 12.3.0 unterstützt die dokumentierte Python-3.10-Basis. Beide laufen ausschließlich im begrenzten Preview-Unterprozess. Auswahl mit Implementierungskoordination abgestimmt.",
+    "distribution_note": "extract-msg ist GPL-3.0-or-later, Casos-Code bleibt unverändert MIT. Keine pauschale Aussage zur Lizenzkompatibilität. Abhängigkeit, Lizenztexte und Herkunft dokumentieren; Distribution vor späterem Publishing prüfen. Aktueller Auftrag veröffentlicht nichts."
+  },
+  "packages": [
+    {
+      "name": "extract-msg",
+      "version": "0.56.1",
+      "release": "2026-08-14",
+      "python": ">=3.8",
+      "license": "GPL-3.0-or-later",
+      "sources": [
+        "https://pypi.org/project/extract-msg/0.56.1/",
+        "https://github.com/TeamMsgExtractor/msg-extractor/blob/master/extract_msg/__init__.py",
+        "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/master/LICENSE.txt",
+        "https://github.com/TeamMsgExtractor/msg-extractor/wiki/Using-msg-extractor-In-Your-Own-Code"
+      ],
+      "caveats": [
+        "Keine [all]/[image]-Extras: Metadaten beschränken dort Pillow auf <10.",
+        "ReadTheDocs latest meldet noch 0.49.0; API zusätzlich an 0.56.1-Quelltext prüfen.",
+        "delayAttachments=True und insecureFeatures=NONE verwenden; save()/saveAttachments() nie mit Mail-Dateinamen aufrufen.",
+        "Anzahl und Tiefe aus OLE-Verzeichnis prüfen, bevor attachment-Objekte und verschachtelte MSGs initialisiert werden."
+      ]
+    },
+    {
+      "name": "Pillow",
+      "selected_version": "12.3.0",
+      "release": "2026-07-01",
+      "python": ">=3.10",
+      "license": "MIT-CMU",
+      "latest_version": "13.0.0",
+      "latest_release": "2026-10-16",
+      "latest_python": ">=3.11",
+      "sources": [
+        "https://pypi.org/project/pillow/12.3.0/",
+        "https://pypi.org/project/pillow/",
+        "https://pillow.readthedocs.io/en/stable/releasenotes/12.3.0.html",
+        "https://pillow.readthedocs.io/en/stable/handbook/security.html",
+        "https://pillow.readthedocs.io/en/stable/reference/Image.html",
+        "https://github.com/python-pillow/Pillow/blob/main/LICENSE"
+      ],
+      "safe_usage": [
+        "Image.open mit formats=[JPEG,PNG,GIF,WEBP,BMP]",
+        "MAX_IMAGE_PIXELS begrenzen und DecompressionBombWarning als Fehler behandeln",
+        "Nur erstes Bild/Frame laden; neu nach PNG/JPEG kodieren ohne EXIF/ICC/XMP",
+        "Keine EPS/TIFF/SVG-Parser oder externe Konverter aktivieren; nicht unterstützte Formate explizit zum Originaldownload anbieten"
+      ]
+    }
+  ],
+  "alternatives": [
+    {
+      "name": "outlookmsgfile / convert-outlook-msg-file",
+      "license": "MIT",
+      "reason_not_selected": "Kein PyPI-Release und keine offiziellen Fixtures im Repo. Transitive rtfparse-Abhängigkeit zieht extract-msg/GPL ebenfalls ein; compoundfiles zuletzt 2014 veröffentlicht.",
+      "sources": [
+        "https://github.com/JoshData/convert-outlook-msg-file",
+        "https://github.com/JoshData/convert-outlook-msg-file/blob/primary/LICENSE",
+        "https://pypi.org/project/rtfparse/"
+      ]
+    },
+    {
+      "name": "msg-parser",
+      "version": "1.2.0",
+      "release": "2019-12-14",
+      "license": "BSD",
+      "reason_not_selected": "Deutlich älterer letzter Release; extract-msg bietet umfassendere aktuelle MSG-Unterstützung.",
+      "sources": [
+        "https://pypi.org/project/msg-parser/"
+      ]
+    }
+  ],
+  "fixtures": {
+    "repository": "https://github.com/TeamMsgExtractor/msg-extractor",
+    "commit": "18172ea4730fcfef6edaa0bd20e7a9c64bea20b9",
+    "review": "Dateien nur zur Metadaten-/Hash-/Textmarkerprüfung in den Speicher geladen, nicht auf Platte gespeichert und nicht mit Parser ausgeführt. Keine Casos-/Tareas-Nutzerdaten.",
+    "selected": [
+      {
+        "name": "unicode-header.msg",
+        "size": 86016,
+        "sha256": "fe13d8dfba467cd1a6dbc538bef43fccc8ac3fcdcba46cfda1fc15b72fe18a7f",
+        "purpose": "Unicode-Mailkopf, mehrere Empfänger, harmlose Testmail mit example.com-Adressen",
+        "license_note": "Offizieller Fixture im GPL-3.0-or-later-Repository, kein separater Fixture-Lizenzhinweis gefunden; Repository-Lizenz und Herkunft mitliefern.",
+        "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/unicode-header.msg"
+      },
+      {
+        "name": "strangeDate.msg",
+        "size": 31744,
+        "sha256": "9676ca02b32c15bf47bcf4295131d807a2729c2d1cddc53c4d40b57aa6c6d32b",
+        "purpose": "Datumsrandfall, fehlender Absender, längerer Beispieltext",
+        "license_note": "Fixture-Inhalt nennt ausdrücklich CC BY-SA 3.0 Unported, online-convert.com und Wikipedia John_Doe. Diese Attribution/Lizenz gesondert erhalten.",
+        "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/strangeDate.msg",
+        "license_source": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/master/example-msg-files/expected-outputs/2016-02-23_0657%20MSG%20Test%20File/message.text"
+      },
+      {
+        "name": "unicode.msg",
+        "size": 2045952,
+        "sha256": "3c67dc70854b994e469fc14496d23bf778e718831806ebafc72436c840439f9c",
+        "purpose": "Öffentliche ausdrücklich als Parser-Testmail bezeichnete Nachricht mit zwei TIFF-Anhängen; Header/Text und bytegenauer eingebetteter Download",
+        "license_note": "Repository-Lizenz GPL-3.0-or-later und Herkunft erhalten; enthaltene Namen/Adressen stammen aus dem öffentlichen Parser-Testfixture.",
+        "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/unicode.msg"
+      }
+    ],
+    "additional_cases": "Im Test später synthetische/aus Fixtures abgeleitete gekennzeichnete MSGs mit UTF-16-Text, HTML, RTF-only, PNG-CID, gleichnamigen Anhängen, fehlenden Streams, kaputten OLE-Ketten, hoher Anzahl/Tiefe und aktiven/external URLs erzeugen. Niemals reale Nutzer-Mails verwenden."
+  },
+  "planned_limits": {
+    "note": "Technischer Vorschlag, beim Implementieren messen und endgültig dokumentieren; Uploadlimit ist Spec, Vorschaugrenzen sind unabhängig.",
+    "upload_bytes": 524288000,
+    "preview_input_bytes": 26214400,
+    "image_pixels": 20000000,
+    "image_dimension": 10000,
+    "preview_max_dimension": 4096,
+    "image_frames_decoded": 1,
+    "msg_attachment_count": 100,
+    "embedded_attachment_bytes": 20971520,
+    "msg_body_bytes": 1048576,
+    "ole_directory_entries": 4096,
+    "ole_max_path_depth": 16,
+    "embedded_msg_preview_recursion": 0,
+    "worker_wall_seconds": 10,
+    "worker_cpu_seconds": 5,
+    "worker_address_space_bytes": 536870912,
+    "worker_output_bytes": 33554432,
+    "worker_file_descriptors": 32,
+    "per_process_parallel_workers": 2
+  },
+  "worker_design": [
+    "Authentifizierung und aktuelle Issue-/Anhangszuordnung im Hauptprozess vor jedem Original-/Preview-/Embedded-Abruf prüfen; nach langem Parsing Rechte nochmals prüfen.",
+    "Serverseitig geöffnetes read-only Original oder Bytes an unabhängigen Python-Worker; keine Nutzerpfade, kein Shell-Aufruf, keine Credentials/DB/Netzwerkaufrufe im Parser.",
+    "RLIMIT_AS, RLIMIT_CPU, RLIMIT_FSIZE und RLIMIT_NOFILE im Worker vor Parserimport setzen; Elternprozess erzwingt Wall-Timeout und tötet/reapt Worker bei Abbruch.",
+    "Ausgabe begrenzen; stdout/stderr nicht unbeschränkt sammeln. Temporäre Arbeitsverzeichnisse ausschließlich serverseitig erzeugen und in finally entfernen.",
+    "OLE-Verzeichnisse/Streamgrößen vor initialisierten Attachments prüfen. Verschachtelte MSGs nicht rekursiv anzeigen, als geschützten Download anbieten; bei nicht unterstütztem Export ehrliche Einschränkung.",
+    "Keine saveAttachments()-Dateiextraktion mit extern gelieferten Namen. Eingebettete Dateien per numerischem Index an die Original-Anhang-ID binden; Dateiname ausschließlich Metadatum.",
+    "HTML serverseitig mit enger Tag-/Attribut-Allowlist bereinigen; script/style/iframe/object/forms/SVG/MathML und Event-/CSS-Attribute entfernen. Kein bloßes DOMParser-Vorparsen unbereinigten HTML im sichtbaren Browserdokument.",
+    "Externe Bilder, CSS, Fonts und URLs in Ressourcenattributen entfernen. Eindeutige CID-Zuordnung ausschließlich auf authentifizierte Embedded-Image-Routen; übrige cid fehlen kontrolliert.",
+    "Bildderivate nach echter Decoderprüfung neu kodieren, Originaldatei unverändert lassen. SVG in V1 ausdrücklich Download-Fallback, keine aktive SVG-Auslieferung als Preview.",
+    "Alle Antworten private/no-store; Downloads attachment-Disposition plus sandbox/nosniff. Preview-Fehler strukturieren und Originaldownload weiterhin anbieten."
+  ],
+  "api_plan": {
+    "base": "/api/issues/{issue_id}/attachments",
+    "list": "GET base?offset=0&limit=50 -> {items:[metadata],next_offset,can_upload}",
+    "upload": "POST base (genau ein Multipart-Feld file) -> metadata mit id; 500 MiB streamend",
+    "metadata": "GET base/{attachment_id} -> metadata; storage_name nicht öffentlich",
+    "download": "GET base/{attachment_id}/download -> bytegenaues Original, attachment-Disposition",
+    "delete": "DELETE base/{attachment_id} -> {ok:true}; Ersteller/Admin oder Uploader mit aktuellen Beitragsrechten",
+    "preview": "GET base/{attachment_id}/preview -> {kind:image|msg, ...}; strukturierte unsupported/invalid/too_large Fehler",
+    "image": "GET base/{attachment_id}/preview/image -> begrenztes neu kodiertes Rasterbild",
+    "embedded": "GET base/{attachment_id}/embedded/{index}/download und /preview/image; jeder Zugriff prüft Originalrechte",
+    "metadata_fields": [
+      "id",
+      "issue_id",
+      "original_name",
+      "media_type",
+      "size",
+      "uploader_id",
+      "uploader_name",
+      "created_at",
+      "can_delete",
+      "preview_kind",
+      "download_url"
+    ],
+    "services": [
+      "list_attachments(issue_id,user,offset=0,limit=50)",
+      "get_attachment(issue_id,attachment_id,user)",
+      "add_attachment(issue_id,user,original_name,media_type,stream,reason=None)",
+      "delete_attachment(issue_id,attachment_id,user,reason=None)",
+      "process_attachment_gc(limit=100)"
+    ],
+    "deletion": "Metadatenlöschung und attachment_gc-Eintrag atomar in DB; GC nach Commit löscht Datei und Job; Fehler bleiben mit last_error/Log nachvollziehbar. Issue-Löschung queued alle storage_names in derselben Transaktion. Wiederanlauf führt Queue erneut aus.",
+    "upload_crash_consistency": "Interne Namen vor endgültigem Speichern in Cleanup-Queue reservieren; erfolgreiche Veröffentlichung entfernt Queue-Eintrag atomar mit Metadaten. Streamend in Tempdatei schreiben, fsync, atomar umbenennen. GC darf laufenden Upload nicht entfernen: Sperr-/Quittierungsprotokoll koordinieren."
+  },
+  "ownership": {
+    "agent_392": [
+      "dashboard/attachment_service.py",
+      "dashboard/api_attachments.py",
+      "tests/test_attachments.py",
+      "tests/test_attachment_auth.py"
+    ],
+    "later_394": [
+      "dashboard/attachment_preview.py",
+      "dashboard/preview_worker.py",
+      "dashboard/static/js/attachment_preview.js",
+      "dashboard/static/css/attachment_preview.css",
+      "tests/test_attachment_preview.py",
+      "tests/check_attachment_preview_ui.py",
+      "tests/fixtures/msg/"
+    ],
+    "coordinator": [
+      "dashboard/database.py",
+      "dashboard/auth.py",
+      "dashboard/mcp_transport.py",
+      "dashboard/app.py",
+      "dashboard/mcp_app.py",
+      "dashboard/static/js/app_core.js",
+      "dashboard/templates/index.html",
+      "dashboard/static/i18n/*.json",
+      "requirements.txt"
+    ]
+  },
+  "test_plan": [
+    "Zwei normale User, Admin, MCP; globale aktive Lesbarkeit; Upload/Löschen nach Spec; fremder Uploader ohne aktuellen Beitrag darf nicht löschen.",
+    "Gleichnamige/parallele Uploads bytegenau getrennt; kein Overwrite; keine Ordner/Move/Edit/Append-Routen.",
+    "Grenzgröße, Chunked Upload, falsche Content-Length, malformed Multipart, Disconnect, DB-/Storage-Fehler; Tempfiles und offene Handles schließen.",
+    "CSRF, expliziter Bearer vor Cookie, Tokenwiderruf/Kill-Switch, Nutzerdeaktivierung, Entzug während Upload/Preview, Anhang-Issue-Mismatch.",
+    "Einzel-/Issue-Löschung mit Fehler und wiederholbarer GC; Backup/Restore von DB und attachment-Verzeichnis.",
+    "Reale fünf Rasterformate und korrupte/falsch benannte/überdimensionierte Dateien; SVG aktive/externe Inhalte nur Download-Fallback.",
+    "Echte MSG-Fixtures plus synthetische HTML/Text/RTF/CID/Unicode/Attachment-/OLE-/Ressourcenrandfälle; Original und eingebettete Downloads bytegenau.",
+    "Browser: Overlay Fokus/Escape/Tab, Rückgabe, Vergrößern, schmale Ansicht, Light/Dark, Lade-/Fehlermeldung, Download; kein Script oder automatischer externer Request."
+  ],
+  "local_availability": {
+    "extract_msg": false,
+    "olefile": false,
+    "Pillow": false,
+    "playwright": false,
+    "browser_cache": [
+      "webkit-2370",
+      "ffmpeg-1013"
+    ],
+    "existing_browser_tests": [
+      "tests/check_editor_ui.py",
+      "tests/check_text_file_ui.py",
+      "tests/check_file_storage_ui.py"
+    ],
+    "existing_backend_templates": [
+      "tests/test_mcp_endpoints.py",
+      "tests/test_rest_file_auth.py",
+      "tests/test_file_storage.py"
+    ]
+  }
+}

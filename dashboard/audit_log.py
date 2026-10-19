@@ -41,6 +41,7 @@ def log_change(
     changes: dict[str, Any] | None = None,
     *,
     reason: str | None = None,
+    db=None,
 ) -> None:
     """Schreibt einen Eintrag ins Audit-Log.
 
@@ -52,8 +53,21 @@ def log_change(
         changes: Optional dict mit Feld -> neuer Wert (oder {'old': ..., 'new': ...})
         reason: Optionale Begruendung (max. 1000 Zeichen), getrennt vom Feld-Diff.
 
-    Schluckt Fehler bewusst (Audit darf nie den eigentlichen Request zum Scheitern bringen).
+    Mit db gehoert Audit zur bestehenden Transaktion und Fehler werden weitergegeben.
+    Ohne db bleibt der bisherige Best-effort-Aufruf fuer Konfigurationsaktionen erhalten.
     """
+    if db is not None:
+        # Issue services may couple the audit record to their business mutation.
+        # A write error then rolls back both records through the outer transaction.
+        source = (actor.get("auth_source") if actor else None) or "local"
+        actor_type = "mcp" if source == "mcp" else ("system" if actor is None else "user")
+        db.execute(
+            "INSERT INTO audit_log (actor_user_id, actor_type, entity_type, entity_id, action, changes_json, reason) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (actor["id"] if actor else None, actor_type, entity_type, entity_id, action,
+             json.dumps(changes, ensure_ascii=False, default=str) if changes else None, normalize_reason(reason)),
+        )
+        return
     try:
         actor_user_id = actor["id"] if actor else None
         actor_source = (actor.get("auth_source") if actor else None) or "local"

@@ -25,7 +25,7 @@ class MCPAuthMiddleware:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         path = scope.get("path", "")
-        if self.dedicated and re.match(r"/api/tasks/[^/]+/files(?:/|$)", path):
+        if self.dedicated and re.match(r"/api/issues/[^/]+/attachments(?:/|$)", path):
             # REST-Dependencies greifen sonst erst nach dem Multipart-Parser.
             # Die Dependency prueft nach langen Uploads weiterhin erneut.
             try:
@@ -77,8 +77,6 @@ async def api_csrf_protection(request: Request, call_next):
     if (
         request.method in ("POST", "PUT", "DELETE", "PATCH")
         and request.url.path.startswith("/api/")
-        and not request.url.path.startswith("/api/wopi/")
-        and not request.url.path.startswith("/api/onlyoffice/callback")
         and request.headers.get("X-Requested-With") != "XMLHttpRequest"
     ):
         return JSONResponse(status_code=403, content={"detail": "CSRF-Validierung fehlgeschlagen"})

@@ -1,481 +1,68 @@
-"""
-Casos - SQLite Datenbank
-Schema, Initialisierung und Verbindungsmanagement.
-"""
-
+"""Casos issue schema. Legacy Tareas databases require an explicit migration."""
 import fcntl
+import os
 import sqlite3
 from contextlib import closing
 from pathlib import Path
 
-DB_DIR = Path(__file__).parent.parent / "data"
-DB_PATH = DB_DIR / "casos.db"
-
-DEFAULT_AREAS = ["Entwicklung", "Design", "Planung", "Testing", "Allgemein"]
+DB_DIR = Path(os.environ.get('CASOS_DATA_DIR', Path(__file__).parent.parent / 'data'))
+DB_PATH = DB_DIR / 'casos.db'
+SCHEMA_VERSION = 1
 
 
 def get_db() -> sqlite3.Connection:
-    """Liefert eine SQLite-Verbindung mit Row-Factory und Foreign Keys."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=30)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute('PRAGMA foreign_keys = ON')
     return conn
 
 
 def init_db():
-    """Initialisiert die DB exklusiv gegenueber anderen App-/Scheduler-Prozessen."""
     DB_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Vor dem ersten SQLite-Zugriff sperren, auch journal_mode=WAL kann kollidieren.
-    # Eine DB-Transaktion reicht nicht: executescript() committet zwischendurch.
-    # Die Datei bleibt bestehen, damit alle Prozesse denselben Inode sperren.
-    lock_path = DB_PATH.with_suffix(DB_PATH.suffix + ".init.lock")
-    with lock_path.open("a") as lock:
+    with DB_PATH.with_suffix('.db.init.lock').open('a') as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        with closing(sqlite3.connect(str(DB_PATH))) as conn:
+        with closing(sqlite3.connect(str(DB_PATH), timeout=30)) as conn:
             _initialize_db(conn)
-    # close() gibt die Sperre auch bei Fehlern automatisch frei.
 
 
-def _initialize_db(conn: sqlite3.Connection):
-    """Schema, Migrationen und Default-Daten unter der Initialisierungssperre."""
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys = ON")
+def _initialize_db(conn):
+    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
+    if tables and ('schema_info' not in tables or 'issues' not in tables):
+        raise RuntimeError('Existing database is not a Casos issue database. Back up database, secret and files; use a fresh CASOS_DATA_DIR. No data was deleted or migrated.')
+    if tables:
+        version = conn.execute('SELECT version FROM schema_info').fetchall()
+        if version != [(SCHEMA_VERSION,)]:
+            raise RuntimeError('Unsupported Casos database schema version; back up before upgrading.')
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA foreign_keys=ON')
+    # DDL and bootstrap are one transaction, so a failed first start can retry.
+    schema = Path(__file__).with_name('issue_schema.sql').read_text()
+    conn.execute('BEGIN IMMEDIATE')
+    try:
+        for statement in schema.split(';'):
+            if statement.strip():
+                conn.execute(statement)
+        if not tables:
+            conn.execute('INSERT INTO schema_info(version) VALUES (?)', (SCHEMA_VERSION,))
+        if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
+            import bcrypt
+            hashed = bcrypt.hashpw(b'admin', bcrypt.gensalt()).decode()
+            conn.execute("INSERT INTO users(username,password_hash,vorname,is_admin) VALUES('admin',?,'Administrator',1)", (hashed,))
+        _default_templates(conn)
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
 
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS areas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
 
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now')),
-            deadline TEXT,
-            priority INTEGER DEFAULT 50,
-            task_type TEXT DEFAULT 'aufgabe',
-            status TEXT DEFAULT 'offen',
-            description TEXT DEFAULT ''
-        );
-
-        CREATE TABLE IF NOT EXISTS sub_tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-            name TEXT NOT NULL,
-            area_id INTEGER REFERENCES areas(id) ON DELETE SET NULL,
-            created_at TEXT DEFAULT (datetime('now')),
-            deadline TEXT,
-            priority INTEGER DEFAULT 50,
-            status_percent INTEGER DEFAULT 0
-        );
-
-        CREATE TABLE IF NOT EXISTS sub_task_dependencies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
-            depends_on_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
-            UNIQUE(sub_task_id, depends_on_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            vorname TEXT DEFAULT '',
-            nachname TEXT DEFAULT '',
-            email TEXT DEFAULT '',
-            is_admin INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            token TEXT NOT NULL UNIQUE,
-            created_at TEXT DEFAULT (datetime('now')),
-            expires_at TEXT NOT NULL
-        );
-    """)
-
-    # Migrationen: Spalten hinzufuegen falls nicht vorhanden
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(sub_tasks)").fetchall()]
-
-    if "description" not in cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN description TEXT DEFAULT ''")
-
-    if "position_number" not in cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN position_number INTEGER")
-        # Bestehende SubTasks nachtraeglich nummerieren (pro Projekt)
-        projects = conn.execute(
-            "SELECT DISTINCT project_id FROM sub_tasks"
-        ).fetchall()
-        for (pid,) in projects:
-            rows = conn.execute(
-                "SELECT id FROM sub_tasks WHERE project_id = ? ORDER BY created_at ASC, id ASC",
-                (pid,),
-            ).fetchall()
-            for i, (sid,) in enumerate(rows, start=1):
-                conn.execute(
-                    "UPDATE sub_tasks SET position_number = ? WHERE id = ?", (i, sid)
-                )
-
-    # Migration: created_by fuer tasks
-    task_cols = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
-    if "parent_subtask_id" not in task_cols:
-        conn.execute(
-            "ALTER TABLE tasks ADD COLUMN parent_subtask_id INTEGER "
-            "REFERENCES sub_tasks(id) ON DELETE SET NULL"
-        )
-    conn.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_parent_subtask "
-        "ON tasks(parent_subtask_id) WHERE parent_subtask_id IS NOT NULL"
-    )
-    if "created_by" not in task_cols:
-        conn.execute("ALTER TABLE tasks ADD COLUMN created_by INTEGER REFERENCES users(id)")
-
-    # Migration: assigned_to fuer tasks
-    if "assigned_to" not in task_cols:
-        conn.execute("ALTER TABLE tasks ADD COLUMN assigned_to INTEGER REFERENCES users(id)")
-
-    # Migration: created_by und assigned_to fuer sub_tasks
-    sub_cols = [r[1] for r in conn.execute("PRAGMA table_info(sub_tasks)").fetchall()]
-    if "created_by" not in sub_cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN created_by INTEGER REFERENCES users(id)")
-    if "assigned_to" not in sub_cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN assigned_to INTEGER REFERENCES users(id)")
-
-    # Migration: Netzplan-Positionen
-    if "netzplan_x" not in sub_cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN netzplan_x REAL")
-    if "netzplan_y" not in sub_cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN netzplan_y REAL")
-
-    # Migration: Netzplan-Projektknoten-Position
-    if "netzplan_project_x" not in task_cols:
-        conn.execute("ALTER TABLE tasks ADD COLUMN netzplan_project_x REAL")
-    if "netzplan_project_y" not in task_cols:
-        conn.execute("ALTER TABLE tasks ADD COLUMN netzplan_project_y REAL")
-
-    # Migration: Abhaengigkeit vom Projektknoten
-    if "depends_on_project" not in sub_cols:
-        conn.execute("ALTER TABLE sub_tasks ADD COLUMN depends_on_project INTEGER DEFAULT 0")
-
-    # Migration: Notes-Tabellen
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS task_notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            content TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(task_id, user_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS sub_task_notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            content TEXT DEFAULT '',
-            created_at TEXT DEFAULT (datetime('now')),
-            updated_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(sub_task_id, user_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS task_note_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            content TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS sub_task_note_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sub_task_id INTEGER NOT NULL REFERENCES sub_tasks(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            content TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS project_members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            can_read INTEGER DEFAULT 1,
-            can_edit INTEGER DEFAULT 0,
-            can_create INTEGER DEFAULT 0,
-            added_at TEXT DEFAULT (datetime('now')),
-            UNIQUE(project_id, user_id)
-        );
-
-    """)
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_task_note_entries_task_created "
-        "ON task_note_entries(task_id, created_at DESC)"
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_task_note_entries_user "
-        "ON task_note_entries(user_id)"
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_sub_task_note_entries_subtask_created "
-        "ON sub_task_note_entries(sub_task_id, created_at DESC)"
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_sub_task_note_entries_user "
-        "ON sub_task_note_entries(user_id)"
-    )
-
-    # Migration: subtask_permissions entfernen (nicht mehr benoetigt)
-    conn.execute("DROP TABLE IF EXISTS subtask_permissions")
-
-    # Migration: LDAP-Felder fuer users-Tabelle
-    user_cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
-    if "auth_source" not in user_cols:
-        conn.execute("ALTER TABLE users ADD COLUMN auth_source TEXT DEFAULT 'local'")
-    if "ldap_dn" not in user_cols:
-        conn.execute("ALTER TABLE users ADD COLUMN ldap_dn TEXT")
-    if "is_active" not in user_cols:
-        conn.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
-
-    # LDAP-Config Tabelle
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS ldap_config (
-            id INTEGER PRIMARY KEY,
-            server TEXT NOT NULL,
-            port INTEGER DEFAULT 389,
-            use_ssl INTEGER DEFAULT 0,
-            bind_dn TEXT NOT NULL,
-            bind_password TEXT NOT NULL,
-            search_base TEXT NOT NULL,
-            group_dn TEXT,
-            group_name TEXT,
-            sync_interval_minutes INTEGER DEFAULT 60,
-            last_sync_at TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS nextcloud_config (
-            id INTEGER PRIMARY KEY,
-            server_url TEXT NOT NULL,
-            username TEXT NOT NULL,
-            password TEXT NOT NULL,
-            base_path TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS onlyoffice_config (
-            id INTEGER PRIMARY KEY,
-            server_url TEXT NOT NULL,
-            jwt_secret TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS wopi_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            token TEXT NOT NULL UNIQUE,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-            file_path TEXT NOT NULL,
-            permissions TEXT DEFAULT 'edit',
-            created_at TEXT DEFAULT (datetime('now')),
-            expires_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS wopi_locks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            file_id TEXT NOT NULL UNIQUE,
-            lock_id TEXT NOT NULL,
-            user_id INTEGER NOT NULL,
-            created_at TEXT DEFAULT (datetime('now')),
-            expires_at TEXT NOT NULL
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_wopi_tokens_token ON wopi_tokens(token);
-    """)
-
-    # Migration: nextcloud_path fuer tasks
-    task_cols2 = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
-    if "nextcloud_path" not in task_cols2:
-        conn.execute("ALTER TABLE tasks ADD COLUMN nextcloud_path TEXT")
-    if "file_storage_type" not in task_cols2:
-        conn.execute("ALTER TABLE tasks ADD COLUMN file_storage_type TEXT")
-        conn.execute("UPDATE tasks SET file_storage_type = 'webdav' WHERE nextcloud_path IS NOT NULL AND nextcloud_path != ''")
-
-    # App-Config Tabelle
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS app_config (
-            id INTEGER PRIMARY KEY,
-            server_address TEXT NOT NULL DEFAULT 'localhost:8514'
-        );
-    """)
-
-    # TLS-Config Tabelle
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS tls_config (
-            id INTEGER PRIMARY KEY,
-            enabled INTEGER DEFAULT 0,
-            cert_path TEXT NOT NULL,
-            key_path TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS tls_verify_config (
-            id INTEGER PRIMARY KEY,
-            verify_nextcloud INTEGER DEFAULT 0,
-            verify_onlyoffice INTEGER DEFAULT 0,
-            verify_smtp INTEGER DEFAULT 0,
-            verify_ldap INTEGER DEFAULT 0
-        );
-    """)
-
-    # Mail-Tabellen
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS mail_config (
-            id INTEGER PRIMARY KEY,
-            smtp_server TEXT NOT NULL,
-            smtp_port INTEGER DEFAULT 587,
-            encryption TEXT DEFAULT 'starttls',
-            auth_enabled INTEGER DEFAULT 1,
-            username TEXT DEFAULT '',
-            password TEXT DEFAULT '',
-            from_address TEXT NOT NULL,
-            from_name TEXT DEFAULT 'Casos',
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS mail_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_type TEXT NOT NULL UNIQUE,
-            subject TEXT NOT NULL,
-            body_text TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS user_mail_preferences (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            event_type TEXT NOT NULL,
-            enabled INTEGER DEFAULT 1,
-            days_before INTEGER DEFAULT 2,
-            UNIQUE(user_id, event_type)
-        );
-    """)
-
-    # MCP-Tabellen (Token-Verwaltung, Audit-Log, globale Config)
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS mcp_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            token_hash TEXT NOT NULL UNIQUE,
-            display_name TEXT NOT NULL,
-            created_at TEXT DEFAULT (datetime('now')),
-            last_used_at TEXT,
-            revoked_at TEXT,
-            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_mcp_tokens_hash ON mcp_tokens(token_hash);
-
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT DEFAULT (datetime('now')),
-            actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-            actor_type TEXT NOT NULL,
-            entity_type TEXT NOT NULL,
-            entity_id INTEGER,
-            action TEXT NOT NULL,
-            changes_json TEXT,
-            reason TEXT
-        );
-        CREATE INDEX IF NOT EXISTS idx_audit_log_timestamp ON audit_log(timestamp DESC);
-        CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id);
-        CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor_user_id);
-
-        CREATE TABLE IF NOT EXISTS mcp_config (
-            id INTEGER PRIMARY KEY,
-            enabled INTEGER DEFAULT 1
-        );
-        INSERT OR IGNORE INTO mcp_config (id, enabled) VALUES (1, 1);
-    """)
-
-    # Alte Inhalte unveraendert behalten; neue Inhalte sind Markdown. Die Markierung
-    # ist noetig, damit Markdown mit HTML-Codebeispielen nie als Alt-HTML gilt.
-    # DDL und Markierung gemeinsam committen, auch nach einem abgebrochenen Upgrade.
-    with conn:
-        conn.execute("BEGIN IMMEDIATE")
-        if "reason" not in {r[1] for r in conn.execute("PRAGMA table_info(audit_log)")}:
-            conn.execute("ALTER TABLE audit_log ADD COLUMN reason TEXT")
-        for info_sql, column, alter_sql, mark_sql in (
-            ("PRAGMA table_info(tasks)", "description_format",
-             "ALTER TABLE tasks ADD COLUMN description_format TEXT NOT NULL DEFAULT 'markdown'",
-             "UPDATE tasks SET description_format = 'legacy'"),
-            ("PRAGMA table_info(sub_tasks)", "description_format",
-             "ALTER TABLE sub_tasks ADD COLUMN description_format TEXT NOT NULL DEFAULT 'markdown'",
-             "UPDATE sub_tasks SET description_format = 'legacy'"),
-            ("PRAGMA table_info(task_notes)", "content_format",
-             "ALTER TABLE task_notes ADD COLUMN content_format TEXT NOT NULL DEFAULT 'markdown'",
-             "UPDATE task_notes SET content_format = 'legacy'"),
-            ("PRAGMA table_info(sub_task_notes)", "content_format",
-             "ALTER TABLE sub_task_notes ADD COLUMN content_format TEXT NOT NULL DEFAULT 'markdown'",
-             "UPDATE sub_task_notes SET content_format = 'legacy'"),
-            ("PRAGMA table_info(task_note_entries)", "content_format",
-             "ALTER TABLE task_note_entries ADD COLUMN content_format TEXT NOT NULL DEFAULT 'markdown'",
-             "UPDATE task_note_entries SET content_format = 'legacy'"),
-            ("PRAGMA table_info(sub_task_note_entries)", "content_format",
-             "ALTER TABLE sub_task_note_entries ADD COLUMN content_format TEXT NOT NULL DEFAULT 'markdown'",
-             "UPDATE sub_task_note_entries SET content_format = 'legacy'"),
-        ):
-            if column not in {r[1] for r in conn.execute(info_sql)}:
-                conn.execute(alter_sql)
-                conn.execute(mark_sql)
-
-    # One cross-type FTS5 corpus, initial backfill and source-table triggers.
-    # No executescript here: schema, triggers and backfill must commit together.
-    from dashboard.search_service import initialize_search_index
-    with conn:
-        conn.execute("BEGIN IMMEDIATE")
-        initialize_search_index(conn)
-
-    # Default-Mail-Templates einfuegen (nur wenn Tabelle leer)
-    tmpl_count = conn.execute("SELECT COUNT(*) FROM mail_templates").fetchone()[0]
-    if tmpl_count == 0:
-        default_templates = [
-            ("task_assigned", "Aufgabe zugewiesen: {task_name}",
-             "Hallo {recipient_name},\n\nDir wurde die Aufgabe \"{task_name}\" von {actor_name} zugewiesen.\n\nDeadline: {deadline}\nPrioritaet: {priority}\n\nViele Gruesse\nCasos\n\n{app_url}"),
-            ("status_change", "Status geaendert: {task_name}",
-             "Hallo {recipient_name},\n\nDer Status der Aufgabe \"{task_name}\" wurde von {actor_name} auf \"{new_status}\" geaendert.\n\nViele Gruesse\nCasos\n\n{app_url}"),
-            ("deadline_reached", "Faelligkeit heute: {task_name}",
-             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist heute faellig.\n\nBitte pruefe den aktuellen Stand.\n\nViele Gruesse\nCasos\n\n{app_url}"),
-            ("deadline_warning", "Faelligkeit in {days_before} Tagen: {task_name}",
-             "Hallo {recipient_name},\n\nDie Aufgabe \"{task_name}\" ist in {days_before} Tagen faellig (Deadline: {deadline}).\n\nViele Gruesse\nCasos\n\n{app_url}"),
-            ("invite", "Einladung zu Casos",
-             "Hallo {recipient_name},\n\nDu wurdest zu Casos eingeladen.\n\nBenutzername: {username}\nURL: {app_url}\n\nBitte melde dich an und aendere dein Passwort.\n\nViele Gruesse\nCasos"),
-            ("test", "Testmail von Casos",
-             "Dies ist eine Testmail von Casos.\n\nWenn du diese Mail erhaeltst, funktioniert der Mailversand korrekt."),
-        ]
-        for event_type, subject, body_text in default_templates:
-            conn.execute(
-                "INSERT INTO mail_templates (event_type, subject, body_text) VALUES (?, ?, ?)",
-                (event_type, subject, body_text),
-            )
-
-    # Default-Bereiche einfuegen (nur wenn Tabelle leer)
-    cursor = conn.execute("SELECT COUNT(*) FROM areas")
-    if cursor.fetchone()[0] == 0:
-        for area in DEFAULT_AREAS:
-            conn.execute("INSERT INTO areas (name) VALUES (?)", (area,))
-
-    # Default-Admin anlegen (nur wenn keine User vorhanden)
-    user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    if user_count == 0:
-        import bcrypt
-        hashed = bcrypt.hashpw("admin".encode(), bcrypt.gensalt()).decode()
-        conn.execute(
-            "INSERT INTO users (username, password_hash, vorname, nachname, is_admin) VALUES (?, ?, ?, ?, ?)",
-            ("admin", hashed, "Administrator", "", 1),
-        )
-
-    conn.commit()
+def _default_templates(conn):
+    templates = [
+        ('issue_assigned', 'Issue zugewiesen: {issue_title}', 'Hallo {recipient_name},\n\n{actor_name} hat dir das Issue "{issue_title}" zugewiesen.\nFälligkeit: {deadline}\nPriorität: {priority}\n\n{issue_url}'),
+        ('status_change', 'Status geändert: {issue_title}', 'Hallo {recipient_name},\n\n{actor_name} hat den Status von "{issue_title}" auf {new_status} geändert.\n\n{issue_url}'),
+        ('new_update', 'Neues Update: {issue_title}', 'Hallo {recipient_name},\n\n{actor_name} hat ein Update zu "{issue_title}" geschrieben.\n\n{issue_url}'),
+        ('deadline_reached', 'Heute fällig: {issue_title}', 'Hallo {recipient_name},\n\nDas Issue "{issue_title}" ist heute fällig.\n\n{issue_url}'),
+        ('deadline_warning', 'Bald fällig: {issue_title}', 'Hallo {recipient_name},\n\nDas Issue "{issue_title}" ist in {days_before} Tagen fällig.\n\n{issue_url}'),
+        ('invite', 'Einladung zu Casos', 'Hallo {recipient_name},\n\nBenutzername: {username}\nURL: {app_url}\n\nBitte melde dich an und ändere dein Passwort.'),
+        ('test', 'Testmail von Casos', 'Dies ist eine Testmail von Casos.'),
+    ]
+    conn.executemany('INSERT OR IGNORE INTO mail_templates(event_type,subject,body_text) VALUES(?,?,?)', templates)

@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 import os
 
 LOG_DIR = "/var/log"
-LOG_FILE = os.path.join(LOG_DIR, "casos.log")
+LOG_FILE = os.environ.get("CASOS_LOG_FILE", os.path.join(LOG_DIR, "casos.log"))
 
 
 def setup_security_logger():
