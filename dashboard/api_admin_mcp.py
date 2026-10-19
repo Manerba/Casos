@@ -31,15 +31,10 @@ router = APIRouter(prefix="/api/admin/mcp", tags=["mcp-admin"])
 # Static tool list (Sync mit mcp_server.py). Bewusst hardcoded fuer Robustheit
 # und um Import-Reihenfolge-Probleme zu vermeiden.
 MCP_TOOLS = [
-    "get_agent_guide",
-    "list_projects", "list_projects_page", "get_project", "get_project_status", "create_project", "update_project", "delete_project", "patch_description",
-    "list_subtasks", "get_subtask", "create_subtask", "update_subtask", "delete_subtask",
-    "move_subtask", "set_subtask_position",
-    "add_dependency", "remove_dependency",
-    "note.list", "note.write", "note.update", "note.delete",
-    "handoff.list", "handoff.get", "handoff.add", "handoff.update", "handoff.delete",
-    "file.list", "file.read", "file.write", "file.append", "file.mkdir", "file.move", "file.delete",
-    "list_users", "list_areas", "search", "assign_self", "whoami",
+    "whoami", "get_agent_guide", "issue.list", "issue.get", "issue.create", "issue.update", "issue.delete",
+    "issue.patch_description", "issue.editors.get", "issue.editors.set",
+    "update.list", "update.get", "update.add", "update.edit", "update.delete",
+    "attachment.list", "attachment.add", "attachment.read", "attachment.delete", "users.list", "search",
 ]
 
 

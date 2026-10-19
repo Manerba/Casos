@@ -24,12 +24,14 @@ from dashboard.api_admin_mcp import router as admin_mcp_router
 from dashboard.auth import _extract_user_from_request, get_current_user, get_admin_user
 from dashboard.errors import ApplicationError
 from dashboard.agent_guide import build_agent_metadata, build_agent_guide_markdown
+from dashboard.api_search import router as search_router
 from dashboard.mcp_transport import api_csrf_protection, install_mcp, mcp_lifespan
 from dashboard.tls_utils import get_tls_config
 
 app = FastAPI(title='Casos', lifespan=mcp_lifespan)
 app.include_router(auth_router)
 app.include_router(issues_router)
+app.include_router(search_router)
 app.include_router(updates_router)
 app.include_router(attachments_router)
 app.include_router(mail_user_router)

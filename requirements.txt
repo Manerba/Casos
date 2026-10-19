@@ -6,7 +6,9 @@ ldap3>=2.9.1
 httpx>=0.28.1
 python-multipart>=0.0.22
 cryptography>=46.0.5
-fastmcp>=3.0
+fastmcp==3.3.1
+mcp==1.27.1
 # Bounded attachment preview worker; versions verified for Python >=3.10.
 extract-msg==0.56.1
 Pillow==12.3.0
+striprtf==0.0.33

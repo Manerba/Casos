@@ -1,0 +1,100 @@
+{
+  "project": 77,
+  "subtask": 397,
+  "service": {
+    "module": "dashboard.search_service",
+    "initialize": "initialize_search_index(db) after source DDL inside init_db BEGIN IMMEDIATE, before commit",
+    "maintenance": "rebuild_search_index(db) inside db_transaction(); preserves caller transaction through SAVEPOINT",
+    "search": "search_content(db, user, query, limit=20, *, offset=0, issue_id=None, types=None, since=None) -> page"
+  },
+  "rest": {
+    "method": "GET",
+    "path": "/api/search",
+    "auth": "Current cookie session, get_current_user; service rechecks active identity",
+    "parameters": {
+      "query": "Literal AND terms, double-quoted phrases, trailing word* prefixes; max 1000 Unicode characters and 32 terms/phrases",
+      "limit": "Integer 1..200, default 20",
+      "offset": "Integer 0..9223372036854775807, default 0",
+      "issue_id": "Optional positive SQLite integer ID; unknown ID yields an empty filtered page",
+      "types": "Repeated query parameters types=issue&types=update; omitted means both; unknown values rejected",
+      "since": "Optional inclusive ISO8601 lower bound with explicit timezone, e.g. 2026-10-19T16:00:00+02:00"
+    }
+  },
+  "page": {
+    "items": [
+      {
+        "type": "issue | update",
+        "id": "Source row ID",
+        "issue_id": "Issue ID",
+        "update_id": "Update ID or null for Issue hits",
+        "title": "Current parent Issue title, max 240 characters",
+        "created_at": "UTC ISO8601 with Z",
+        "updated_at": "UTC ISO8601 with Z",
+        "user_id": "Source author ID or null after user deletion",
+        "user": "Current username, max 160 characters, or null",
+        "snippet": "Plain excerpt <=322 visible characters including ellipses",
+        "snippet_html": "HTML-escaped excerpt with only server-generated <mark> highlights",
+        "url": "/issues/{issue_id}; for Updates /issues/{issue_id}?update={update_id}"
+      }
+    ],
+    "total": "Filtered total from the same read snapshot",
+    "offset": "Requested offset",
+    "limit": "Requested limit",
+    "next_offset": "Next offset or null"
+  },
+  "sources": {
+    "issues": [
+      "title",
+      "description"
+    ],
+    "issue_updates": [
+      "content"
+    ],
+    "excluded": [
+      "attachments",
+      "embedded MSG contents",
+      "issue_events"
+    ]
+  },
+  "semantics": {
+    "visibility": "All active users, including active MCP identities, see the same corpus. require_active_user checks current activity and supplied mcp_token_id including revocation and Kill-Switch before any early return. No edit permission required.",
+    "time": "since uses updated_at of both source types, not created_at. Source timestamps are UTC with second resolution; fractional lower bounds round upwards to the next source second. Non-content Issue changes that change updated_at also affect since. Search is not a change feed.",
+    "unicode": "FTS5 unicode61 remove_diacritics 2, case-insensitive, with NFC input normalization. No stemming or arbitrary infix matching.",
+    "ranking": "One shared BM25 corpus with equal title/body weights, ascending BM25 then updated_at descending, type ascending, source ID descending. Raw scores are not exposed.",
+    "query_syntax": "Whitespace/punctuation separate ordinary words combined with AND. Double quotes specify an ordered phrase. A final * expands the final word prefix. Uppercase AND/OR/NOT are literal search terms. FTS control syntax is rejected.",
+    "empty": "Empty/whitespace query and an explicitly empty types list return an empty page after current-identity and filter validation.",
+    "snapshot": "Identity, total, and items share one SQLite read snapshot. Pagination across separate requests may change after concurrent writes.",
+    "snippet_security": "Random per-query FTS markers; source characters HTML-escaped; no stored HTML passed through. Plain excerpts are suitable for textContent."
+  },
+  "index": {
+    "version": 2,
+    "objects": [
+      "search_index_meta",
+      "search_documents view",
+      "search_fts virtual table",
+      "search_issues_ai/au/ad",
+      "search_issue_updates_ai/au/ad"
+    ],
+    "rowid": "Positive Issue ID; negative Update ID, avoiding multiplication overflow or type collisions",
+    "synchronization": "Insert/content-update/delete triggers run in the source transaction. Issue deletion cascades Update deletions and their index triggers. Metadata is joined from authoritative current source rows.",
+    "backfill": "Installation and missing-trigger repair rebuild from authoritative sources atomically. Failure rolls back derived schema changes; source rows are untouched. Existing matching version is retained.",
+    "dependency": "SQLite FTS5/unicode61 required; startup explicitly fails if unavailable, without LIKE fallback."
+  },
+  "errors": [
+    "authentication_required",
+    "inactive_user",
+    "invalid_token",
+    "invalid_search_query",
+    "invalid_search_limit",
+    "invalid_search_offset",
+    "invalid_issue_id",
+    "invalid_search_types",
+    "invalid_search_since",
+    "search_unavailable"
+  ],
+  "verification": {
+    "command": "venv/bin/python -m unittest discover -s tests -p test_issue_search.py -v",
+    "scope": "15 tests: real content matching/ranking/snippets, current users/tokens, REST/service parity, filters/time/pagination, source triggers/cascades, atomic backfill/rollback, restart/idempotency, FTS failure behavior",
+    "mcp": "Root #396 integrates and tests actual MCP transport using the same service."
+  }
+}

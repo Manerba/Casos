@@ -1,0 +1,22 @@
+.issue-search { border:1px solid var(--border-color); border-radius:7px; padding:14px; margin:0 0 18px; background:var(--bg-primary); color:var(--text-primary); }
+.issue-search h3 { margin:0 0 12px; font-size:15px; }
+.issue-search-form { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.issue-search-form label { display:flex; flex-direction:column; gap:5px; font-size:12px; min-width:0; }
+.issue-search-query { flex:1 1 230px; }
+.issue-search input,.issue-search select { width:100%; min-width:0; padding:8px; box-sizing:border-box; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-primary); color:var(--text-primary); font:inherit; font-size:13px; }
+.issue-search-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.issue-search-help,.issue-search-meta { color:var(--text-secondary); font-size:12px; line-height:1.5; }
+.issue-search-help { margin:9px 0 0; }
+.issue-search-feedback { font-size:13px; margin-top:10px; overflow-wrap:anywhere; }
+.issue-search-feedback:empty { display:none; }
+.issue-search-feedback[role=alert] { color:var(--color-bearish); }
+.issue-search-results { list-style:none; margin:12px 0; padding:0; }
+.issue-search-results li { padding:12px 0; border-top:1px solid var(--border-color); overflow-wrap:anywhere; }
+.issue-search-result-link { color:var(--accent-primary); font-weight:600; text-decoration:none; }
+.issue-search-result-link:hover { text-decoration:underline; }
+.issue-search-meta { margin:4px 0; }
+.issue-search-snippet { margin:6px 0 0; font-size:13px; line-height:1.55; white-space:pre-wrap; }
+.issue-search mark { color:#1f2937; background:#fff0a8; font-weight:700; border-radius:2px; }
+.issue-search-pagination { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+.issue-search input:focus-visible,.issue-search select:focus-visible,.issue-search a:focus-visible,.issue-search button:focus-visible { outline:2px solid var(--accent-primary); outline-offset:2px; }
+@media(max-width:650px) { .issue-search { padding:10px; }.issue-search-query { flex-basis:100%; }.issue-search-form>label:not(.issue-search-query) { flex:1 1 130px; }.issue-search-actions { width:100%; }.issue-search-actions button { flex:1; } }

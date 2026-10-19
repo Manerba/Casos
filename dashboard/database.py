@@ -44,6 +44,8 @@ def _initialize_db(conn):
                 conn.execute(statement)
         if not tables:
             conn.execute('INSERT INTO schema_info(version) VALUES (?)', (SCHEMA_VERSION,))
+        from dashboard.search_service import initialize_search_index
+        initialize_search_index(conn)
         if not conn.execute('SELECT 1 FROM users LIMIT 1').fetchone():
             import bcrypt
             hashed = bcrypt.hashpw(b'admin', bcrypt.gensalt()).decode()

@@ -1,12 +1,11 @@
-"""Permission-filtered FTS5 search shared by MCP and future search consumers.
+"""Shared Issue/Update FTS5 search with current identity and one read snapshot.
 
-The index uses one corpus and equal BM25 weights for every source type. Source
-rows remain authoritative: metadata and permissions are joined at query time.
-SQLite source timestamps without a timezone are UTC. Notes use updated_at;
-tasks, subtasks and handoffs use created_at. Search is not a change feed.
+The single BM25 corpus indexes issue title/description and update content. The
+inclusive `since` filter uses updated_at for both sources; this is a content
+search, not a change feed. DB timestamps without a timezone are UTC.
 """
-
-from datetime import datetime, timezone
+from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
 import html
 import re
 import sqlite3
@@ -14,121 +13,94 @@ import unicodedata
 import uuid
 
 from dashboard.errors import ApplicationError
-from dashboard.permissions import task_visibility_sql
+from dashboard.issue_permissions import require_active_user
 
-
-SEARCH_TYPES = (
-    "task", "sub_task", "task_note", "sub_task_note",
-    "task_handoff", "sub_task_handoff",
-)
-_INDEX_VERSION = 1
-# All identifiers/expressions are fixed schema constants, never request input.
+SEARCH_TYPES = ("issue", "update")
+_INDEX_VERSION = 2
 _SOURCES = (
-    ("tasks", "task", "name", "description", "id", "NULL", "created_by", "created_at"),
-    ("sub_tasks", "sub_task", "name", "description", "project_id", "id", "created_by", "created_at"),
-    ("task_notes", "task_note", "''", "content", "task_id", "NULL", "user_id", "updated_at"),
-    ("sub_task_notes", "sub_task_note", "''", "content", "NULL", "sub_task_id", "user_id", "updated_at"),
-    ("task_note_entries", "task_handoff", "''", "content", "task_id", "NULL", "user_id", "created_at"),
-    ("sub_task_note_entries", "sub_task_handoff", "''", "content", "NULL", "sub_task_id", "user_id", "created_at"),
+    ("issues", "issue", "title", "description", "id", "created_by", 1),
+    ("issue_updates", "update", None, "content", "issue_id", "user_id", -1),
 )
 
 
-def _raise_if_fts_missing(exc: sqlite3.OperationalError) -> None:
-    if "no such module" in str(exc).lower():
-        raise RuntimeError(
-            "Casos search requires SQLite FTS5 (unicode61). Install a Python/SQLite "
-            "build with ENABLE_FTS5, then restart; the search migration was rolled back."
-        ) from exc
+@contextmanager
+def _savepoint(db, name):
+    # Names are fixed internal constants, never supplied by callers.
+    db.execute("SAVEPOINT " + name)
+    try:
+        yield
+    except BaseException:
+        db.execute("ROLLBACK TO SAVEPOINT " + name)
+        db.execute("RELEASE SAVEPOINT " + name)
+        raise
+    else:
+        db.execute("RELEASE SAVEPOINT " + name)
 
 
 def rebuild_search_index(db: sqlite3.Connection) -> None:
-    """Rebuild from current source rows atomically; preserves an outer transaction.
-
-    Maintenance callers should use db_transaction(), then call this function.
-    Source writes and rebuilds serialize through SQLite's normal writer lock.
-    """
-    db.execute("SAVEPOINT rebuild_search_index")
-    try:
+    """Rebuild derived index atomically, preserving the caller's transaction."""
+    with _savepoint(db, "rebuild_search_index"):
         db.execute("INSERT INTO search_fts(search_fts) VALUES ('rebuild')")
-        db.execute("RELEASE SAVEPOINT rebuild_search_index")
-    except Exception:
-        db.execute("ROLLBACK TO SAVEPOINT rebuild_search_index")
-        db.execute("RELEASE SAVEPOINT rebuild_search_index")
-        raise
+        db.execute("INSERT INTO search_fts(search_fts, rank) VALUES ('integrity-check', 1)")
 
 
 def initialize_search_index(db: sqlite3.Connection) -> None:
-    """Install/upgrade under init_db's process lock and an IMMEDIATE transaction.
-
-    Missing FTS5 is an explicit startup error; a LIKE fallback would silently
-    change AND, phrase, prefix and ranking semantics. No loadable module needed.
-    """
-    db.execute("CREATE TABLE IF NOT EXISTS search_index_meta (version INTEGER NOT NULL)")
-    version = db.execute("SELECT version FROM search_index_meta").fetchone()
-    existing = {row[0] for row in db.execute(
-        "SELECT name FROM sqlite_master WHERE name LIKE 'search_%'"
-    )}
-    expected = {"search_documents", "search_fts"} | {
-        f"search_{table}_{event}" for table, *_ in _SOURCES for event in ("ai", "au", "ad")
-    }
-    if version and version[0] == _INDEX_VERSION and expected <= existing:
-        # A later Python/SQLite upgrade may remove FTS5 even for an existing DB.
+    """Run after source DDL within init_db's IMMEDIATE transaction/process lock."""
+    with _savepoint(db, "initialize_search_index"):
+        db.execute("CREATE TABLE IF NOT EXISTS search_index_meta (version INTEGER NOT NULL)")
+        versions = db.execute("SELECT version FROM search_index_meta").fetchall()
+        existing = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE name LIKE 'search_%'")}
+        expected = {"search_documents", "search_fts"} | {
+            f"search_{table}_{event}" for table, *_ in _SOURCES for event in ("ai", "au", "ad")
+        }
+        if len(versions) == 1 and versions[0][0] == _INDEX_VERSION and expected <= existing:
+            try:
+                db.execute("SELECT rowid FROM search_fts LIMIT 0")
+            except sqlite3.OperationalError as exc:
+                _raise_if_fts_missing(exc)
+                raise
+            return
+        # Only derived search objects are replaced. Source rows are authoritative.
+        trigger_names = [row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'search_%'")]
+        for name in trigger_names:
+            db.execute('DROP TRIGGER "' + name.replace('"', '""') + '"')
+        db.execute("DROP TABLE IF EXISTS search_fts")
+        db.execute("DROP VIEW IF EXISTS search_documents")
+        selects = []
+        for table, kind, title, body, issue_id, author, sign in _SOURCES:
+            title_sql = f"coalesce(s.{title}, '')" if title else "''"
+            selects.append(
+                f"SELECT s.id * {sign} AS search_id, '{kind}' AS type, s.id AS id, "
+                f"{title_sql} AS title, coalesce(s.{body}, '') AS body, "
+                f"s.{issue_id} AS issue_id, s.{author} AS user_id, "
+                f"s.created_at AS created_at, s.updated_at AS updated_at FROM {table} s"
+            )
+        db.execute("CREATE VIEW search_documents AS " + " UNION ALL ".join(selects))
         try:
-            db.execute("SELECT rowid FROM search_fts LIMIT 0")
+            db.execute("CREATE VIRTUAL TABLE search_fts USING fts5(title, body, "
+                       "content='search_documents', content_rowid='search_id', "
+                       "tokenize='unicode61 remove_diacritics 2', prefix='2 3 4')")
         except sqlite3.OperationalError as exc:
             _raise_if_fts_missing(exc)
             raise
-        return
+        for table, kind, title, body, issue_id, author, sign in _SOURCES:
+            def value(prefix, column):
+                return f"coalesce({prefix}.{column}, '')" if column else "''"
+            insert = ("INSERT INTO search_fts(rowid,title,body) VALUES "
+                      f"(new.id * {sign}, {value('new', title)}, {value('new', body)});")
+            delete = ("INSERT INTO search_fts(search_fts,rowid,title,body) VALUES "
+                      f"('delete', old.id * {sign}, {value('old', title)}, {value('old', body)});")
+            columns = ', '.join(['id', body] + ([title] if title else []))
+            for suffix, event, statements in (("ai", "INSERT", insert), ("au", f"UPDATE OF {columns}", delete + insert), ("ad", "DELETE", delete)):
+                db.execute(f"CREATE TRIGGER search_{table}_{suffix} AFTER {event} ON {table} BEGIN {statements} END")
+        rebuild_search_index(db)
+        db.execute("DELETE FROM search_index_meta")
+        db.execute("INSERT INTO search_index_meta(version) VALUES (?)", (_INDEX_VERSION,))
 
-    # The surrounding transaction rolls this back if schema creation/backfill
-    # fails. Repairing a missing trigger always backfills writes it could miss.
-    for table, *_ in _SOURCES:
-        for event in ("ai", "au", "ad"):
-            db.execute(f"DROP TRIGGER IF EXISTS search_{table}_{event}")
-    db.execute("DROP TABLE IF EXISTS search_fts")
-    db.execute("DROP VIEW IF EXISTS search_documents")
-    selects = []
-    for tag, (table, kind, title, body, project, subtask, author, date) in enumerate(_SOURCES, 1):
-        def col(value):
-            return value if value in ("NULL", "''") else f"s.{value}"
-        # Subtask notes/handoffs get their current parent, including after moves.
-        parent = "st.project_id" if project == "NULL" else col(project)
-        join = " JOIN sub_tasks st ON st.id = s.sub_task_id" if project == "NULL" else ""
-        selects.append(
-            f"SELECT s.id * 8 + {tag} AS search_id, '{kind}' AS type, s.id AS id, "
-            f"coalesce({col(title)}, '') AS title, coalesce({col(body)}, '') AS body, "
-            f"{parent} AS project_id, {col(subtask)} AS subtask_id, "
-            f"{col(author)} AS user_id, {col(date)} AS date FROM {table} s{join}"
-        )
-    db.execute("CREATE VIEW search_documents AS " + " UNION ALL ".join(selects))
-    try:
-        db.execute(
-            "CREATE VIRTUAL TABLE search_fts USING fts5(title, body, "
-            "content='search_documents', content_rowid='search_id', "
-            "tokenize='unicode61 remove_diacritics 2', prefix='2 3 4')"
-        )
-    except sqlite3.OperationalError as exc:
-        _raise_if_fts_missing(exc)
-        raise
-    for tag, (table, _, title, body, *_) in enumerate(_SOURCES, 1):
-        def text_value(prefix, value):
-            return "''" if value == "''" else f"coalesce({prefix}.{value}, '')"
-        insert = (
-            "INSERT INTO search_fts(rowid, title, body) "
-            f"VALUES (new.id * 8 + {tag}, {text_value('new', title)}, {text_value('new', body)});"
-        )
-        delete = (
-            "INSERT INTO search_fts(search_fts, rowid, title, body) "
-            f"VALUES ('delete', old.id * 8 + {tag}, {text_value('old', title)}, {text_value('old', body)});"
-        )
-        indexed_columns = ", ".join(["id", body] + ([title] if title != "''" else []))
-        for suffix, event, statements in (
-            ("ai", "INSERT", insert), ("au", f"UPDATE OF {indexed_columns}", delete + insert), ("ad", "DELETE", delete),
-        ):
-            db.execute(f"CREATE TRIGGER search_{table}_{suffix} AFTER {event} ON {table} BEGIN {statements} END")
-    rebuild_search_index(db)
-    db.execute("DELETE FROM search_index_meta")
-    db.execute("INSERT INTO search_index_meta(version) VALUES (?)", (_INDEX_VERSION,))
+
+def _raise_if_fts_missing(exc):
+    if "no such module" in str(exc).lower():
+        raise RuntimeError("Casos requires SQLite FTS5/unicode61. Use a Python/SQLite build with FTS5; no source data was changed.") from exc
 
 
 def _invalid_query(detail: str):
@@ -195,7 +167,13 @@ def _since_utc(value: str) -> str:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
             raise ValueError
-        return parsed.astimezone(timezone.utc).isoformat()
+        parsed = parsed.astimezone(timezone.utc)
+        # Source services store UTC timestamps at second resolution. Round a
+        # fractional lower bound upwards rather than lose it in SQLite's
+        # millisecond-resolution julianday conversion.
+        if parsed.microsecond:
+            parsed = parsed.replace(microsecond=0) + timedelta(seconds=1)
+        return parsed.isoformat()
     except (ValueError, OverflowError):
         raise ApplicationError(
             400, "since muss ein ISO-8601-Zeitpunkt mit Zeitzone sein, z.B. 2026-10-11T12:00:00Z",
@@ -210,7 +188,13 @@ def _date_utc(value: str | None) -> str | None:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+        parsed = parsed.astimezone(timezone.utc)
+        # Source services store UTC timestamps at second resolution. Round a
+        # fractional lower bound upwards rather than lose it in SQLite's
+        # millisecond-resolution julianday conversion.
+        if parsed.microsecond:
+            parsed = parsed.replace(microsecond=0) + timedelta(seconds=1)
+        return parsed.isoformat().replace("+00:00", "Z")
     except (ValueError, OverflowError):
         return None
 
@@ -253,81 +237,74 @@ def _snippets(raw: str, opening: str, closing: str) -> tuple[str, str]:
 
 def search_content(
     db: sqlite3.Connection, user: dict, query: str, limit: int = 20, *,
-    project_id: int | None = None, types: list[str] | None = None, since: str | None = None,
-) -> list[dict]:
-    """Search current visible rows before LIMIT; never return corpus scores.
+    offset: int = 0, issue_id: int | None = None,
+    types: list[str] | None = None, since: str | None = None,
+) -> dict:
+    """Paginated common BM25 search; rights and count/results share a snapshot.
 
-    `types` accepts the six SEARCH_TYPES and `handoff` (both handoff kinds).
-    `since` is inclusive ISO-8601 with an explicit timezone, normalized to UTC.
-    Empty queries/empty type lists return []. Limits retain legacy 1..200 clamping.
+    Types are `issue` and `update`. Empty text/type lists give an empty page.
+    `since` requires a timezone and is inclusive on each source's updated_at.
+    Ranking is BM25, then modification time descending, type, ID descending.
+    Snippets are bounded plain text plus escaped HTML with only our <mark> tags.
     """
+    with _savepoint(db, "issue_search_snapshot"):
+        require_active_user(db, user)
+        return _search_snapshot(db, query, limit, offset, issue_id, types, since)
+
+
+def _search_snapshot(db, query, limit, offset, issue_id, types, since):
     prepared = prepare_query(query)
-    if type(limit) is not int:
-        raise ApplicationError(400, "limit muss ganzzahlig sein", code="invalid_search_limit", field="limit")
-    limit = max(1, min(limit, 200))
-    if project_id is not None and (type(project_id) is not int or project_id < 1):
-        raise ApplicationError(400, "project_id muss positiv sein", code="invalid_project_id", field="project_id")
+    if type(limit) is not int or not 1 <= limit <= 200:
+        raise ApplicationError(400, "limit muss ganzzahlig zwischen 1 und 200 sein", code="invalid_search_limit", field="limit")
+    if type(offset) is not int or not 0 <= offset <= 2**63 - 1:
+        raise ApplicationError(400, "offset muss eine nichtnegative ganze Zahl sein", code="invalid_search_offset", field="offset")
+    if issue_id is not None and (type(issue_id) is not int or not 1 <= issue_id <= 2**63 - 1):
+        raise ApplicationError(400, "issue_id muss positiv sein", code="invalid_issue_id", field="issue_id")
     selected = list(SEARCH_TYPES)
     if types is not None:
-        if not isinstance(types, list) or any(not isinstance(v, str) or v not in (*SEARCH_TYPES, "handoff") for v in types):
+        if not isinstance(types, list) or any(not isinstance(kind, str) or kind not in SEARCH_TYPES for kind in types):
             raise ApplicationError(400, "Unbekannter Suchtyp", code="invalid_search_types", field="types")
-        selected = [kind for kind in SEARCH_TYPES if kind in types or ("handoff" in types and kind.endswith("_handoff"))]
+        selected = [kind for kind in SEARCH_TYPES if kind in types]
     timestamp = _since_utc(since) if since is not None else None
+    page = {"items": [], "total": 0, "offset": offset, "limit": limit, "next_offset": None}
     if not prepared or not selected:
-        return []
-
-    # Both task- and subtask-level contributions obey the exact current policy.
-    task_visible, task_params = task_visibility_sql(user)
-    subtask_visible, subtask_params = task_visibility_sql(user, subtask=True)
-    conditions = [
-        "search_fts MATCH ?", "d.type IN (" + ",".join("?" for _ in selected) + ")",
-        f"((d.subtask_id IS NULL AND {task_visible}) OR (st.id IS NOT NULL AND {subtask_visible}))",
-    ]
-    params = [prepared, *selected, *task_params, *subtask_params]
-    if project_id is not None:
-        conditions.append("d.project_id = ?")
-        params.append(project_id)
+        return page
+    conditions = ["search_fts MATCH ?", "d.type IN (" + ','.join('?' for _ in selected) + ")"]
+    params = [prepared, *selected]
+    if issue_id is not None:
+        conditions.append("d.issue_id = ?")
+        params.append(issue_id)
     if timestamp is not None:
-        conditions.append("julianday(d.date) >= julianday(?)")
+        conditions.append("julianday(d.updated_at) >= julianday(?)")
         params.append(timestamp)
-    # Random per-query markers cannot be spoofed by stored content.
+    joins = ("FROM search_fts JOIN search_documents d ON d.search_id = search_fts.rowid "
+             "JOIN issues i ON i.id = d.issue_id LEFT JOIN users u ON u.id = d.user_id WHERE " + " AND ".join(conditions))
     marker = uuid.uuid4().hex
     opening, closing = f"<{marker}>", f"</{marker}>"
     try:
+        total = db.execute("SELECT COUNT(*) " + joins, params).fetchone()[0]
         rows = db.execute(
-            "SELECT d.type, d.id, d.project_id, d.subtask_id, d.user_id, d.date, "
-            "substr(d.title, 1, 160) AS name, substr(u.username, 1, 160) AS username, "
-            "snippet(search_fts, -1, ?, ?, ' … ', 24) AS excerpt "
-            "FROM search_fts JOIN search_documents d ON d.search_id = search_fts.rowid "
-            "JOIN tasks t ON t.id = d.project_id "
-            "LEFT JOIN sub_tasks st ON st.id = d.subtask_id AND st.project_id = t.id "
-            "LEFT JOIN users u ON u.id = d.user_id WHERE " + " AND ".join(conditions) +
-            " ORDER BY bm25(search_fts), julianday(d.date) DESC, d.search_id ASC LIMIT ?",
-            [opening, closing, *params, limit],
+            "SELECT d.type,d.id,d.issue_id,d.user_id,d.created_at,d.updated_at, "
+            "substr(i.title,1,240) AS issue_title,substr(u.username,1,160) AS username, "
+            "snippet(search_fts,-1,?,?,' … ',24) AS excerpt " + joins +
+            " ORDER BY bm25(search_fts),julianday(d.updated_at) DESC,d.type ASC,d.id DESC LIMIT ? OFFSET ?",
+            [opening, closing, *params, limit, offset],
         ).fetchall()
     except sqlite3.OperationalError as exc:
-        if "no such table" in str(exc).lower() or "no such module" in str(exc).lower():
-            raise ApplicationError(
-                503, "Suchindex nicht verfuegbar; Datenbankinitialisierung und SQLite FTS5 pruefen",
-                code="search_unavailable",
-            ) from exc
+        if any(text in str(exc).lower() for text in ("no such table", "no such module", "no such tokenizer")):
+            raise ApplicationError(503, "Suchindex nicht verfuegbar; Datenbankinitialisierung und SQLite FTS5 pruefen", code="search_unavailable") from exc
         raise
-    results = []
     for row in rows:
         plain, rendered = _snippets(row["excerpt"], opening, closing)
-        result = {
-            "type": row["type"], "id": row["id"], "project_id": row["project_id"],
-            "task_id": row["project_id"], "date": _date_utc(row["date"]),
+        update_id = row["id"] if row["type"] == "update" else None
+        page["items"].append({
+            "type": row["type"], "id": row["id"], "issue_id": row["issue_id"], "update_id": update_id,
+            "title": row["issue_title"], "created_at": _date_utc(row["created_at"]), "updated_at": _date_utc(row["updated_at"]),
+            "user_id": row["user_id"], "user": row["username"],
             "snippet": plain, "snippet_html": rendered,
-        }
-        if row["type"] in ("task", "sub_task"):
-            result["name"] = row["name"]
-        if row["subtask_id"] is not None:
-            result["subtask_id"] = row["subtask_id"]
-        if row["user_id"] is not None:
-            result.update(user_id=row["user_id"], user=row["username"])
-        if row["type"].endswith("_handoff"):
-            scope = "subtask" if row["subtask_id"] is not None else "task"
-            result.update(handoff_id=f"{scope}:{row['id']}", local_id=row["id"])
-        results.append(result)
-    return results
+            "url": f"/issues/{row['issue_id']}" + (f"?update={update_id}" if update_id else ""),
+        })
+    page["total"] = total
+    if offset + len(page["items"]) < total:
+        page["next_offset"] = offset + len(page["items"])
+    return page

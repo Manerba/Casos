@@ -1,0 +1,204 @@
+{
+  "project_id": 77,
+  "subtask_id": 394,
+  "prepared_on": "2026-10-19",
+  "state": "Vorbereitung abgeschlossen; Implementierung wartet auf Fertigstellung von #393 und Freigabe der Dateizuständigkeit durch Koordination.",
+  "specification": "docs/project77-spec.json, insbesondere vollständige Projektbeschreibung und Subtask #394; Ergänzung zu docs/project77-preview-research.json.",
+  "implementation_prerequisites": {
+    "attachment_backend": "#392 abgeschlossen, Commit 4b7a7d9, Version 0.0.1+146; open_attachment liefert geprüften Dateideskriptor und Metadaten.",
+    "frontend_hook": "openAttachmentPreview(issueId, attachmentId); exakt mit capture-Agent abgestimmt. Metadaten für Namen/Originaldownload können vor der Vorschau geladen werden.",
+    "packages_installed": ["extract-msg==0.56.1", "Pillow==12.3.0"],
+    "package_to_add_by_root": "striprtf==0.0.33; von Koordination bestätigt, bisher nicht installiert.",
+    "browser": "Koordination meldet isolierte Browser-Testinfrastruktur verfügbar. In diesem Vorbereitungsschritt keine Browserprüfung ausgeführt."
+  },
+  "package_decisions": [
+    {
+      "package": "extract-msg==0.56.1",
+      "license": "GPL-3.0-or-later",
+      "python": ">=3.8",
+      "release": "2026-08-14",
+      "sources": [
+        "https://pypi.org/project/extract-msg/0.56.1/",
+        "https://github.com/TeamMsgExtractor/msg-extractor/blob/master/extract_msg/__init__.py",
+        "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/master/LICENSE.txt",
+        "https://github.com/TeamMsgExtractor/msg-extractor/wiki/Using-msg-extractor-In-Your-Own-Code"
+      ],
+      "use": "Nur im begrenzten Unterprozess, openMsg mit delayAttachments=True und insecureFeatures=NONE. Kein save/saveAttachments/htmlBodyPrepared und keine externen Konverter. Tatsächliche API im installierten Quellstand geprüft; ReadTheDocs ist älter.",
+      "distribution_note": "Casos-Code und bestehende MIT-Lizenz werden nicht umdeklariert. Abhängigkeit und Lizenz dokumentieren; keine pauschale Lizenzkompatibilität behaupten. Distribution vor späterem Publishing gesondert prüfen; aktueller Auftrag veröffentlicht nichts. Keine Extras [all]/[image], die Pillow<10 verlangen."
+    },
+    {
+      "package": "Pillow==12.3.0",
+      "license": "MIT-CMU",
+      "python": ">=3.10",
+      "release": "2026-07-01",
+      "sources": [
+        "https://pypi.org/project/pillow/12.3.0/",
+        "https://pillow.readthedocs.io/en/stable/releasenotes/12.3.0.html",
+        "https://pillow.readthedocs.io/en/stable/handbook/security.html",
+        "https://pillow.readthedocs.io/en/stable/reference/Image.html",
+        "https://github.com/python-pillow/Pillow/blob/main/LICENSE"
+      ],
+      "use": "Formate JPEG/PNG/GIF/WEBP/BMP explizit freigeben, Pixelgrenze vor load, DecompressionBombWarning als Fehler, erstes Frame, EXIF-Orientierung und begrenzte Neucodierung ohne EXIF/ICC/XMP. Pillow13 benötigt Python>=3.11 und wird wegen dokumentierter Python3.10-Basis nicht verwendet."
+    },
+    {
+      "package": "striprtf==0.0.33",
+      "license": "BSD-3-Clause",
+      "python": ">=3.8",
+      "release": "2026-08-17",
+      "sources": [
+        "https://pypi.org/project/striprtf/0.0.33/",
+        "https://github.com/joshy/striprtf/blob/master/LICENSE"
+      ],
+      "use": "Nur im begrenzten Worker: striprtf.striprtf.rtf_to_text mit begrenztem bereits dekomprimiertem RTF, encoding='cp1252', errors='replace'. Codepage aus RTF hat Vorrang. Ergebnis ausschließlich als Text anzeigen, niemals als rohes HTML. Fallback wenn extract-msg/RTFDE normales, nicht HTML-gekapseltes RTF nicht verarbeiten kann. Keine Laufzeitabhängigkeiten erforderlich."
+    }
+  ],
+  "planned_file_ownership": {
+    "attachment_agent": [
+      "dashboard/attachment_preview.py",
+      "dashboard/preview_worker.py",
+      "dashboard/api_attachment_preview.py",
+      "dashboard/static/js/attachment_preview.js",
+      "dashboard/static/css/attachment_preview.css",
+      "tests/test_attachment_preview.py",
+      "tests/preview_test_helpers.py",
+      "tests/check_attachment_preview_ui.py",
+      "tests/fixtures/msg/*"
+    ],
+    "coordination_only": [
+      "Router-Mount in dashboard/app.py und dashboard/mcp_app.py",
+      "JS/CSS-Includes in dashboard/templates/index.html",
+      "Alle sieben zentralen Übersetzungsdateien",
+      "requirements.txt und zentrale Abhängigkeits-/Betriebsdokumentation",
+      "Changelog, Version und Commits"
+    ],
+    "coordination_note": "Falls Metadaten um preview_kind erweitert werden, Schnittstelle zuerst mit capture/Root abstimmen; aktuelle API funktioniert ohne Erweiterung. Bestehende attachment_service.py und api_attachments.py nur nach expliziter Rücksprache ändern."
+  },
+  "service_and_api": {
+    "input": "attachment_service.open_attachment(issue_id, attachment_id, user) -> (metadata, BinaryIO). Keinen Pfad erneut öffnen; geprüften offenen FD über pass_fds an Worker geben. Parent schließt Original-FD in finally.",
+    "authorization": "Jede Anfrage get_file_user; dedizierte App behält get_mcp_user-Override. Aktuelle Rechte/Token vor Verarbeitung über open_attachment und nach Worker vor Rückgabe über get_attachment erneut prüfen. Keine öffentliche Extraktions-URL, keine Speicherung extrahierter Dateien als Issue-Anhänge.",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/api/issues/{issue_id}/attachments/{attachment_id}/preview",
+        "response": "JSON kind=image|msg, original_name, download_url, warnings; Bild: width,height,original_width,original_height,image_url. MSG: subject,sender,to,cc,date,body_format=text|html,body,attachments[]."
+      },
+      {
+        "method": "GET",
+        "path": "/api/issues/{issue_id}/attachments/{attachment_id}/preview/image",
+        "response": "Validiertes, neu codiertes image/png; keine unverarbeiteten Originalbytes inline."
+      },
+      {
+        "method": "GET",
+        "path": "/api/issues/{issue_id}/attachments/{attachment_id}/embedded/{index}/download",
+        "response": "Unveränderte eingebettete Dateibytes bzw. bounded MSG-Export, attachment Content-Disposition mit sicherer RFC5987-Kodierung; Index serverseitig strikt prüfen."
+      },
+      {
+        "method": "GET",
+        "path": "/api/issues/{issue_id}/attachments/{attachment_id}/embedded/{index}/preview/image",
+        "response": "Geschützte Raster-Vorschau; dieselben Bildlimits und Authprüfungen."
+      }
+    ],
+    "embedded_item": "index,name,size,media_type,can_preview,download_url,image_url optional. Namen nur Anzeige/Download-Disposition, niemals Dateipfade. Fehlende Namen durch generierte Anzeigenamen ersetzen. Gleichnamige Anhänge bleiben über Index eindeutig.",
+    "errors": ["preview_unsupported", "preview_invalid", "preview_too_large", "preview_timeout", "preview_busy", "embedded_not_found"],
+    "headers": "Cache-Control private,no-store; X-Content-Type-Options nosniff; Original-/Embedded-Download attachment und sandbox. Keine Mailtexte/Dateiinhalte/Parser-Stacktraces in API-Fehlern oder Betriebslog.",
+    "fallback": "SVG und andere unbekannte Formate werden nicht gerendert und erhalten einen ausdrücklich erklärten Download-Fallback. Kein Anspruch auf rekursive Vorschau eingebetteter MSGs; begrenzter Download bleibt möglich."
+  },
+  "resource_limits": {
+    "preview_input_bytes": 26214400,
+    "image_pixels": 20000000,
+    "image_max_dimension": 10000,
+    "image_output_max_dimension": 4096,
+    "image_encoded_output_bytes": 16777216,
+    "msg_attachment_count": 100,
+    "msg_individual_attachment_bytes": 20971520,
+    "msg_aggregate_stream_or_extraction_bytes": 52428800,
+    "msg_body_bytes": 1048576,
+    "msg_header_field_characters": 8192,
+    "ole_entries": 4096,
+    "ole_path_depth": 16,
+    "nested_message_preview_depth": 0,
+    "worker_wall_seconds": 10,
+    "worker_cpu_seconds": 5,
+    "worker_address_space_bytes": 536870912,
+    "worker_open_files": 32,
+    "worker_core_bytes": 0,
+    "worker_file_size_bytes": 33554432,
+    "worker_jobs_per_app_process": 2,
+    "worker_metadata_output_bytes": 2097152,
+    "note": "Technische Startwerte, anhand echter Tests zu verifizieren und dokumentiert anzupassen. Unabhängig vom 500-MiB-Uploadlimit; Originaldownload bleibt auch bei Vorschau-Ablehnung erhalten. Bei parallelem Haupt-/MCP-Prozess maximal vier Worker insgesamt ohne zusätzliche prozessübergreifende Sperre."
+  },
+  "worker_design": [
+    "Standalone-Python-Script ohne App-/DB-Import, mit sys.executable -I gestartet. Rlimits vor Parserimport setzen; minimaler Prozess-Environment, keine Shell. Ressourcenbegrenzung ist keine Behauptung einer vollständigen Betriebssystem-Sandbox.",
+    "Temporäres privates Verzeichnis Modus0700, feste Ausgabenamen und Modus0600. Eingabe über geerbten sicheren FD; keine Mail-Dateinamen als Pfade. Begrenzte JSON- und Binärdatei als Ausgabe, keine unbeschränkten Pipes/Base64 im Parent.",
+    "Subprocess Timeout: kill und wait/reap; in finally Tempverzeichnis sowie alle Handles schließen. Auch Client-Abbruch muss Worker beendet/bereinigt lassen; falls Threadpool verwendet, dessen Abschluss/Bereinigung sicherstellen.",
+    "Keine dauerhafte Vorschaucache zunächst: geschütztes Original pro Anfrage erneut lesen. Original bleibt unverändert; temporäre Extraktion erscheint weder in der Attachmenttabelle noch in der Ablage.",
+    "OLE vor Attachmentinitialisierung prüfen: Eintragsanzahl, Tiefe, Streamlängen, gesamte Bytes, Top-Level-Anhanganzahl. Nested-MSG nicht rekursiv rendern. Attachmentdaten werden von extract-msg eager geladen, deshalb Limits vorher anwenden.",
+    "Komprimiertes RTF sowohl vor Dekompression auf Header-/Rawsize und komprimierte Eingangsgröße als auch nach Dekompression auf tatsächliche Länge prüfen. compressed_rtf erzwingt raw_size im komprimierten Zweig selbst nicht. CPU-/Speicherlimit bleibt zusätzlich wirksam.",
+    "Jedes Headerfeld unabhängig lesen, Decoderfehler abfangen und aus Display-/Transportheadern fallbacken. RFC2047 mit replace dekodieren, NUL/unerlaubte Steuerzeichen entfernen, Länge begrenzen. Bei unvollständigen Daten sichtbaren stabilen Warncode ausgeben. Datum bei fehlender MAPI-Date aus gültigem Mailheader ableiten.",
+    "HTML ausschließlich im Worker serverseitig bereinigen: feste Formatierungs-Tagliste; script/style/iframe/object/embed/form/template/noscript/svg/math vollständig verwerfen; keine Eventattribute/CSS/srcset. Externe Ressourcen entfernen. Keine rohe Mail-HTML vor Bereinigung in Browserparser einsetzen.",
+    "CID-Bilder nur bei eindeutiger Zuordnung zu eingebettetem Rasterbild auf generierte geschützte numerische URL umschreiben. Unbekannte/doppelte CID nicht laden. Keine fremden URLs/data-URLs als img-src. Links nur sichere Protokolle und ausschließlich Nutzeraktion, rel=noopener noreferrer.",
+    "Text und striprtf-Ergebnis unverändert als Text, nicht HTML, rendern. HTML-Body nur bereinigt; keine Dateibearbeitung oder Versandfunktionen.",
+    "Rasterformate explizit eingrenzen, Pixelmaße vor Dekodierung prüfen, erstes Frame auswählen und Hinweis für Animation; neue RGB/RGBA-Bitmap ohne Metadaten als PNG ausgeben. Manipuliertes SVG niemals direkt als img/object/iframe laden."
+  ],
+  "overlay_design": [
+    "Globaler Hook openAttachmentPreview(issueId, attachmentId) lädt Metadaten/Originaldownload und danach die Vorschau; Download bleibt während Laden und nach Fehler sichtbar.",
+    "Native Dialog-/zugängliche Overlaystruktur mit aria-modal, Fokusfalle, Escape, Schließen-Schaltfläche, Fokus-Rückgabe an Auslöser und AbortController für abgebrochene Requests.",
+    "Bilder zunächst passend anzeigen; Vergrößern/Verkleinern und Zurücksetzen auf Einpassen, per Tastatur nutzbar. Auf schmalen Bildschirmen scrollbar, Toolbar/Download erreichbar.",
+    "Mailkopf/Namen ausschließlich textContent. Textbody pre/textContent. Nur bereits serverseitig bereinigten HTML-Body darstellen und geschützte Bildpfade defensiv validieren; niemals externe Bilder automatisch laden.",
+    "Ladezustand, konkrete Fehler-/Grenzhinweise und Warnung bei unvollständigem Header/erstem Frame. Light/Dark, keine Beeinträchtigung vorhandener Issue-/Update-Entwürfe."
+  ],
+  "fixtures": {
+    "source_commit": "18172ea4730fcfef6edaa0bd20e7a9c64bea20b9",
+    "storage_plan": "Nur während #394-Implementierung ausgewählte offizielle Fixtures unter tests/fixtures/msg ablegen, mit Attribution, Lizenztexten und SHA256-Manifest. Bisher nur Bytes im Speicher geprüft; keine Fixtures in Repository geschrieben.",
+    "official": [
+      {
+        "name": "unicode-header.msg",
+        "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/unicode-header.msg",
+        "size": 86016,
+        "sha256": "fe13d8dfba467cd1a6dbc538bef43fccc8ac3fcdcba46cfda1fc15b72fe18a7f",
+        "license": "GPL-3.0-or-later des Parser-Repos; keine separate Fixture-Lizenz gefunden, Herkunft erhalten.",
+        "observation": "Öffentlicher Test mit example.com-Adressen. Betreff/Absender lesbar; .to löst UnicodeDecodeError in RFC2047 gb2312-Dekodierung aus. Tests müssen feldweisen Fallback und sichtbare Unvollständigkeit verlangen."
+      },
+      {
+        "name": "strangeDate.msg",
+        "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/strangeDate.msg",
+        "size": 31744,
+        "sha256": "9676ca02b32c15bf47bcf4295131d807a2729c2d1cddc53c4d40b57aa6c6d32b",
+        "license": "Nachrichteninhalt CC BY-SA 3.0 laut erwartetem Textoutput; Attribution online-convert.com und Wikipedia John_Doe ergänzen. Parser-Repo-Lizenz allein genügt hierfür nicht.",
+        "license_source": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/master/example-msg-files/expected-outputs/2016-02-23_0657%20MSG%20Test%20File/message.text",
+        "observation": "Betreff MSG Test File, kein Absender/Datum, Empfänger verfügbar. Text2711Zeichen, RTF-abgeleitetes HTML40440Bytes; 40OLE-Einträge, keine Anhänge. Begrenzter Probeprozess erfolgreich."
+      },
+      {
+        "name": "unicode.msg",
+        "url": "https://raw.githubusercontent.com/TeamMsgExtractor/msg-extractor/18172ea4730fcfef6edaa0bd20e7a9c64bea20b9/example-msg-files/unicode.msg",
+        "size": 2045952,
+        "sha256": "3c67dc70854b994e469fc14496d23bf778e718831806ebafc72436c840439f9c",
+        "license": "GPL-3.0-or-later des Parser-Repos; keine separate Fixture-Lizenz gefunden, Herkunft erhalten.",
+        "observation": "Öffentliche Testexperiment-Mail. Unicode-/Header-/RTF-Pfad, Text119Zeichen, HTML552Bytes; zwei TIFF-Anhänge969674/1033142Bytes. 80OLE-Einträge; begrenzter Probeprozess erfolgreich. TIFF nur Download-Fallback."
+      }
+    ],
+    "synthetic": [
+      "Mit extract_msg.ole_writer.OleWriter im Test erzeugte harmlose IPM.Note-Dateien: UTF16LE-Header mit Umlauten, reine Textmail, HTMLmail mit zugeordnetem generiertem PNG-CID, normales RTF und fehlende Header.",
+      "Unicode-MSG-Rootproperties: 32Byte-Header plus 0x340D0003=0x40000. Leere __nameid_version1.0-Struktur mit Streams00020102/00030102/00040102 notwendig für Attachmentinitialisierung.",
+      "Binäranhang: __attach_version1.0_#00000000, Propertiesheader8Byte plus 0x37050003=1, Daten37010102, Dateiname3707001F, MIME370E001F, CID3712001F. Niemals reale Benutzerdaten verwenden.",
+      "Manipulationen: Script/Eventhandler/Remoteimg/CSS/iframe/SVG, doppelte Dateinamen/CIDs, Traversalnamen, falsche OLE-Längen/Tiefe/Anzahl, abgeschnittene Dateien, riesige RTF-Rawsize. Repräsentative kleine Bilddateien aller fünf Formate in Tests erzeugen."
+    ]
+  },
+  "preparatory_checks_performed": [
+    "Installierte Versionen extract-msg0.56.1 und Pillow12.3.0 geprüft; striprtf bislang nicht installiert.",
+    "Pillow erzeugt und dekodiert JPEG/PNG/GIF/WebP/BMP im Speicher erfolgreich, jeweils12x9Pixel. Kein Browsernachweis.",
+    "Offizielle drei MSG-Fixtures heruntergeladen ausschließlich in Speicher, SHA256 geprüft und in Unterprozessen mit512MiBAdressraum/5sCPU/10sWall geöffnet. Zwei vollständig erfolgreich, unicode-header erwartbar am fehlerhaften .to-Header gescheitert: Implementierungsanforderung für toleranten Fallback.",
+    "Synthetische Unicode-Text-/HTML-CID-MSGs mit OleWriter erfolgreich gelesen: Header, Text/HTML und PNG-Anhang korrekt. Normales synthetisches RTF löst derzeit RTFDE ValueError 'No font table found in tree' aus: striprtf-Fallback erforderlich, noch nicht verifiziert.",
+    "Installierten Parserquelltext auf eager Attachmentdaten, EmbeddedMsgAttachment, exportBytes, getStream/listDir und unbeschränkte compressed_rtf-Dekompression gelesen. Keine Produktimplementierung vorgenommen."
+  ],
+  "acceptance_checks_after_implementation": [
+    "Backendtests: offizielle Fixtures plus synthetische Unicode/Text/HTML/CID/RTF/fehlendeHeader; Headerfallback darf ganze Nachricht nicht verwerfen. Original- und Embedded-Downloads bytegenau.",
+    "JPEG/PNG/GIF/WebP/BMP, Zoom/Einpassen, erstesFrame bei Animation mit Hinweis; beschädigte Dateien, falscher MIME/Extension, Pixel-/Bytegrenzen und SVG-Downloadfallback.",
+    "Echte Worker-Timeout-/Speicher-/Dateigrößen-/Parallelitätsfehler und Cleanup auf Erfolg/Fehler/Abbruch; keine Dateireste und keine neuen Issue-Anhänge.",
+    "Zwei normale Nutzer/Admin/MCP: globale Sichtbarkeit, aktiver Benutzer, Tokenwiderruf/Kill-Switch vor und während Parsing, aktueller Rechtecheck auf Embedded-Downloads und Bilder, falsches Issue/Index.",
+    "Manipuliertes HTML/SVG/CSS/iframe/srcset/Links und externe Mailbilder: kein Script, keine automatische Netzwerk-Anfrage. Browser-Netzwerkinterception muss auch blockierte Ladeversuche erfassen.",
+    "OLE-Stream-/Anzahl-/Tiefe-/RTF-Limits; PathTraversal in Dateinamen, gleiche Namen, doppelte/fehlende CIDs, unsupported Embedded-MSG-Varianten kontrolliert, niemals ungeprüfte Pfade oder rekursive Verarbeitung.",
+    "Browser mit echtem isoliertem Server/DB: Hook vom Issue-Anhang, Originaldownload bei Vorschaufehler, Fokus-/Tab-/Escape-/Rückgabe, Ladeabbruch, schmale Ansicht, Light/Dark und Entwurfserhalt.",
+    "Gesamtsuite venv/bin/python -m unittest discover -s tests -v durch Koordination; nicht ausgeführte Checks ausdrücklich als offen dokumentieren."
+  ]
+}

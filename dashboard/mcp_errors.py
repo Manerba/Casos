@@ -15,6 +15,30 @@ from dashboard.errors import ApplicationError
 logger = logging.getLogger(__name__)
 
 
+class _ToolLogRedaction(logging.Filter):
+    """FastMCP logs Pydantic's input values before middleware can redact them.
+
+    Preserve a diagnostic event, without arguments, content or exception text.
+    Filtering at the source logger also covers future handler reconfiguration.
+    """
+    def filter(self, record):
+        message = str(record.msg)
+        if message.startswith("Invalid arguments for tool"):
+            record.msg = "MCP tool arguments rejected (values omitted)"
+            record.args = ()
+        elif message.startswith("Error calling tool"):
+            record.msg = "MCP tool call failed (details omitted)"
+            record.args = ()
+        if message.startswith(("Invalid arguments for tool", "Error calling tool")):
+            record.exc_info = None
+            record.exc_text = None
+            record.stack_info = None
+        return True
+
+
+logging.getLogger('fastmcp.server.server').addFilter(_ToolLogRedaction())
+
+
 class MCPToolError(ToolError):
     """Typisierter, absichtlich oeffentlicher Fachfehler fuer direkte Toolaufrufe."""
 
@@ -85,15 +109,13 @@ def _validation_payload(exc: ValidationError) -> dict:
         root_field = str(error["loc"][0]) if error["loc"] else ""
         code, message = {
             "status": ("invalid_status", "status muss offen, in_arbeit, erledigt oder abgebrochen sein"),
-            "status_percent": ("invalid_progress", "status_percent muss eine ganze Zahl von 0 bis 100 sein"),
-            "parent_subtask_id": ("invalid_parent_subtask", "parent_subtask_id muss eine ganze Zahl ab 0 sein"),
             "encoding": ("invalid_encoding", "Die angegebene Kodierung wird nicht unterstuetzt"),
             "offset": ("invalid_pagination", "offset muss eine ganze Zahl ab 0 sein"),
             "limit": ("invalid_pagination", "limit liegt ausserhalb des erlaubten Bereichs"),
         }.get(root_field, ("invalid_argument", "Ungueltiger Wert fuer dieses Feld"))
         if error["type"] in {"missing", "missing_argument", "missing_keyword_only_argument"}:
             code, message = "missing_argument", "Ein erforderliches Feld fehlt"
-        elif error["type"] == "unexpected_keyword_argument":
+        elif error["type"] in {"unexpected_keyword_argument", "extra_forbidden"}:
             code, message = "unknown_argument", "Dieses Werkzeug unterstuetzt das Feld nicht"
         item = {"code": code, "message": message}
         if field:
@@ -111,28 +133,8 @@ def _validation_payload(exc: ValidationError) -> dict:
 
 def _request_fields(payload: dict, name: str, arguments: dict) -> dict:
     """Gemeinsame Service-Felder an die jeweilige Werkzeugsignatur anpassen."""
-    aliases = {}
-    if "project_id" in arguments and "task_id" not in arguments:
-        aliases["task_id"] = "project_id"
-    if name == "add_dependency":
-        aliases["predecessor_ids"] = "depends_on_id"
-    if name == "note.update":
-        aliases["note_user_id"] = "user_id"
-    if name == "patch_description":
-        aliases["description_revision"] = "revision"
-    if name == "file.move" and payload.get("field") == "path":
-        if payload["code"] == "file_exists":
-            aliases["path"] = "destination"
-        else:
-            # Beispielsweise kann rename an einer inzwischen entfernten Quelle
-            # oder einem fehlenden Ziel-Elternordner scheitern. Keine Zuordnung
-            # anhand von Exception-Texten oder internen Dateisystempfaden raten.
-            payload.pop("field")
-            payload["fields"] = ["source", "destination"]
-    if "field" in payload:
-        payload["field"] = aliases.get(payload["field"], payload["field"])
-    if "fields" in payload:
-        payload["fields"] = [aliases.get(field, field) for field in payload["fields"]]
+    if name == "issue.patch_description" and payload.get("field") == "description_revision":
+        payload["field"] = "revision"
     return payload
 
 
@@ -160,7 +162,7 @@ class StructuredToolErrors(Middleware):
             if isinstance(cause, HTTPException):
                 payload = tool_error_from_http(cause).payload()
             else:
-                logger.exception("Unerwarteter MCP-Werkzeugfehler")
+                logger.error("Unerwarteter MCP-Werkzeugfehler (%s)", type(exc).__name__)
                 payload = {"code": "internal_error", "message": "Werkzeugaufruf fehlgeschlagen"}
         return _error_result(_request_fields(
             payload, context.message.name, context.message.arguments or {},

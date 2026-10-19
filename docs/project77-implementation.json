@@ -80,6 +80,26 @@
       "command": "venv/bin/python tests/check_settings_ui.py",
       "result": "Root final repeat passed after TLS/SMTP fixes; 11 browser scenarios",
       "log": "/tmp/casos-project77-395-browser-final.log"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization tests.test_issue_http tests.test_issues tests.test_issue_sorting tests.test_updates tests.test_attachments tests.test_attachment_auth tests.test_settings tests.test_issue_search tests.test_issue_mcp -v",
+      "result": "86 tests OK66.136s",
+      "log": "/tmp/casos-project77-phase3-integrated-tests.log"
+    },
+    {
+      "command": "venv/bin/python tests/check_mcp_http.py",
+      "result": "Passed; two real isolated loopback processes and SDK sessions, shared issue/update/binary attachment/search/guide/deletion",
+      "log": "/tmp/casos-project77-396-live.log"
+    },
+    {
+      "command": "venv/bin/python tests/check_issues_ui.py",
+      "result": "Root final repetition passed after correcting CSP-incompatible test predicate; screenshots viewed",
+      "log": "/tmp/casos-project77-393-review.log"
+    },
+    {
+      "command": "venv/bin/python tests/check_search_ui.py",
+      "result": "Root repetition passed11 scenarios; mobile screenshot viewed",
+      "log": "/tmp/casos-project77-397-browser-review.log"
     }
   ],
   "progress": {
@@ -88,7 +108,10 @@
     "401": "PL only; open",
     "391": "complete implementation and root review; grouped version 0.0.1+146",
     "392": "complete implementation and root review; grouped version 0.0.1+146",
-    "395": "complete implementation and root review; grouped version 0.0.1+146"
+    "395": "complete implementation and root review; grouped version 0.0.1+146",
+    "393": "complete; Root browser repetition passed incl concurrent save/detail reload; desktop/mobile light/dark viewed; version0.0.1+147",
+    "396": "complete; Root6 real protocol tests passed, live2process SDK check passed, integrated86 tests passed; version0.0.1+147",
+    "397": "complete; Root15 backend tests and11-scenario real browser repetition passed, mobile screenshot viewed; version0.0.1+147"
   },
   "constraints": [
     "No Tareas writes except authorized project handoffs/status through MCP",
@@ -97,5 +120,9 @@
     "Complete packages only after coordinator review and recorded tests"
   ],
   "environment": "Playwright1.64/Chromium156 installed and smoke-tested; extract-msg0.56.1/Pillow12.3.0 installed; runtime data/ still empty",
-  "next": "393 UI and 397 search in parallel agents; root396 MCP;394/398 only after393. Legacy suite replacement/cleanup399 and final400 remain."
+  "next": "394 previews and398 history/mail now released; then399 cleanup/ops,400 final review/handoff.401 PL only.",
+  "last_committed": "4b7a7d9 / 0.0.1+146;391/392/395 Tareas100",
+  "known_test_notes": [
+    "ASGI TestClient MCP protocol tests emit upstream anyio MemoryObjectReceiveStream ResourceWarnings; live SDK two-process check clean. No assertion failure."
+  ]
 }

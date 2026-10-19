@@ -482,7 +482,8 @@ async function restartDashboard() {
 
 function parseRoute() {
     const match = window.location.pathname.match(/^\/issues\/(\d+)\/?$/);
-    return { issueId: match ? Number(match[1]) : null };
+    const update = new URLSearchParams(window.location.search).get('update');
+    return { issueId: match ? Number(match[1]) : null, updateId: update && /^\d+$/.test(update) ? Number(update) : null };
 }
 
 function navigateIssue(issueId, replaceState = false) {
