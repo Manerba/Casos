@@ -1,3 +1,5 @@
+> **Historische Tareas-Unterlage.** Dieser übernommene Ausgangsstand ist keine aktuelle Casos-Betriebsanleitung oder Abnahme. Gültiger Stand: [Casos README](../README.md), [AGENTS.md](../AGENTS.md) und [Betrieb](operations.md). Frühere Produktnamen wurden beim Klonen teilweise ersetzt; die hier beschriebenen Altkomponenten gehören nicht zum heutigen Funktionsumfang.
+
 # Casos Desktop App - Spezifikation
 
 > Uebernommene Desktop-Spezifikation des Ursprungsprojekts. Eine Casos-Desktop-App wurde weder geklont noch beauftragt; Anforderungen fuer Casos werden separat festgelegt.

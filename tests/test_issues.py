@@ -13,7 +13,7 @@ from unittest.mock import patch
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from dashboard import api_auth, api_issues, auth, database, issue_service as service
+from dashboard import api_auth, api_issues, auth, database, mcp_transport, issue_service as service
 from dashboard.errors import ApplicationError
 
 
@@ -25,6 +25,7 @@ class IssueTests(unittest.TestCase):
             (database, "DB_DIR", Path(temp.name)),
             (database, "DB_PATH", Path(temp.name) / "casos.db"),
             (auth, "SECRET_KEY_PATH", Path(temp.name) / "secret.key"),
+            (mcp_transport, "setup_security_logger", lambda: None),
         ):
             patcher = patch.object(module, name, value)
             patcher.start()

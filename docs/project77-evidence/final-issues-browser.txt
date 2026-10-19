@@ -1,0 +1,2 @@
+Issue browser checks passed: real creation/read/assignment/reopen, Alice/Bob/Admin permissions, update integration, drafts across navigation, revisions/grant conflicts, duplicate filenames/download/retry/delete, server pagination/sort/filter, mobile dark mode, keyboard, admin cleanup.
+Evidence: /tmp/casos-issues-evidence

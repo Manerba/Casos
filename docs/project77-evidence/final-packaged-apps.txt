@@ -1,0 +1,1 @@
+{"result": "passed", "package_version": "0.0.1+148", "package_sha256": "48cfca83cbda29e74aacd6e0466df993d85f320f59f7e80214eba5c22982e2ab", "tool_count": 22, "evidence": "/sdb1/nextcloud/data/mir/files/Dev/Casos/docs/project77-packaged-apps-evidence.json"}

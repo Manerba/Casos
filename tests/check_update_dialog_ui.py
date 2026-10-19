@@ -28,7 +28,6 @@ HTML = '''<!doctype html><html lang="de"><head><meta charset="utf-8">
 <script src="/static/js/i18n.js"></script>
 <script src="/static/js/app_core.js"></script>
 <script src="/static/js/vendor/marked.umd.js"></script>
-<script src="/static/js/vendor/turndown.js"></script>
 <script src="/static/js/markdown_editor.js"></script>
 <script src="/static/js/update_dialog.js"></script>
 </body></html>'''
@@ -46,10 +45,24 @@ def main():
         context = browser.new_context(viewport={"width": 1280, "height": 900})
         context.route(base + '/updates-harness', lambda route: route.fulfill(
             status=200, content_type='text/html', body=HTML, headers={'Content-Security-Policy': CSP}))
-        # Allow the package test to run before root merges its translation artifact.
-        additions = json.loads((ROOT / 'docs/project77-update-translations.json').read_text())['de']
-        translations = {**json.loads((ROOT / 'dashboard/static/i18n/de.json').read_text()), **additions}
-        context.route(base + '/static/i18n/de.json', lambda route: route.fulfill(json=translations))
+        translations = json.loads((ROOT / 'dashboard/static/i18n/de.json').read_text())
+        static_failures, static_responses = [], []
+
+        def observe_assets(browser_context):
+            def response_received(response):
+                if response.url.startswith(base + '/static/'):
+                    static_responses.append(response.url)
+                    if response.status >= 400:
+                        static_failures.append({'url': response.url, 'status': response.status})
+
+            def request_failed(request):
+                if request.url.startswith(base + '/static/'):
+                    static_failures.append({'url': request.url, 'failure': request.failure})
+
+            browser_context.on('response', response_received)
+            browser_context.on('requestfailed', request_failed)
+
+        observe_assets(context)
         context.add_init_script("""window.cspViolations=[]; document.addEventListener('securitypolicyviolation', event =>
             window.cspViolations.push({directive:event.effectiveDirective, blocked:event.blockedURI}));""")
         page = context.new_page()
@@ -77,7 +90,7 @@ def main():
         expect(dialog.locator('textarea')).to_be_focused()
         dialog.locator('textarea').fill(' \n\t ')
         dialog.locator('[data-md-action="save"]').click()
-        expect(dialog.locator('.markdown-error')).to_have_text(additions['updates.empty'])
+        expect(dialog.locator('.markdown-error')).to_have_text(translations['updates.empty'])
         assert posts == []
 
         content = '## Neues Update ü ✓\n\n<script>window.injected = true</script>\n**Ergebnis**'
@@ -119,7 +132,7 @@ def main():
         concurrent = page.request.put(url + f'/{item["id"]}', data={'content': 'Fremde aktuelle Fassung', 'revision': current['revision']}, headers=HEADERS)
         assert concurrent.ok, concurrent.text()
         dialog.locator('[data-md-action="save"]').click()
-        expect(dialog.locator('.markdown-error')).to_have_text(additions['updates.conflict'])
+        expect(dialog.locator('.markdown-error')).to_have_text(translations['updates.conflict'])
         expect(dialog.locator('textarea')).to_have_value('Mein offener Entwurf')
         page.once('dialog', lambda prompt: prompt.dismiss())
         dialog.locator('[data-update-close]').click()
@@ -167,7 +180,7 @@ def main():
         # A separate normal identity reads the same update, with no edit button.
         bob = browser.new_context(viewport={'width': 900, 'height': 700})
         bob.route(base + '/updates-harness', lambda route: route.fulfill(status=200, content_type='text/html', body=HTML, headers={'Content-Security-Policy': CSP}))
-        bob.route(base + '/static/i18n/de.json', lambda route: route.fulfill(json=translations))
+        observe_assets(bob)
         bobpage = bob.new_page()
         bobpage.on('pageerror', lambda error: errors.append(str(error)))
         assert bobpage.request.post(base + '/api/auth/login', data={'username': 'bob', 'password': 'Browser77!'}, headers=HEADERS).ok
@@ -190,9 +203,11 @@ def main():
         bobpage.screenshot(path=str(artifacts / 'revoked-rights.png'))
         bobdialog.locator('[data-md-action="cancel"]').click()
         assert errors == [], errors
+        assert static_failures == [], static_failures
+        assert any(url.startswith(base + '/static/i18n/de.json') for url in static_responses)
         assert page.evaluate('cspViolations') == [], page.evaluate('cspViolations')
         browser.close()
-    print('Update browser checks passed: real cookie/REST creation, author metadata, empty input, failed save draft, double-submit lock, POST-to-PUT, conflict draft, cancel/Escape/focus, foreign draft, mobile, read-only user, revoked rights, sanitizing, strict CSP.')
+    print('Update browser checks passed: real cookie/REST creation, author metadata, empty input, failed save draft, double-submit lock, POST-to-PUT, conflict draft, cancel/Escape/focus, foreign draft, mobile, read-only user, revoked rights, sanitizing, strict CSP, production translations and successful static requests.')
     print(f'Evidence: {artifacts}')
 
 

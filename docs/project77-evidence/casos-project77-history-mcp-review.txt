@@ -1,0 +1,179 @@
+test_attachments_binary_duplicates_bounds_and_rest_parity (tests.test_issue_mcp.IssueMCPTests.test_attachments_binary_duplicates_bounds_and_rest_parity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffd8bfb0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffd8b770>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0eed0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:12:10] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe42ca70>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44c530>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44cbc0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44e8d0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffdd5b20>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:12:11] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_both_mounts_catalog_lifecycle_and_compact_writes (tests.test_issue_mcp.IssueMCPTests.test_both_mounts_catalog_lifecycle_and_compact_writes) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe458f20>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffdb6750>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffd8be00>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe42e330>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0fcb0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:12:12] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+[10/19/26 18:12:13] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe482060>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4778c0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4751f0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe42ef00>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44cb00>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0e9c0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0fc50>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe42fcb0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe474980>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_errors_are_structured_and_no_partial_writes (tests.test_issue_mcp.IssueMCPTests.test_errors_are_structured_and_no_partial_writes) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4a0ce0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0fda0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffdd6180>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_existing_sessions_refresh_roles_revocation_and_kill_switch (tests.test_issue_mcp.IssueMCPTests.test_existing_sessions_refresh_roles_revocation_and_kill_switch) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe476d20>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe481730>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:12:16] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4a1670>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4ab950>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4a39e0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe42d550>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_global_read_rights_grants_and_update_revisions (tests.test_issue_mcp.IssueMCPTests.test_global_read_rights_grants_and_update_revisions) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44d3a0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0d1c0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44e7e0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:12:18] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_guides_bootstrap_search_and_current_identity (tests.test_issue_mcp.IssueMCPTests.test_guides_bootstrap_search_and_current_identity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe44ecc0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3ffe0f830>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4deba0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4ca5a0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4deb70>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 72d3fe4ca5a0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 11.496s
+
+OK

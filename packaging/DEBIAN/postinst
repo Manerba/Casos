@@ -1,68 +1,48 @@
 #!/bin/bash
-set -e
-
-APP_DIR="/opt/casos"
-DATA_DIR="$APP_DIR/data"
-VENV_DIR="$APP_DIR/venv"
-SERVICE_USER="casos"
-
-# System-User erstellen (falls nicht vorhanden)
-if ! id "$SERVICE_USER" &>/dev/null; then
-    useradd --system --no-create-home --home-dir "$APP_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
-    echo "Benutzer '$SERVICE_USER' erstellt."
+set -euo pipefail
+case "${1:-}" in configure) ;; *) exit 0 ;; esac
+# A prefixed hook may call only explicit local stubs, never host management tools.
+PACKAGE_ROOT="${CASOS_PACKAGE_ROOT:-}"
+if [ -n "$PACKAGE_ROOT" ]; then
+    if [[ "$PACKAGE_ROOT" != /* ]] || [ ! -d "$PACKAGE_ROOT" ]; then
+        echo "Invalid isolated package root" >&2; exit 1
+    fi
+    PACKAGE_ROOT=$(realpath -- "$PACKAGE_ROOT")
+    if [ "$PACKAGE_ROOT" = / ]; then echo "Invalid isolated package root" >&2; exit 1; fi
+    STUB_DIR="$PACKAGE_ROOT/.casos-hook-stubs"
+    if [ -L "$STUB_DIR" ]; then echo "Isolated stubs must be local files" >&2; exit 1; fi
+    for command_name in id useradd chown python3 venv-python systemctl; do
+        if [ ! -f "$STUB_DIR/$command_name" ] || [ -L "$STUB_DIR/$command_name" ] || [ ! -x "$STUB_DIR/$command_name" ]; then
+            echo "Missing isolated hook stub: $command_name" >&2; exit 1
+        fi
+    done
 fi
-
-# Datenverzeichnis erstellen
-mkdir -p "$DATA_DIR"
-
-# Python-venv erstellen (falls nicht vorhanden)
-if [ ! -d "$VENV_DIR" ]; then
-    python3 -m venv "$VENV_DIR"
-    echo "Python-venv erstellt."
+run_system() {
+    local command_name="$1"
+    shift
+    if [ -n "$PACKAGE_ROOT" ]; then "$STUB_DIR/$command_name" "$@"
+    elif [ "$command_name" = venv-python ]; then "$APP_DIR/venv/bin/python" "$@"
+    else "$command_name" "$@"
+    fi
+}
+APP_DIR="$PACKAGE_ROOT/opt/casos"
+UNIT_DIR="$PACKAGE_ROOT/etc/systemd/system"
+SERVICE_USER=casos
+if ! run_system id "$SERVICE_USER" >/dev/null 2>&1; then
+    run_system useradd --system --user-group --no-create-home --home-dir /opt/casos --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
-
-# Dependencies installieren
-"$VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$VENV_DIR/bin/pip" install --quiet -r "$APP_DIR/requirements.txt"
-echo "Python-Dependencies installiert."
-
-# Service-Dateien kopieren
-cp "$APP_DIR/scripts/casos.service" /etc/systemd/system/casos.service
-cp "$APP_DIR/scripts/casos-admin.service" /etc/systemd/system/casos-admin.service
-cp "$APP_DIR/scripts/casos-mcp.service" /etc/systemd/system/casos-mcp.service
-cp "$APP_DIR/scripts/casos-ldap-sync.service" /etc/systemd/system/casos-ldap-sync.service
-cp "$APP_DIR/scripts/casos-ldap-sync.timer" /etc/systemd/system/casos-ldap-sync.timer
-
-# Dateiberechtigungen setzen
-chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
-
-# Systemd neu laden und Services aktivieren
-systemctl daemon-reload
-systemctl enable casos.service
-systemctl enable casos-admin.service
-systemctl enable casos-mcp.service
-systemctl enable casos-ldap-sync.timer
-
-# Services (neu)starten
-systemctl restart casos.service
-systemctl restart casos-admin.service
-systemctl restart casos-mcp.service
-systemctl restart casos-ldap-sync.timer
-
-# Docker-Daemon sicherstellen (wurde als Dependency installiert)
-systemctl enable docker.service 2>/dev/null || true
-systemctl start docker.service 2>/dev/null || true
-
-# ONLYOFFICE Document Server Setup (Docker)
-if [ -x "$APP_DIR/scripts/onlyoffice-setup.sh" ]; then
-    echo ""
-    echo "--- ONLYOFFICE Setup ---"
-    APP_DIR="$APP_DIR" "$APP_DIR/scripts/onlyoffice-setup.sh" || true
+install -d -m 700 "$APP_DIR/data"
+if [ ! -x "$APP_DIR/venv/bin/python" ]; then
+    run_system python3 -m venv "$APP_DIR/venv"
 fi
-
-echo ""
-echo "=== Casos Installation abgeschlossen ==="
-echo "  App:   http://$(hostname -I | awk '{print $1}'):8514/"
-echo "  Admin: http://$(hostname -I | awk '{print $1}'):8515/"
-echo "  MCP:   http://$(hostname -I | awk '{print $1}'):8516/mcp/ (auch weiter auf Port 8514)"
-echo ""
+run_system venv-python -m pip install --quiet -r "$APP_DIR/requirements.txt"
+install -d -m 755 "$UNIT_DIR"
+for unit in casos.service casos-mcp.service casos-ldap-sync.service casos-ldap-sync.timer casos-mail-scheduler.service casos-mail-scheduler.timer; do
+    install -m 644 "$APP_DIR/scripts/$unit" "$UNIT_DIR/$unit"
+done
+# Runtime is writable by the service; application source stays owned by root.
+run_system chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR/data"
+run_system systemctl daemon-reload
+run_system systemctl enable casos.service casos-mcp.service casos-ldap-sync.timer casos-mail-scheduler.timer
+run_system systemctl restart casos.service casos-mcp.service casos-ldap-sync.timer casos-mail-scheduler.timer
+echo "Casos installed: web 8514, MCP 8516; settings in the main application."

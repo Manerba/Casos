@@ -1,0 +1,70 @@
+test_commit_before_mail_and_mail_failures_do_not_lose_mutations (tests.test_issue_history_mail.IssueHistoryMailTests.test_commit_before_mail_and_mail_failures_do_not_lose_mutations) ... Issue notification failed: issue=1 event=status_change recipient=2
+Traceback (most recent call last):
+  File "/sdb1/nextcloud/data/mir/files/Dev/Casos/dashboard/mail_service.py", line 303, in notify_issue_event
+    error = notify_event(event_type, uid, placeholders)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sdb1/nextcloud/data/mir/files/Dev/Casos/dashboard/mail_service.py", line 227, in notify_event
+    return send_mail(user["email"], subject, html_body, body_text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1199, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sdb1/nextcloud/data/mir/files/Dev/Casos/tests/test_issue_history_mail.py", line 105, in inspect_commit
+    raise RuntimeError('Deliberate transport failure')
+RuntimeError: Deliberate transport failure
+Issue notification failed: issue=1 event=new_update recipient=2: SMTP unavailable
+ok
+test_deadlines_default_individual_warning_terminal_inactive_and_dedup (tests.test_issue_history_mail.IssueHistoryMailTests.test_deadlines_default_individual_warning_terminal_inactive_and_dedup) ... ok
+test_deleted_assignee_preserves_event_names_and_real_admin_actor (tests.test_issue_history_mail.IssueHistoryMailTests.test_deleted_assignee_preserves_event_names_and_real_admin_actor) ... ok
+test_duplicate_addresses_and_actor_mailbox_are_excluded (tests.test_issue_history_mail.IssueHistoryMailTests.test_duplicate_addresses_and_actor_mailbox_are_excluded) ... ok
+test_events_before_after_reopen_actor_and_history_pagination (tests.test_issue_history_mail.IssueHistoryMailTests.test_events_before_after_reopen_actor_and_history_pagination) ... ok
+test_failed_audit_and_commit_send_no_mail_and_leave_no_events (tests.test_issue_history_mail.IssueHistoryMailTests.test_failed_audit_and_commit_send_no_mail_and_leave_no_events) ... ok
+test_history_active_rights_and_strict_pagination (tests.test_issue_history_mail.IssueHistoryMailTests.test_history_active_rights_and_strict_pagination) ... ok
+test_new_updates_only_current_creator_assignee_not_actor_or_readers (tests.test_issue_history_mail.IssueHistoryMailTests.test_new_updates_only_current_creator_assignee_not_actor_or_readers) ... ok
+test_preferences_defaults_validation_and_html_escaping (tests.test_issue_history_mail.IssueHistoryMailTests.test_preferences_defaults_validation_and_html_escaping) ... ok
+test_real_mcp_and_rest_share_history_notifications_and_current_identity (tests.test_issue_history_mail.IssueHistoryMailTests.test_real_mcp_and_rest_share_history_notifications_and_current_identity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 7bdd19cf3ad0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_and_phrase_and_controlled_literal_punctuation (tests.test_issue_search.IssueSearchTests.test_and_phrase_and_controlled_literal_punctuation) ... ok
+test_backfill_missing_trigger_repair_and_transaction_rollback (tests.test_issue_search.IssueSearchTests.test_backfill_missing_trigger_repair_and_transaction_rollback) ... ok
+test_current_mcp_token_and_kill_switch_apply_to_common_service (tests.test_issue_search.IssueSearchTests.test_current_mcp_token_and_kill_switch_apply_to_common_service) ... ok
+test_every_active_user_reads_and_stale_activity_is_rejected_even_for_empty_query (tests.test_issue_search.IssueSearchTests.test_every_active_user_reads_and_stale_activity_is_rejected_even_for_empty_query) ... ok
+test_initialization_idempotent_and_does_not_index_attachment_names (tests.test_issue_search.IssueSearchTests.test_initialization_idempotent_and_does_not_index_attachment_names) ... ok
+test_insert_update_delete_and_issue_cascade_update_index (tests.test_issue_search.IssueSearchTests.test_insert_update_delete_and_issue_cascade_update_index) ... ok
+test_invalid_filters_and_queries_return_structured_errors (tests.test_issue_search.IssueSearchTests.test_invalid_filters_and_queries_return_structured_errors) ... ok
+test_microsecond_ranking_ties_sort_mixed_sources_before_pagination (tests.test_issue_search.IssueSearchTests.test_microsecond_ranking_ties_sort_mixed_sources_before_pagination) ... ok
+test_missing_fts_is_explicit_and_failed_reinitialization_rolls_back (tests.test_issue_search.IssueSearchTests.test_missing_fts_is_explicit_and_failed_reinitialization_rolls_back) ... ok
+test_one_corpus_ranks_concise_update_over_noisy_issues (tests.test_issue_search.IssueSearchTests.test_one_corpus_ranks_concise_update_over_noisy_issues) ... ok
+test_pagination_has_stable_ties_and_no_duplicate_rows (tests.test_issue_search.IssueSearchTests.test_pagination_has_stable_ties_and_no_duplicate_rows) ... ok
+test_real_rest_auth_filters_and_service_parity (tests.test_issue_search.IssueSearchTests.test_real_rest_auth_filters_and_service_parity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 7bdd19b88fe0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_runtime_metadata_joins_do_not_index_parent_title_as_update (tests.test_issue_search.IssueSearchTests.test_runtime_metadata_joins_do_not_index_parent_title_as_update) ... ok
+test_safe_bounded_snippets_include_late_match (tests.test_issue_search.IssueSearchTests.test_safe_bounded_snippets_include_late_match) ... ok
+test_since_preserves_microsecond_boundaries_for_both_sources_and_zones (tests.test_issue_search.IssueSearchTests.test_since_preserves_microsecond_boundaries_for_both_sources_and_zones) ... ok
+test_since_rejects_precision_loss_and_preserves_latest_supported_instant (tests.test_issue_search.IssueSearchTests.test_since_rejects_precision_loss_and_preserves_latest_supported_instant) ... ok
+test_types_issue_filter_and_timezone_inclusive_updated_at (tests.test_issue_search.IssueSearchTests.test_types_issue_filter_and_timezone_inclusive_updated_at) ... ok
+test_unicode_case_accents_prefix_and_no_infix (tests.test_issue_search.IssueSearchTests.test_unicode_case_accents_prefix_and_no_infix) ... ok
+test_all_admin_sections_are_session_and_admin_protected (tests.test_settings.SettingsTests.test_all_admin_sections_are_session_and_admin_protected) ... ok
+test_app_configuration_is_immediately_visible_and_audited (tests.test_settings.SettingsTests.test_app_configuration_is_immediately_visible_and_audited) ... ok
+test_csrf_on_admin_writes_and_restart_without_service_execution (tests.test_settings.SettingsTests.test_csrf_on_admin_writes_and_restart_without_service_execution) ... ok
+test_current_admin_and_active_state_apply_to_existing_session (tests.test_settings.SettingsTests.test_current_admin_and_active_state_apply_to_existing_session) ... ok
+test_ldap_secret_masking_retains_secret_and_delete_deactivates (tests.test_settings.SettingsTests.test_ldap_secret_masking_retains_secret_and_delete_deactivates) ... ok
+test_mail_secret_and_preferences_with_fake_transport (tests.test_settings.SettingsTests.test_mail_secret_and_preferences_with_fake_transport) ... ok
+test_tls_options_and_current_database_path (tests.test_settings.SettingsTests.test_tls_options_and_current_database_path) ... ok
+test_user_management_preserves_issue_and_cannot_expose_password (tests.test_settings.SettingsTests.test_user_management_preserves_issue_and_cannot_expose_password) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 20.346s
+
+OK
+
+Host security log unchanged (size, mtime, SHA256).

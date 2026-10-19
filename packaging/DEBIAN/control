@@ -2,10 +2,10 @@ Package: casos
 Version: __VERSION__
 Architecture: all
 Maintainer: Manerba <https://github.com/Manerba>
-Depends: python3 (>= 3.10), python3-venv, python3-pip, sqlite3, docker.io | docker-ce, curl
+Depends: python3 (>= 3.10), python3-venv, python3-pip, sqlite3
 Section: web
 Priority: optional
-Description: Casos - Basis fuer ein Ticketsystem
- Web-basierte Anwendung auf Basis von FastAPI.
- Bietet Projektverwaltung, Teilaufgaben, Teams, LDAP-Integration,
- ONLYOFFICE-Dokumentenbearbeitung und eine Admin-Oberflaeche.
+Description: Casos - self-hosted Issue system
+ Flat Issues with Markdown updates, local attachments, image and MSG previews,
+ LDAP authentication, mail notifications and MCP access.
+ Settings are integrated into the main web application.

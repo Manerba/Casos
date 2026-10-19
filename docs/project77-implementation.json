@@ -38,10 +38,10 @@
     "sorting": "list_issues and GET accept sort_by=id/title/priority/deadline/created_at, sort_direction asc/desc, unassigned bool; global sort before pagination, null deadlines last"
   },
   "ownership": {
-    "root": "schema, main app/router integration, core JS, templates, i18n, requirements, version/commits, independent integration review",
-    "capture_analysis": "398 frozen;399 legacy test/security analysis",
-    "attachments_analysis": "394 final theme browser check",
-    "settings_ops_analysis": "397 precision fix frozen;399 operations plan complete"
+    "root": "Integration, product/assets/i18n cleanup and central commits",
+    "capture_analysis": "Retired-test mapping, security/secret regressions, current Update browser harness",
+    "attachments_analysis": "Complete isolated backup/restore and extracted-DEB app checks",
+    "settings_ops_analysis": "Operations/package/docs and isolated hook tests"
   },
   "checks": [
     {
@@ -104,27 +104,101 @@
     {
       "command": "venv/bin/python -m unittest tests.test_issue_initialization tests.test_issue_history_mail tests.test_issue_search -v",
       "result": "35 tests OK26.378s; root review",
-      "log": "docs/project77-evidence/casos-project77-phase4-review.log"
+      "log": "docs/project77-evidence/casos-project77-phase4-review.txt"
     },
     {
       "command": "venv/bin/python -m unittest tests.test_attachment_preview -v",
       "result": "17 tests OK45.873s; real bounded worker",
-      "log": "docs/project77-evidence/casos-project77-preview-review.log"
+      "log": "docs/project77-evidence/casos-project77-preview-review.txt"
     },
     {
       "command": "venv/bin/python tests/check_history_ui.py",
       "result": "Passed; root repeat and screenshot review",
-      "log": "docs/project77-evidence/casos-project77-history-review.log"
+      "log": "docs/project77-evidence/casos-project77-history-review.txt"
     },
     {
       "command": "venv/bin/python tests/check_attachment_preview_ui.py",
       "result": "Passed; root repeat with actual dark color scheme and computed color assertion",
-      "log": "docs/project77-evidence/casos-project77-preview-browser-final.log"
+      "log": "docs/project77-evidence/casos-project77-preview-browser-final.txt"
     },
     {
       "command": "venv/bin/python -m unittest tests.test_issue_initialization tests.test_issue_http tests.test_issues tests.test_issue_sorting tests.test_updates tests.test_attachments tests.test_attachment_auth tests.test_settings tests.test_issue_search tests.test_issue_mcp tests.test_issue_history_mail tests.test_attachment_preview -v",
       "result": "119 tests OK124.849s",
-      "log": "docs/project77-evidence/casos-project77-phase4-integrated-tests.log"
+      "log": "docs/project77-evidence/casos-project77-phase4-integrated-tests.txt"
+    },
+    {
+      "command": "venv/bin/python -m unittest discover -s tests -v",
+      "result": "145 tests OK, 128.482s; root full cleanup run including secret and package regressions",
+      "log": "docs/project77-evidence/final-backend.txt"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_history_mail tests.test_issue_search tests.test_settings -v",
+      "result": "36 tests OK, 20.346s; root test-log isolation recheck; host log size/mtime/SHA256 unchanged",
+      "log": "docs/project77-evidence/final-log-isolation.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_backup_restore.py",
+      "result": "Passed root repeat: two real app processes, 12 checks, full offline restore, both parallel restarts",
+      "evidence": "docs/project77-backup-evidence.json"
+    },
+    {
+      "command": "venv/bin/python tests/check_packaged_apps.py",
+      "result": "Passed root repeat: real DEB extracted, both production scripts, 22 tools, 24 exact assets, byte-preserving attachments, real PNG worker; existing venv",
+      "evidence": "docs/project77-packaged-apps-evidence.json"
+    },
+    {
+      "command": "Python AST/JSON, node --check, bash -n, git diff --check, i18n parity, runtime/remote checks",
+      "result": "Passed; 393 identical keys in all seven languages, runtime data/ empty, no remote"
+    },
+    {
+      "command": "venv/bin/python tests/check_issues_ui.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-issues-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_search_ui.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-search-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_markdown_ui.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-markdown-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_history_ui.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-history-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_attachment_preview_ui.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-preview-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_settings_ui.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-settings-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_mcp_http.py",
+      "result": "Passed; root independent repetition after cleanup",
+      "log": "docs/project77-evidence/final-mcp-live.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_update_dialog_ui.py",
+      "result": "Passed root repeat after removing stale Turndown include and translation overrides; productive assets verified",
+      "log": "docs/project77-evidence/final-updates-browser.txt"
+    },
+    {
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization -v",
+      "result": "11 tests OK, 16.457s; root repeat including concurrent Schema-1→2 migration with data/snapshot preservation",
+      "log": "docs/project77-evidence/final-init-review.txt"
+    },
+    {
+      "command": "Visual review of desktop settings screenshot; translation scan and tests/check_settings_ui.py repeat",
+      "result": "Found missing dynamic nav.mcp label; restored in all seven languages, now 394 keys; browser regression guard added",
+      "log": "docs/project77-evidence/final-settings-browser.txt"
     }
   ],
   "progress": {
@@ -137,7 +211,9 @@
     "396": "complete; Root6 real protocol tests passed, live2process SDK check passed, integrated86 tests passed; version0.0.1+147",
     "397": "complete; Root15 backend tests and11-scenario real browser repetition passed, mobile screenshot viewed; version0.0.1+147",
     "394": "complete implementation and root review; version0.0.1+148",
-    "398": "complete implementation and root review; version0.0.1+148"
+    "398": "complete implementation and root review; version0.0.1+148",
+    "399": "Complete implementation and root review; grouped cleanup/operations commit version 0.0.1+149",
+    "400": "Final exact-commit verification and handoff pending after #399"
   },
   "constraints": [
     "No Tareas writes except authorized project handoffs/status through MCP",
@@ -146,9 +222,11 @@
     "Complete packages only after coordinator review and recorded tests"
   ],
   "environment": "Playwright1.64/Chromium156 installed and smoke-tested; extract-msg0.56.1/Pillow12.3.0 installed; runtime data/ still empty",
-  "next": "399 cleanup, operations and regression preservation; then400 final handoff.401 PL only.",
-  "last_committed": "2623b0f /0.0.1+147;393/396/397 Tareas100",
+  "next": "400: exact-commit final full suite, backup/restore and packaged-app checks, then PL handoff. #401 remains open.",
+  "last_committed": "146c6ba /0.0.1+148;394/398 Tareas100",
   "known_test_notes": [
-    "ASGI TestClient MCP protocol tests emit upstream anyio MemoryObjectReceiveStream ResourceWarnings; live SDK two-process check clean. No assertion failure."
+    "ASGI TestClient MCP protocol tests emit upstream anyio MemoryObjectReceiveStream ResourceWarnings; live SDK two-process check clean. No assertion failure.",
+    "Earlier in-process tests initialized /var/log/casos.log; test fixtures now suppress host-handler installation. Existing log retained, no runtime DB/secret/attachments created. Final targeted isolation rerun verified unchanged host log.",
+    "A too-broad test-only os.write fault injection caused resource_tracker warnings; narrowed to candidate key file descriptors. Full 145-test rerun has no multiprocessing tracker/semaphore warnings."
   ]
 }

@@ -1,0 +1,22 @@
+test_animation_first_frame_and_metadata_removal (tests.test_attachment_preview.AttachmentPreviewTests.test_animation_first_frame_and_metadata_removal) ... ok
+test_corrupt_and_unsupported_formats_keep_original (tests.test_attachment_preview.AttachmentPreviewTests.test_corrupt_and_unsupported_formats_keep_original) ... ok
+test_dedicated_bearer_and_revocation (tests.test_attachment_preview.AttachmentPreviewTests.test_dedicated_bearer_and_revocation) ... ok
+test_duplicate_names_cids_and_traversal_names (tests.test_attachment_preview.AttachmentPreviewTests.test_duplicate_names_cids_and_traversal_names) ... ok
+test_embedded_routes_current_rights_all_active_roles (tests.test_attachment_preview.AttachmentPreviewTests.test_embedded_routes_current_rights_all_active_roles) ... ok
+test_five_raster_formats_and_original_bytes (tests.test_attachment_preview.AttachmentPreviewTests.test_five_raster_formats_and_original_bytes) ... ok
+test_image_dimension_limits_without_large_fixture (tests.test_attachment_preview.AttachmentPreviewTests.test_image_dimension_limits_without_large_fixture) ... ok
+test_limits_input_count_depth_rtf_and_body (tests.test_attachment_preview.AttachmentPreviewTests.test_limits_input_count_depth_rtf_and_body) ... ok
+test_logout_during_worker_rechecks_cookie (tests.test_attachment_preview.AttachmentPreviewTests.test_logout_during_worker_rechecks_cookie) ... ok
+test_official_fixtures_hashes_headers_and_embedded_bytes (tests.test_attachment_preview.AttachmentPreviewTests.test_official_fixtures_hashes_headers_and_embedded_bytes) ... ok
+test_plain_text_rtf_and_missing_fields (tests.test_attachment_preview.AttachmentPreviewTests.test_plain_text_rtf_and_missing_fields) ... ok
+test_revocation_and_deactivation_during_worker (tests.test_attachment_preview.AttachmentPreviewTests.test_revocation_and_deactivation_during_worker) ... ok
+test_sanitizer_allowlist_mutations_and_links (tests.test_attachment_preview.AttachmentPreviewTests.test_sanitizer_allowlist_mutations_and_links) ... ok
+test_timeout_busy_and_temp_cleanup (tests.test_attachment_preview.AttachmentPreviewTests.test_timeout_busy_and_temp_cleanup) ... ok
+test_unicode_html_cid_and_embedded_download (tests.test_attachment_preview.AttachmentPreviewTests.test_unicode_html_cid_and_embedded_download) ... ok
+test_utf16_html_bom_preserves_unicode (tests.test_attachment_preview.AttachmentPreviewTests.test_utf16_html_bom_preserves_unicode) ... ok
+test_worker_resource_limits_are_effective (tests.test_attachment_preview.AttachmentPreviewTests.test_worker_resource_limits_are_effective) ... ok
+
+----------------------------------------------------------------------
+Ran 17 tests in 45.873s
+
+OK

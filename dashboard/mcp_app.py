@@ -61,6 +61,8 @@ async def agent_guide(request: Request):
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(levelname)s %(message)s")
+    from dashboard.database import init_db
+    init_db()
     tls = get_tls_config()
     kwargs = {"host": os.environ.get("CASOS_HOST", "0.0.0.0"), "port": int(os.environ.get("CASOS_MCP_PORT", "8516"))}
     if tls and tls["enabled"]:

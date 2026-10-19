@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from dashboard import auth, database, search_service as search
+from dashboard import auth, database, mcp_transport, search_service as search
 from dashboard.errors import ApplicationError
 from dashboard.app import app
 
@@ -17,7 +17,7 @@ class IssueSearchTests(unittest.TestCase):
     def setUp(self):
         temp=tempfile.TemporaryDirectory(prefix='casos-issue-search-');self.addCleanup(temp.cleanup)
         root=Path(temp.name)
-        for module,name,value in ((database,'DB_DIR',root),(database,'DB_PATH',root/'casos.db'),(auth,'SECRET_KEY_PATH',root/'secret.key')):
+        for module,name,value in ((database,'DB_DIR',root),(database,'DB_PATH',root/'casos.db'),(auth,'SECRET_KEY_PATH',root/'secret.key'),(mcp_transport,'setup_security_logger',lambda: None)):
             patcher=patch.object(module,name,value);patcher.start();self.addCleanup(patcher.stop)
         database.init_db()
         self.db=database.get_db();self.addCleanup(self.db.close)

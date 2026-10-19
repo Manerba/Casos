@@ -1,5 +1,5 @@
 [Unit]
-Description=Casos - Basis fuer ein Ticketsystem (FastAPI)
+Description=Casos - Issue-System (FastAPI)
 After=network.target
 
 [Service]

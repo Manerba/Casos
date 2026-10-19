@@ -1,0 +1,2 @@
+Markdown browser passed: real REST source roundtrip, tables/lists/tasks/code, literal HTML, Issue+Update reader rendering, script/event/protocol/namespace/DOM-clobbering defenses.
+Evidence: /tmp/casos-markdown-evidence

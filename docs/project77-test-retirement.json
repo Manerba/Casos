@@ -1,0 +1,524 @@
+{
+  "project_id": 77,
+  "subtask_id": 399,
+  "purpose": "Semantische Zuordnung pensionierter Tests und transparente verbleibende Prüflücken; keine abschließende PL-Abnahme.",
+  "reviewed_on": "2026-10-19",
+  "baseline_commit": "146c6ba9c473116506dd6b169deb340b141837d4",
+  "baseline_version": "0.0.1+148",
+  "reviewed_state": "Uncommitted #399 worktree after product cleanup and secret-test correction. Root owns final integrated test evidence and version commit.",
+  "authorization": "Root-Freigabe #399: nur fachlich entfallene Tests pensionieren; Schutzmechanismen fachlich passend erhalten. Diese Datei entstand nach ausdrücklichem Dokumentationsauftrag; keine weiteren Test-/Produktänderungen.",
+  "evidence_semantics": "retained nennt vorhandene Testabdeckung, nicht einen neuen erfolgreichen Testlauf. Finale Befehle/Ergebnisse gehören in #400 und project77-implementation.json. Quelltests wurden gegen git show HEAD:<path> gelesen.",
+  "count": {
+    "removed_backend_test_files": 23,
+    "removed_browser_check_files": 10
+  },
+  "removed_tests": [
+    {
+      "source": "tests/test_admin_project_access.py",
+      "retired": [
+        "Projekt-/Subtask-Sonderrechte, Reihenfolge, Layout, Projektmitglieder und Dateiablage-Konfiguration"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_every_active_identity_reads_and_creates_but_reader_cannot_mutate",
+        "tests/test_issues.py::test_current_admin_active_flags_and_missing_id_are_rechecked",
+        "tests/test_updates.py::test_only_author_corrects_and_only_admin_deletes",
+        "tests/test_updates.py::test_author_window_boundaries_preserve_identity_time_and_revision",
+        "tests/test_issue_mcp.py::test_global_read_rights_grants_and_update_revisions"
+      ],
+      "note": "Globale Lesbarkeit ersetzt frühere eingeschränkte Projektsichtbarkeit; Schreibrechte bleiben differenziert."
+    },
+    {
+      "source": "tests/test_append_and_reason.py",
+      "retired": [
+        "In-place-Dateibearbeitung, file.append, UTF-8/BOM-Dateiappend und gemeinsamer WebDAV/Office-Schreiblock"
+      ],
+      "retained": [
+        "tests/test_security_regressions.py::test_reason_unicode_length_empty_and_audit_separation",
+        "tests/test_issues.py::test_exact_patch_append_replace_and_overlapping_ambiguity",
+        "tests/test_issue_mcp.py::test_errors_are_structured_and_no_partial_writes",
+        "tests/test_attachments.py::test_filename_type_reason_validation_precedes_mutations"
+      ],
+      "note": "Beschreibungspatches bleiben; Anhänge sind unveränderliche getrennte Uploads. Dateiappend selbst besitzt keinen Ersatz, weil es entfällt."
+    },
+    {
+      "source": "tests/test_database_initialization.py",
+      "retired": [
+        "Tareas-Tabellen-/Bereichs-/Subtask-Positionsmigration"
+      ],
+      "retained": [
+        "tests/test_issue_initialization.py::test_parallel_first_start_and_restart",
+        "tests/test_issue_initialization.py::test_second_initializer_waits_before_wal_setup",
+        "tests/test_issue_initialization.py::test_process_death_releases_lock_and_rolls_back_partial_schema",
+        "tests/test_issue_initialization.py::test_initialization_error_propagates_closes_connection_and_allows_retry",
+        "tests/test_issue_initialization.py::test_schema_one_upgrade_preserves_data_and_custom_templates",
+        "tests/test_issue_initialization.py::test_concurrent_schema_one_upgrade_waits_and_preserves_data_and_snapshots",
+        "tests/test_issue_initialization.py::test_schema_upgrade_failure_rolls_back_columns_version_and_content"
+      ],
+      "note": "Die legitimen alten Prüfungen einer wartenden Migration und eines gleichzeitigen Upgrades sind durch einen kombinierten Schema-1→2-Mehrprozessfall ersetzt. Separate Lock-, Restart- und Rollbacktests bleiben zusätzlich erhalten."
+    },
+    {
+      "source": "tests/test_dependencies.py",
+      "retired": [
+        "Abhängigkeiten, Projektanker, transitive Redundanz, Zyklen und Graphmutationen"
+      ],
+      "retained": [
+        "tests/test_issue_initialization.py::test_fresh_restart_and_foreign_keys",
+        "tests/test_issue_mcp.py::test_both_mounts_catalog_lifecycle_and_compact_writes",
+        "tests/test_issue_http.py::test_removed_endpoints_do_not_fall_through_to_spa"
+      ],
+      "note": "Fachfunktion vollständig entfernt; Negativprüfungen bestätigen Ziel-Schema/-Katalog/-Routen."
+    },
+    {
+      "source": "tests/test_description_revisions.py",
+      "retired": [
+        "Getrennte Projekt-/Subtask-Beschreibungspfade, optionale Legacy-Revisionen und Legacy-HTML-Formaterhalt"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_description_revision_preserves_text_and_rejects_conflict_atomically",
+        "tests/test_issues.py::test_exact_patch_append_replace_and_overlapping_ambiguity",
+        "tests/test_issues.py::test_concurrent_description_updates_have_one_winner",
+        "tests/test_issues.py::test_audit_failure_rolls_back_issue_event_grants_and_cleanup_queue",
+        "tests/test_issue_http.py::test_real_session_csrf_and_description_conflict",
+        "tests/test_issue_mcp.py::test_global_read_rights_grants_and_update_revisions"
+      ],
+      "note": "Beschreibungsschreiben erfordert jetzt die Basisrevision; fehlende Revision ist kein erlaubter Legacy-Fall mehr."
+    },
+    {
+      "source": "tests/test_editor_page.py",
+      "retired": [
+        "Office-/Textdatei-Editorseiten, WOPI und separates Handoff-Fenster"
+      ],
+      "retained": [
+        "tests/test_security_regressions.py::test_authentication_csrf_and_security_headers_on_real_apps",
+        "tests/test_issue_http.py::test_removed_endpoints_do_not_fall_through_to_spa",
+        "tests/check_markdown_ui.py",
+        "tests/check_update_dialog_ui.py"
+      ],
+      "note": "Strikte CSP, Authentifizierung, CSRF und Sanitizing werden an aktiven Seiten/Overlays geprüft. Kein separates Update-Fenster zugesagt."
+    },
+    {
+      "source": "tests/test_file_storage.py",
+      "retired": [
+        "Pro Issue konfigurierbare Ablagen, Verzeichnisse, WebDAV, Office-Token/-Callbacks, Ablagewechsel und Dateibearbeitung"
+      ],
+      "retained": [
+        "tests/test_attachments.py",
+        "tests/test_attachment_auth.py",
+        "tests/test_attachment_preview.py",
+        "tests/check_issues_ui.py"
+      ],
+      "note": "Flache Anhang-IDs und generierte Speichernamen ersetzen freie Dateipfade. Gleichnamige Dateien überschreiben sich nicht; endgültige Issue-Löschung nutzt dauerhafte GC."
+    },
+    {
+      "source": "tests/test_handoff_editing.py",
+      "retired": [
+        "Doppelte Aufgaben-/Subtask-Handoff-Scope und persönliche Notizen"
+      ],
+      "retained": [
+        "tests/test_updates.py::test_author_window_boundaries_preserve_identity_time_and_revision",
+        "tests/test_updates.py::test_only_author_corrects_and_only_admin_deletes",
+        "tests/test_updates.py::test_revisions_required_for_admin_and_author_and_conflicts_do_not_write",
+        "tests/test_updates.py::test_revocation_and_deactivation_apply_after_opening",
+        "tests/test_updates.py::test_concurrent_corrections_have_one_winner",
+        "tests/test_issue_mcp.py::test_global_read_rights_grants_and_update_revisions"
+      ],
+      "note": "300-Sekunden-Korrekturfenster, aktuelle Beitragsrechte, Autor/Erstellzeit und Revisionen bleiben erhalten."
+    },
+    {
+      "source": "tests/test_markdown_content.py",
+      "retired": [
+        "Migration alter HTML-Daten aus Tareas und HTML-Formatmarkierung"
+      ],
+      "retained": [
+        "tests/test_security_regressions.py::test_exact_markdown_roundtrip_between_rest_and_mcp",
+        "tests/test_issue_initialization.py::test_legacy_and_unknown_data_are_not_changed",
+        "tests/check_markdown_ui.py"
+      ],
+      "note": "Casos akzeptiert nur Markdown; bestehende fremde/Tareas-Daten werden unverändert abgewiesen. Legacy-HTML-Konvertierung ist kein zugesagter Migrationspfad."
+    },
+    {
+      "source": "tests/test_mcp_endpoints.py",
+      "retired": [
+        "Projekt-/Subtask-/Dateibrowser-Werkzeuge, Fortschritts- und Kindprojektfälle"
+      ],
+      "retained": [
+        "tests/test_issue_mcp.py",
+        "tests/test_attachment_auth.py",
+        "tests/test_security_regressions.py::test_authentication_csrf_and_security_headers_on_real_apps",
+        "tests/check_mcp_http.py",
+        "tests/check_packaged_apps.py"
+      ],
+      "note": "Beide Mounts, aktuelle Identität und Rollen, Session-ID-Isolation, Kill-Switch, Tokenwiderruf, Streaming, Bootstrap und dedizierte Routen bleiben geprüft."
+    },
+    {
+      "source": "tests/test_mcp_errors.py",
+      "retired": [
+        "Abhängigkeits-/Ablageeinrichtungs-/Move-/WebDAV-Fehlercodes"
+      ],
+      "retained": [
+        "tests/test_issue_mcp.py::test_errors_are_structured_and_no_partial_writes",
+        "tests/test_security_regressions.py::test_unknown_errors_never_expose_details_and_success_schema_survives",
+        "tests/test_attachments.py::test_storage_audit_and_read_failures_preserve_existing_files"
+      ],
+      "note": "Strukturierte Fehler, keine geheimen Eingaben im Fehler/Log, kein Teilschreiben und unerwartete Fehlerredaktion bleiben erhalten."
+    },
+    {
+      "source": "tests/test_mcp_files.py",
+      "retired": [
+        "Freie Dateipfade, mkdir/move/write/delete-Verzeichnisse und WebDAV-Projektablagen"
+      ],
+      "retained": [
+        "tests/test_issue_mcp.py::test_attachments_binary_duplicates_bounds_and_rest_parity",
+        "tests/test_attachments.py::test_symlinks_hardlinks_corrupt_queue_and_live_metadata_are_safe",
+        "tests/test_attachments.py::test_storage_root_symlink_is_rejected",
+        "tests/test_attachment_auth.py"
+      ],
+      "note": "Anhang-API prüft Binärinhalte, Größen, aktuelle Rechte und sichere lokale Ablage; keine Dateiverzeichnis-Semantik mehr."
+    },
+    {
+      "source": "tests/test_mcp_project_pagination.py",
+      "retired": [
+        "Projektlisten-Alias, abgeleiteter Projektstatus, projektbezogene Sichtbarkeitsfilter und WebDAV-Metadaten"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_pagination_filters_compact_rows_and_restart",
+        "tests/test_issue_sorting.py",
+        "tests/test_security_regressions.py::test_list_total_and_items_share_one_snapshot_under_concurrent_delete",
+        "tests/test_issue_mcp.py::test_both_mounts_catalog_lifecycle_and_compact_writes",
+        "tests/test_issue_mcp.py::test_errors_are_structured_and_no_partial_writes"
+      ],
+      "note": "Listenmetadaten, kompakte Antworten, Grenzen, stabile globale Sortierung und Snapshot-Konsistenz bleiben; alle aktiven Benutzer sehen alle Issues."
+    },
+    {
+      "source": "tests/test_project_assignment_access.py",
+      "retired": [
+        "Vererbte Projekt-/Subtask-Leserechte und persönliche Notizen"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_assignees_browser_and_mcp_edit_but_do_not_manage",
+        "tests/test_updates.py::test_all_active_users_read_and_capabilities_match_creation",
+        "tests/test_updates.py::test_revocation_and_deactivation_apply_after_opening",
+        "tests/test_issue_search.py::test_every_active_user_reads_and_stale_activity_is_rejected_even_for_empty_query"
+      ],
+      "note": "Zuweisung gewährt Schreib-/Beitragsrechte am flachen Issue; globale Lesbarkeit ersetzt die frühere Lesevererbung."
+    },
+    {
+      "source": "tests/test_project_links.py",
+      "retired": [
+        "Kindprojekte/PID, rekursiver Fortschritt, Verknüpfen/Trennen, projektübergreifende Rechte und Zyklen"
+      ],
+      "retained": [
+        "tests/test_issue_initialization.py::test_fresh_restart_and_foreign_keys",
+        "tests/test_issue_mcp.py::test_both_mounts_catalog_lifecycle_and_compact_writes"
+      ],
+      "note": "Diese Fachfunktion entfällt vollständig; keine Reproduktion ihrer Graphregeln im Issue-Modell."
+    },
+    {
+      "source": "tests/test_project_status.py",
+      "retired": [
+        "Aus Subtask-Fortschritt abgeleiteter Projektstatus"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_lifecycle_null_clearing_events_and_audit_reason",
+        "tests/test_issues.py::test_strict_fields_status_title_priority_deadline_and_unicode",
+        "tests/test_issue_history_mail.py::test_events_before_after_reopen_actor_and_history_pagination"
+      ],
+      "note": "Der flache Issue-Status ist manuell und kann wieder geöffnet werden; keine Prozentwerte oder automatischen Projektstatus."
+    },
+    {
+      "source": "tests/test_project_views.py",
+      "retired": [
+        "Readiness/Blocker, Projektstatus-Snapshot, Delegation, Subtask-Zähler/Positionen und Projektübersicht-Querybudget"
+      ],
+      "retained": [
+        "tests/test_issue_mcp.py::test_both_mounts_catalog_lifecycle_and_compact_writes",
+        "tests/test_security_regressions.py::test_list_total_and_items_share_one_snapshot_under_concurrent_delete",
+        "tests/test_issue_history_mail.py::test_events_before_after_reopen_actor_and_history_pagination",
+        "tests/test_issues.py::test_description_revision_preserves_text_and_rejects_conflict_atomically"
+      ],
+      "note": "Kompakte Lese-/Schreibformen, gemeinsame Beschreibungsversion und konsistente Listen bleiben; das alte projektbezogene Querybudget ist nicht Teil des neuen Vertrags."
+    },
+    {
+      "source": "tests/test_rest_file_auth.py",
+      "retired": [
+        "Dateibrowser-/WebDAV-REST auf Aufgabenpfaden"
+      ],
+      "retained": [
+        "tests/test_attachment_auth.py::test_rest_cookie_and_bearer_round_trips_download_headers_and_delete",
+        "tests/test_attachment_auth.py::test_csrf_bearer_precedence_revocation_kill_switch_and_deactivation",
+        "tests/test_attachment_auth.py::test_unauthorized_body_is_not_consumed_on_main_or_dedicated_app",
+        "tests/test_attachment_auth.py::test_token_or_contribution_revoked_during_upload_prevents_publication",
+        "tests/test_security_regressions.py::test_authentication_csrf_and_security_headers_on_real_apps"
+      ],
+      "note": "Bearer-Vorrang gegenüber Cookie, anhangbegrenzte REST-Bearer-Scope, CSRF, aktuelle Rechte und Ablehnung vor Bodyempfang bleiben."
+    },
+    {
+      "source": "tests/test_search.py",
+      "retired": [
+        "Projekt-/Subtask-/persönliche-Notiz-Korpus und frühere Autor-/Parent-Kaskaden"
+      ],
+      "retained": [
+        "tests/test_issue_search.py",
+        "tests/test_issue_mcp.py::test_guides_bootstrap_search_and_current_identity",
+        "tests/check_search_ui.py"
+      ],
+      "note": "FTS5, gemeinsames Ranking, Unicode/Phrasen/Präfix, Filter, stabile Pagination, sichere Snippets, Trigger/Rebuild/Rollback bleiben. Gelöschte Autoren lassen Updates gemäß neuem Modell erhalten."
+    },
+    {
+      "source": "tests/test_task_cancellation.py",
+      "retired": [
+        "Projektabbruch-Vorrang gegenüber automatischem Fortschritt und Erhalt abhängiger Subtask-/Graphdaten"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_lifecycle_null_clearing_events_and_audit_reason",
+        "tests/test_issue_history_mail.py::test_events_before_after_reopen_actor_and_history_pagination",
+        "tests/test_issue_history_mail.py::test_deadlines_default_individual_warning_terminal_inactive_and_dedup",
+        "tests/check_issues_ui.py"
+      ],
+      "note": "Abbrechen/Wiederöffnen, Rechte und keine Fristmail für terminale Issues bleiben."
+    },
+    {
+      "source": "tests/test_task_permissions.py",
+      "retired": [
+        "Lesefreigaben, Projekt-/Subtask-Erstellrechte und Office-Token-Widerruf"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_editor_grants_revision_current_rights_and_strict_members",
+        "tests/test_issues.py::test_concurrent_editor_updates_have_one_winner",
+        "tests/test_issues.py::test_assignees_browser_and_mcp_edit_but_do_not_manage",
+        "tests/test_issues.py::test_audit_failure_rolls_back_issue_event_grants_and_cleanup_queue",
+        "tests/test_attachment_auth.py::test_token_or_contribution_revoked_during_upload_prevents_publication",
+        "tests/check_issues_ui.py"
+      ],
+      "note": "Explizite Bearbeiterfreigaben, Verwaltungsrechte, atomare revisionsgesicherte Vollersetzung und aktueller Rechteentzug bleiben."
+    },
+    {
+      "source": "tests/test_task_validation.py",
+      "retired": [
+        "Projekttyp-/Subtask-Fortschrittsvalidierung und Ablage-Nebeneffekte"
+      ],
+      "retained": [
+        "tests/test_issues.py::test_strict_fields_status_title_priority_deadline_and_unicode",
+        "tests/test_issues.py::test_utf8_description_limit_applies_to_create_update_and_patch",
+        "tests/test_issues.py::test_lifecycle_null_clearing_events_and_audit_reason",
+        "tests/test_issue_mcp.py::test_errors_are_structured_and_no_partial_writes"
+      ],
+      "note": "Vier Statuswerte, strikte Typen/Whitelist, Null-Löschen und keine Teilmutation bleiben; Prozentwerte entfallen."
+    },
+    {
+      "source": "tests/test_text_files.py",
+      "retired": [
+        "Native Datei-In-place-Editoren, UTF-16/BOM-Erhalt, Datei-Revisionen, gemeinsame Office/WebDAV-Schreibsperren"
+      ],
+      "retained": [
+        "tests/test_security_regressions.py::test_exact_markdown_roundtrip_between_rest_and_mcp",
+        "tests/test_issues.py::test_concurrent_description_updates_have_one_winner",
+        "tests/test_attachments.py::test_crashed_upload_is_removed_after_restart",
+        "tests/test_attachments.py::test_storage_audit_and_read_failures_preserve_existing_files",
+        "tests/test_attachment_auth.py::test_disconnect_incomplete_invalid_multipart_and_wrong_field_leave_no_files"
+      ],
+      "note": "Markdown-Inhalt/Revisionen sowie sichere Uploadfehler/Prozessabbruch bleiben erhalten. Keine veränderbaren Anhanginhalte oder Dateischreib-Revisions-API mehr."
+    },
+    {
+      "source": "tests/check_dependencies_ui.py",
+      "retired": [
+        "Abhängigkeitsauswahl und Netzplan"
+      ],
+      "retained": [],
+      "note": "Vollständig entfallene Oberfläche."
+    },
+    {
+      "source": "tests/check_description_revisions_ui.py",
+      "retired": [
+        "Getrennte Task-/Subtask-Zeilen und deren Layout"
+      ],
+      "retained": [
+        "tests/check_issues_ui.py",
+        "tests/check_update_dialog_ui.py"
+      ],
+      "note": "Konfliktentwurf, Basisrevision, Save-Lock und Detail-Neuaufbau während Speichern werden im Issue-/Update-Flow geprüft."
+    },
+    {
+      "source": "tests/check_editor_ui.py",
+      "retired": [
+        "Office-Dateieditor und dessen Konfigurations-/Fensterfluss"
+      ],
+      "retained": [
+        "tests/check_attachment_preview_ui.py",
+        "tests/check_markdown_ui.py"
+      ],
+      "note": "Anhangvorschau ist rein lesend; nur Issue-/Update-Markdown bleibt bearbeitbar."
+    },
+    {
+      "source": "tests/check_file_storage_ui.py",
+      "retired": [
+        "Dateibrowser, Ablageeinrichtung und Ordneraktionen"
+      ],
+      "retained": [
+        "tests/check_issues_ui.py",
+        "tests/check_attachment_preview_ui.py"
+      ],
+      "note": "Upload/Liste/Download/Löschen, gleichnamige Anhänge, Uploadfehler und Vorschauen werden in der flachen Issue-Oberfläche geprüft."
+    },
+    {
+      "source": "tests/check_handoff_ui.py",
+      "retired": [
+        "Task-/Subtask-Handoff-Widgets und separate Popup-/Fenster-Übertragung"
+      ],
+      "retained": [
+        "tests/check_update_dialog_ui.py",
+        "tests/check_issues_ui.py",
+        "tests/check_history_ui.py"
+      ],
+      "note": "Update-Overlay, Entwurfserhalt, POST→PUT, aktuelle Rechte, Revisionen, Metadaten und Ereignisaktualisierung bleiben; separates Fenster nicht implementiert (optional)."
+    },
+    {
+      "source": "tests/check_project_links_ui.py",
+      "retired": [
+        "PID-/Kindprojekt-Verknüpfungsdialoge und Fortschrittsanzeige"
+      ],
+      "retained": [],
+      "note": "Vollständig entfallene Oberfläche."
+    },
+    {
+      "source": "tests/check_project_scroll_ui.py",
+      "retired": [
+        "Projektzeilen-Ausklappen, Subtask-Tabellenkopf und projektspezifische Scrollkorrektur"
+      ],
+      "retained": [
+        "tests/check_issues_ui.py"
+      ],
+      "note": "Neue Liste/Detail-Navigation, Browser-History, Filter/Sortierung, Pagination und schmale Ansicht werden geprüft; frühere ExpandableTable-Geometrie ist kein Zielverhalten."
+    },
+    {
+      "source": "tests/check_subtask_scroll_ui.py",
+      "retired": [
+        "Subtask-Zeilenanimation und zugehörige Scroll-Minimalhöhe"
+      ],
+      "retained": [],
+      "note": "Vollständig entfallene Subtask-Oberfläche; keine künstliche Übertragung dieses Layouttests."
+    },
+    {
+      "source": "tests/check_task_settings_ui.py",
+      "retired": [
+        "Zeilenbezogene Projekt-/Aufgaben-Einstellungen und alte Mitgliederrechte"
+      ],
+      "retained": [
+        "tests/check_issues_ui.py",
+        "tests/check_settings_ui.py"
+      ],
+      "note": "Issue-Bearbeiterfreigaben mit Revision/Entwurf und globales Einstellungen-Overlay mit Admin-/Benutzertrennung werden separat geprüft."
+    },
+    {
+      "source": "tests/check_text_file_ui.py",
+      "retired": [
+        "Textdatei-Overlay, separate Editorfenster, Dateipfade und In-place-Dateispeichern"
+      ],
+      "retained": [
+        "tests/check_markdown_ui.py",
+        "tests/check_update_dialog_ui.py",
+        "tests/check_issues_ui.py"
+      ],
+      "note": "Gemeinsam genutzte Markdown-Funktion bleibt; Dateieditor-/postMessage-Übertragung entfällt."
+    }
+  ],
+  "modified_in_place": [
+    {
+      "source": "tests/check_markdown_ui.py",
+      "retained": [
+        "Markdown-Überschriften, Tabellen, Codebeispiele, Literal-HTML, aktuelle Leserrechte und bearbeitbare Beschreibungen/Updates",
+        "Stored-XSS-Sanitizing und direkte Sanitizer-Vektoren im echten Browser mit produktiven Assets"
+      ],
+      "removed": [
+        "Legacy-HTML→Markdown-Konvertierung, Turndown und Dateieditor-plainText"
+      ],
+      "rationale": "Neues Schema speichert ausschließlich Markdown; Tareas-/unbekannte Daten werden abgewiesen. Gemeinsamer MarkdownEditor bleibt aktiv."
+    }
+  ],
+  "closed_coverage_gaps": [
+    {
+      "id": "concurrent_schema_upgrade",
+      "classification": "Legitime Altregression nach Root-Review vor Übergabe zusätzlich ersetzt und gezielt geprüft.",
+      "replacement": "tests/test_issue_initialization.py::test_concurrent_schema_one_upgrade_waits_and_preserves_data_and_snapshots hält den ersten Migrator vor dem zweiten ALTER TABLE an. Ein Außenleser sieht weiterhin Schema 1 und unveränderte Ereignisse; der zweite Prozess öffnet SQLite erst nach Freigabe des flock. Beide Prozesse schließen erfolgreich ab; Schema 2, Originaldaten, Akteur-/Zuweisungsnamen, angepasste Präferenzen und eigene Mailvorlagen bleiben erhalten. integrity_check und foreign_key_check sind sauber.",
+      "previous": [
+        "tests/test_database_initialization.py::test_second_initializer_waits_for_pending_migration",
+        "tests/test_database_initialization.py::test_concurrent_upgrade_preserves_existing_data"
+      ],
+      "existing_separate_checks": [
+        "tests/test_issue_initialization.py::test_second_initializer_waits_before_wal_setup prüft Prozesssperre vor WAL bei frischem Schema.",
+        "tests/test_issue_initialization.py::test_parallel_first_start_and_restart prüft parallelen Erststart und Restart auf aktuellem Schema.",
+        "tests/test_issue_initialization.py::test_schema_one_upgrade_preserves_data_and_custom_templates prüft Schema-1→2 inklusive Daten/Template/Präferenz-Erhalt ohne konkurrierenden Prozess.",
+        "tests/test_issue_initialization.py::test_schema_upgrade_failure_rolls_back_columns_version_and_content prüft atomaren Upgrade-Rollback.",
+        "tests/test_issue_initialization.py::test_process_death_releases_lock_and_rolls_back_partial_schema prüft Prozesskill innerhalb frischer Schemaanlage, keine unterbrochene 1→2-Migration."
+      ],
+      "command": "venv/bin/python -m unittest tests.test_issue_initialization -v",
+      "result": "11 Tests OK in 16.681s, einschließlich neuem kombinierten Mehrprozessfall.",
+      "log": "/tmp/casos-399-initialization-final.log"
+    }
+  ],
+  "coverage_gaps": [
+    {
+      "id": "auth_rate_limits_password",
+      "classification": "Zusätzliche Absicherung bestehender Auth-Funktionen; keine durch Testpensionierung verlorene belegte Altprüfung.",
+      "missing": "Explizite Login- und Passwortwechsel-Rate-Limit-Grenzen mit Fakezeit, 429/Retry-After und Rücksetzung; erneuter Login mit geändertem Passwort.",
+      "existing_separate_checks": [
+        "tests/test_security_regressions.py::test_signed_cookie_security_flags_logout_and_current_session prüft erfolgreiche Anmeldung, sichere Cookie-Flags, Abmeldung und manipuliertes Cookie.",
+        "tests/test_issues.py::test_login_rejects_deactivated_local_and_mcp_users prüft gesperrte Loginidentitäten.",
+        "tests/check_settings_ui.py führt einen erfolgreichen persönlichen Passwortwechsel über den echten REST-Endpunkt aus und prüft das geleerte Formular; keine Rate-Limit-Sequenz oder erneute Anmeldung mit dem neuen Passwort."
+      ],
+      "disposition": "Nicht durchgeführt; nicht als bestanden melden. Root belässt diese zusätzlichen Szenarien außerhalb des finalen Zusatzprüfumfangs."
+    },
+    {
+      "id": "ldap_provider_transport",
+      "classification": "Zusätzliche Integrationsabdeckung; vorhandene Konfigurations-/Rechteprüfungen bleiben.",
+      "missing": "LDAP-Login und LDAP-Sync mit isoliertem Fakeprovider einschließlich Zertifikatsprüfung/Netzwerkfehlern und Rollen-/Aktivitätsänderungen aus dem Provider.",
+      "existing_separate_checks": [
+        "tests/test_settings.py::test_ldap_secret_masking_retains_secret_and_delete_deactivates prüft maskierte/verschlüsselte Bind-Credentials, Konfigurationsspeicherung mit gemockter test_connection und Deaktivierung beim Entfernen der LDAP-Konfiguration.",
+        "tests/test_settings.py::test_tls_options_and_current_database_path prüft gespeicherte verify_ldap/verify_smtp-Flags, keine echte TLS-Verbindung.",
+        "tests/test_operations.py::test_units_keep_hardening_paths_and_both_timers prüft LDAP-Timer/Service-Konfiguration."
+      ],
+      "disposition": "Weder Providertransport-Regression noch echte LDAP-Netzwerkprüfung durchgeführt; keine produktive Integration genutzt."
+    },
+    {
+      "id": "smtp_tls_transport",
+      "classification": "Zusätzliche Transportabdeckung; fachliche Benachrichtigungslogik und Secret-Restore sind abgedeckt.",
+      "missing": "send_mail/test_smtp_connection gegen isolierten SMTP-Server/Fake-SMTP auf Transportebene, einschließlich SSL/STARTTLS, Zertifikatsprüfung, Authentifizierungs- und Verbindungsfehlern.",
+      "existing_separate_checks": [
+        "tests/test_issue_history_mail.py prüft Postcommit-Auslösung, Empfänger/Deduplikation/Akteurausschluss, Präferenzen, HTML-Escaping und Mailfehler ohne Verlust fachlicher Mutationen; send_mail wird durch Recording-Fake/Fehlerantwort ersetzt.",
+        "tests/test_settings.py::test_mail_secret_and_preferences_with_fake_transport prüft Konfiguration/Masking mit gemockter test_smtp_connection.",
+        "tests/check_backup_restore.py prüft verschlüsselte Test-SMTP-Credentials und produktives get_smtp_config/decrypt nach Restore, ersetzt den Transport und verbietet reale smtplib-Verbindungen."
+      ],
+      "disposition": "Nicht durchgeführt; bestehende fachliche Mailtests sind kein Nachweis für SMTP-/TLS-Protokolltransport."
+    },
+    {
+      "id": "fresh_dependency_install",
+      "classification": "Bereits im Paketnachweis ausdrücklich dokumentierte Ausführungsgrenze.",
+      "missing": "Neuer Python-venv samt tatsächlichem Dependency-Download/-Install und Betrieb unter realem systemd auf frischem Host.",
+      "existing_separate_checks": [
+        "tests/test_operations.py baut das DEB und prüft isolierte Configure/Upgrade/Remove/Purge-Hooks mit zwingenden Stubs; keine Host-Dienstaktivierung.",
+        "tests/check_packaged_apps.py startet beide extrahierten Produkt-Scripts parallel mit frischen isolierten Runtime-Daten, verwendet jedoch den vorhandenen Repository-venv.",
+        "docs/project77-packaged-apps-evidence.json nennt diese Einschränkungen ausdrücklich."
+      ],
+      "disposition": "Isolierter Paketablauf ist geprüft; vollständige Neuinstallation der Pythonabhängigkeiten und reale Hostinstallation nicht als bestanden ausgeben."
+    }
+  ],
+  "read_only_static_check": {
+    "command": "Python json.loads über dashboard/static/i18n/*.json; Keymengen gegen de.json verglichen.",
+    "result": "Sieben gültige JSON-Dateien de/en/es/fr/ro/ru/uk mit jeweils exakt denselben 393 Keys; keine fehlenden/zusätzlichen Keys.",
+    "limitation": "Keine sprachliche Vollkorrekturprüfung und kein Ersatz für Browserprüfungen der tatsächlich angezeigten Texte.",
+    "final_root_correction": "Bei visueller Screenshotprüfung nav.mcp als dynamisch benötigten Key wieder ergänzt; abschließend 394 Keys pro Sprache. Settings-Browsercheck prüft jetzt alle Missing-key-Warnungen und sichtbares MCP-Label."
+  },
+  "update_harness_cleanup": {
+    "file": "tests/check_update_dialog_ui.py",
+    "changes": "Entfernten Turndown-Include und Übersetzungsüberschreibung aus Projektartefakt beseitigt. Der Browser lädt die echte produktive de.json; fehlgeschlagene Staticresponses und Requestfehler beider Benutzerkontexte lassen den Test fehlschlagen.",
+    "command": "venv/bin/python tests/check_update_dialog_ui.py",
+    "result": "Eigener Browserlauf erfolgreich; Root meldet erfolgreiche unabhängige Wiederholung.",
+    "log": "/tmp/casos-399-update-harness-final.log"
+  },
+  "final_integration_requirements": [
+    "Vollständige Backend-Discovery nach finaler Zusammenführung durch Root; aktuelle parallele Läufe sind kein vorweggenommener Erfolg.",
+    "Produktive Browserchecks Issue/Updates/Anhänge/Vorschau/Einstellungen/Suche/Verlauf/Markdown auf dem finalen gelieferten Stand.",
+    "Exakter Commit/Version und alle erfolgreichen/fehlgeschlagenen/nicht ausgeführten Befehle in #400 und Projekt-Handoff.",
+    "Bekannte Ausführungsgrenzen ausdrücklich weitergeben; #401 bleibt PL vorbehalten."
+  ]
+}

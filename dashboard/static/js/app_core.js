@@ -1,6 +1,6 @@
 /**
  * Casos - Core Module
- * Initialisierung, Theme, Settings, Tabs, URL-Routing, Notifications
+ * Initialisierung, Theme, Einstellungen, Issue-Routing und Meldungen
  */
 
 // ========================================
@@ -68,7 +68,6 @@ const COLOR_SCHEMES = [
     },
 ];
 
-// DOM-Cache fuer Tab-Inhalte (DocumentFragment-basiert)
 
 // ========================================
 // Initialisierung
@@ -77,31 +76,10 @@ const COLOR_SCHEMES = [
 document.addEventListener('DOMContentLoaded', async function() {
     initTheme();
     initEventListeners();
-    initTaskTableHeaderOffset();
 
-    // Admin-Mode Guard: Tabs nur in der Haupt-App initialisieren
-    if (!document.body.dataset.adminMode && !document.body.dataset.standalone) {
-        await loadCurrentUser();
-        if (currentUser && window.initIssues) await window.initIssues();
-    }
+    await loadCurrentUser();
+    if (currentUser && window.initIssues) await window.initIssues();
 });
-
-function initTaskTableHeaderOffset() {
-    if (!document.body.classList.contains('main-app')) return;
-    const header = document.querySelector('.header');
-    const filterBar = document.getElementById('filterBar');
-    if (!header || !filterBar) return;
-
-    // Filter koennen umbrechen oder in der Projektansicht ausgeblendet sein.
-    const updateOffset = () => {
-        const height = header.getBoundingClientRect().height + filterBar.getBoundingClientRect().height;
-        document.body.style.setProperty('--task-table-header-top', `${height}px`);
-    };
-    const observer = new ResizeObserver(updateOffset);
-    observer.observe(header);
-    observer.observe(filterBar);
-    updateOffset();
-}
 
 function initEventListeners() {
     // Settings-Button
@@ -118,28 +96,10 @@ function initEventListeners() {
         openSettingsOverlay();
     });
 
-    // Restart-Button
-    const restartBtn = document.getElementById('restartBtn');
-    if (restartBtn) {
-        restartBtn.addEventListener('click', restartDashboard);
-    }
-
     // Logout-Button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', logout);
-    }
-
-    // Passwort-Aendern-Button
-    const changePasswordBtn = document.getElementById('changePasswordBtn');
-    if (changePasswordBtn) {
-        changePasswordBtn.addEventListener('click', openPasswordChangeModal);
-    }
-
-    // Mail-Benachrichtigungen-Button
-    const mailPrefsBtn = document.getElementById('mailPrefsBtn');
-    if (mailPrefsBtn) {
-        mailPrefsBtn.addEventListener('click', openMailPreferencesModal);
     }
 
     // Language Submenu
@@ -149,14 +109,7 @@ function initEventListeners() {
         buildLangMenu();
     }
 
-    // Farbschema Submenu
-    const schemeToggle = document.getElementById('schemeToggle');
-    if (schemeToggle) {
-        schemeToggle.addEventListener('click', toggleColorSchemeMenu);
-        buildColorSchemeMenu();
-    }
-
-    // Der Titel fuehrt zurueck zur Aufgabenliste; neue Tabs bleiben per Modifier moeglich.
+    // Der Titel fuehrt zurueck zur Issue-Liste; neue Browser-Tabs bleiben per Modifier moeglich.
     document.querySelector('.header-home')?.addEventListener('click', (e) => {
         if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
@@ -218,73 +171,6 @@ async function logout() {
     window.location.href = '/login';
 }
 
-function openPasswordChangeModal() {
-    toggleSettingsDropdown(false);
-
-    createModal({
-        title: t('password.change'),
-        body: `
-            <div class="modal-field">
-                <label>${t('password.old')}</label>
-                <input type="password" id="pwdOld" autocomplete="current-password">
-            </div>
-            <div class="modal-field">
-                <label>${t('password.new')}</label>
-                <input type="password" id="pwdNew" autocomplete="new-password">
-            </div>
-            <div class="modal-field">
-                <label>${t('password.confirm')}</label>
-                <input type="password" id="pwdConfirm" autocomplete="new-password">
-            </div>`,
-        footer: `<button class="action-btn" onclick="closeModal()">${t('common.cancel')}</button>` +
-                `<button class="action-btn primary" id="pwdSaveBtn">${t('common.change')}</button>`,
-        onOpen: () => {
-            document.getElementById('pwdOld').focus();
-
-            document.getElementById('pwdSaveBtn').addEventListener('click', async () => {
-                const oldPwd = document.getElementById('pwdOld').value;
-                const newPwd = document.getElementById('pwdNew').value;
-                const confirmPwd = document.getElementById('pwdConfirm').value;
-
-                if (!oldPwd || !newPwd) {
-                    showNotification(t('password.fillAll'), 'error');
-                    return;
-                }
-                if (newPwd !== confirmPwd) {
-                    showNotification(t('password.mismatch'), 'error');
-                    return;
-                }
-                if (newPwd.length < 4) {
-                    showNotification(t('password.minLength'), 'error');
-                    return;
-                }
-
-                try {
-                    const resp = await fetch('/api/auth/password', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ old_password: oldPwd, new_password: newPwd }),
-                    });
-
-                    if (!resp.ok) {
-                        const data = await resp.json().catch(() => ({}));
-                        throw new Error(data.detail || t('common.error'));
-                    }
-
-                    showNotification(t('password.changed'), 'success');
-                    closeModal();
-                } catch (error) {
-                    showNotification(error.message, 'error');
-                }
-            });
-        },
-    });
-}
-
-// ========================================
-// Theme / Color Scheme Handling
-// ========================================
-
 function initTheme() {
     let savedScheme = normalizeColorScheme(localStorage.getItem('dashboard-color-scheme'));
     if (!localStorage.getItem('dashboard-color-scheme')) {
@@ -292,7 +178,6 @@ function initTheme() {
         savedScheme = localStorage.getItem('dashboard-theme') === 'dark' ? 'dark' : 'light';
     }
     applyColorScheme(savedScheme);
-    updateColorSchemeButton(savedScheme);
     initLangStatus();
 }
 
@@ -320,55 +205,11 @@ function applyColorScheme(code) {
     document.documentElement.setAttribute('data-theme', cfg.theme);
 }
 
-function toggleColorSchemeMenu() {
-    const sub = document.getElementById('schemeSubMenu');
-    const icon = document.getElementById('schemeExpandIcon');
-    if (!sub) return;
-
-    const langSub = document.getElementById('langSubMenu');
-    const langIcon = document.getElementById('langExpandIcon');
-    if (langSub) langSub.style.display = 'none';
-    if (langIcon) langIcon.classList.remove('open');
-
-    const isOpen = sub.style.display !== 'none';
-    sub.style.display = isOpen ? 'none' : 'block';
-    if (icon) icon.classList.toggle('open', !isOpen);
-}
-
-function buildColorSchemeMenu() {
-    const sub = document.getElementById('schemeSubMenu');
-    if (!sub) return;
-    const current = getColorScheme();
-    sub.innerHTML = COLOR_SCHEMES.map(s => {
-        const active = s.code === current ? ' active' : '';
-        const check = s.code === current ? '\u2713' : '';
-        const label = getColorSchemeLabel(s);
-        const swatches = s.swatches
-            .map(color => `<span style="background:${escapeAttr(color)}"></span>`)
-            .join('');
-        return `<div class="settings-sub-item${active}" data-scheme="${escapeAttr(s.code)}">
-            <span class="lang-check">${check}</span>
-            <span class="scheme-swatch">${swatches}</span>
-            <span>${escapeHtml(label)}</span>
-        </div>`;
-    }).join('');
-
-    if (!sub.dataset.bound) {
-        sub.addEventListener('click', (e) => {
-            const item = e.target.closest('[data-scheme]');
-            if (item) setColorScheme(item.dataset.scheme);
-        });
-        sub.dataset.bound = '1';
-    }
-}
-
 function setColorScheme(code) {
     const scheme = normalizeColorScheme(code);
     const cfg = getColorSchemeConfig(scheme);
     applyColorScheme(scheme);
     localStorage.setItem('dashboard-color-scheme', scheme);
-    updateColorSchemeButton(scheme);
-    buildColorSchemeMenu();
 
     document.dispatchEvent(new CustomEvent('colorSchemeChanged', {
         detail: { colorScheme: scheme, theme: cfg.theme },
@@ -378,27 +219,10 @@ function setColorScheme(code) {
     }));
 }
 
-function updateColorSchemeButton(code) {
-    const cfg = getColorSchemeConfig(code);
-    const schemeStatus = document.getElementById('schemeStatus');
-    if (schemeStatus) {
-        schemeStatus.textContent = getColorSchemeLabel(cfg);
-    }
-}
-
-// ========================================
-// Language Handling
-// ========================================
-
 function toggleLangMenu() {
     const sub = document.getElementById('langSubMenu');
     const icon = document.getElementById('langExpandIcon');
     if (!sub) return;
-
-    const schemeSub = document.getElementById('schemeSubMenu');
-    const schemeIcon = document.getElementById('schemeExpandIcon');
-    if (schemeSub) schemeSub.style.display = 'none';
-    if (schemeIcon) schemeIcon.classList.remove('open');
 
     const isOpen = sub.style.display !== 'none';
     sub.style.display = isOpen ? 'none' : 'block';
@@ -453,32 +277,6 @@ function toggleSettingsDropdown(forceState = null) {
         btn.setAttribute('aria-expanded', String(settingsDropdownOpen));
     }
 }
-
-async function restartDashboard() {
-    if (!confirm(t('restart.confirm'))) {
-        return;
-    }
-
-    const restartBtn = document.getElementById('restartBtn');
-    if (restartBtn) {
-        restartBtn.innerHTML = `<span class="settings-icon">\u231B</span><span class="settings-label">${t('restart.restarting')}</span>`;
-        restartBtn.style.pointerEvents = 'none';
-    }
-
-    try {
-        await fetch('/api/dashboard/restart', { method: 'POST' });
-    } catch (e) {
-        // Erwarteter Fehler - Verbindung bricht ab
-    }
-
-    setTimeout(() => {
-        location.reload();
-    }, 3000);
-}
-
-// ========================================
-// URL-Routing
-// ========================================
 
 function parseRoute() {
     const match = window.location.pathname.match(/^\/issues\/(\d+)\/?$/);
@@ -537,7 +335,7 @@ function escapeAttr(text) {
 }
 
 /**
- * HTML-Sanitizer fuer Beschreibungen, Markdown und den bisherigen WYSIWYG-Editor.
+ * HTML-Sanitizer fuer die Markdown-Ausgabe von Beschreibungen und Updates.
  * Unerlaubte Tags werden unwrapped (Textinhalt bleibt), Attribute entfernt.
  */
 function sanitizeHtml(html) {
@@ -588,348 +386,4 @@ function sanitizeHtml(html) {
 
     clean(doc.body);
     return doc.body.innerHTML;
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func.apply(this, args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-function formatPercent(value) {
-    if (value === null || value === undefined) return '-';
-    return Math.round(value) + '%';
-}
-
-// ========================================
-// Mail-Benachrichtigungen Modal
-// ========================================
-
-async function openMailPreferencesModal() {
-    toggleSettingsDropdown(false);
-
-    const overlay = createModal({
-        title: t('mail.prefs.title'),
-        maxWidth: '500px',
-        body: '<div class="table-loading"><div class="spinner"></div></div>',
-        footer: `<button class="action-btn" onclick="closeModal()">${t('common.cancel')}</button>` +
-                `<button class="action-btn primary" id="mailPrefsSaveBtn" disabled>${t('common.save')}</button>`,
-    });
-
-    // Prefs laden
-    try {
-        const resp = await fetch('/api/user/mail/preferences');
-        if (!resp.ok) throw new Error(t('common.loadError'));
-        const data = await resp.json();
-        const prefs = data.preferences || [];
-
-        const eventLabels = {
-            'task_assigned': t('mail.event.task_assigned'),
-            'status_change': t('mail.event.status_change'),
-            'deadline_reached': t('mail.event.deadline_reached'),
-            'deadline_warning': t('mail.event.deadline_warning'),
-        };
-
-        let html = '<div class="mail-prefs-list">';
-        for (const pref of prefs) {
-            const label = eventLabels[pref.event_type] || pref.event_type;
-            const checked = pref.enabled ? 'checked' : '';
-
-            html += `<div class="mail-pref-item">
-                <label>
-                    <input type="checkbox" data-event="${pref.event_type}" ${checked}>
-                    ${escapeHtml(label)}
-                </label>`;
-
-            if (pref.event_type === 'deadline_warning') {
-                html += `<div class="mail-pref-days">
-                    <input type="number" id="mailPrefDays_${pref.event_type}" value="${pref.days_before}" min="1" max="30">
-                    <span>${t('mail.prefs.daysBefore')}</span>
-                </div>`;
-            }
-
-            html += '</div>';
-        }
-        html += '</div>';
-
-        const modalBody = overlay.querySelector('.modal-body');
-        modalBody.innerHTML = html;
-
-        const saveBtn = document.getElementById('mailPrefsSaveBtn');
-        saveBtn.disabled = false;
-
-        saveBtn.addEventListener('click', async () => {
-            const preferences = [];
-            overlay.querySelectorAll('.mail-pref-item input[type="checkbox"]').forEach(cb => {
-                const eventType = cb.dataset.event;
-                const enabled = cb.checked;
-                const daysInput = document.getElementById(`mailPrefDays_${eventType}`);
-                const days_before = daysInput ? parseInt(daysInput.value) || 2 : 2;
-                preferences.push({ event_type: eventType, enabled, days_before });
-            });
-
-            try {
-                const resp = await fetch('/api/user/mail/preferences', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preferences }),
-                });
-
-                if (!resp.ok) {
-                    const data = await resp.json().catch(() => ({}));
-                    throw new Error(data.detail || t('common.saveError'));
-                }
-
-                showNotification(t('mail.prefs.saved'), 'success');
-                closeModal();
-            } catch (error) {
-                showNotification(error.message, 'error');
-            }
-        });
-    } catch (error) {
-        const modalBody = overlay.querySelector('.modal-body');
-        modalBody.innerHTML = `<p style="color:var(--color-bearish)">${t('mail.prefs.loadError')}</p>`;
-    }
-}
-
-// ============================================================================
-// Modal-Hilfsfunktionen
-// ============================================================================
-
-/**
- * Erstellt ein Modal-Dialog mit Overlay, ESC-Handler und Click-Outside-Close.
- * @param {Object} config
- * @param {string} config.title - Modal-Titel
- * @param {string} config.body - HTML fuer den Modal-Body
- * @param {string} [config.footer] - HTML fuer den Footer (Buttons). Standard: Abbrechen-Button
- * @param {string} [config.maxWidth] - Max-Breite (z.B. '500px', '700px')
- * @param {string} [config.cssClass] - Zusaetzliche CSS-Klasse fuer modal-content (z.B. 'modal-wide')
- * @param {boolean} [config.closeOnBackdrop=true] - Durch Klick auf den Hintergrund schliessen
- * @param {boolean} [config.closeOnEscape=true] - Durch Escape schliessen
- * @param {Function} [config.onOpen] - Callback nach dem Oeffnen (erhaelt overlay-Element)
- * @param {Function} [config.onClose] - Callback beim Schliessen
- * @returns {HTMLElement} Das Overlay-Element
- */
-function createModal(config) {
-    // Bestehendes Modal entfernen
-    closeModal();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-
-    const maxWidthStyle = config.maxWidth ? ` style="max-width:${config.maxWidth}"` : '';
-    const cssClass = config.cssClass ? ` ${config.cssClass}` : '';
-    const footer = config.footer !== undefined ? config.footer :
-        `<button class="action-btn" onclick="closeModal()">${t('common.cancel')}</button>`;
-
-    overlay.innerHTML = `
-        <div class="modal-content${cssClass}"${maxWidthStyle}>
-            <div class="modal-header">${config.title}</div>
-            <div class="modal-body">${config.body}</div>
-            ${footer ? `<div class="modal-footer">${footer}</div>` : ''}
-        </div>
-    `;
-
-    // Click-Outside schliessen
-    overlay.addEventListener('click', (e) => {
-        if (config.closeOnBackdrop !== false && e.target === overlay) closeModal();
-    });
-
-    document.body.appendChild(overlay);
-
-    // ESC-Handler
-    if (config.closeOnEscape !== false) {
-        const escHandler = (e) => {
-            if (e.key === 'Escape') closeModal();
-        };
-        document.addEventListener('keydown', escHandler);
-        overlay._escHandler = escHandler;
-    }
-
-    if (config.onClose) overlay._onClose = config.onClose;
-    if (config.onOpen) config.onOpen(overlay);
-
-    return overlay;
-}
-
-/**
- * Schliesst das aktuell offene Modal.
- */
-function closeModal() {
-    const overlay = document.querySelector('.modal-overlay');
-    if (!overlay) return;
-    if (overlay._escHandler) {
-        document.removeEventListener('keydown', overlay._escHandler);
-    }
-    if (overlay._onClose) overlay._onClose();
-    overlay.remove();
-}
-
-// ============================================================================
-// Tab-Initialisierung Hilfsfunktion
-// ============================================================================
-
-/**
- * Generische Tab-Initialisierung: Spinner anzeigen, FilterBar steuern, laden + rendern.
- * @param {Object} config
- * @param {boolean} [config.showFilterBar=false] - FilterBar anzeigen?
- * @param {Function} [config.loadFn] - Async-Funktion zum Laden der Daten
- * @param {Function} config.renderFn - Funktion zum Rendern des Tabs
- */
-async function initTabGeneric(config) {
-    const container = document.getElementById('contentContainer');
-    if (!container) return;
-
-    container.innerHTML = '<div class="table-loading"><div class="spinner"></div></div>';
-
-    const filterBar = document.getElementById('filterBar');
-    if (filterBar) filterBar.style.display = config.showFilterBar ? 'flex' : 'none';
-
-    if (config.loadFn) await config.loadFn();
-    if (config.renderFn) config.renderFn();
-}
-
-// ============================================================================
-// Config-CRUD Hilfsfunktionen
-// ============================================================================
-
-/**
- * Laedt eine Konfiguration vom Server.
- * @param {string} endpoint - API-Endpunkt (z.B. '/api/admin/ldap/config')
- * @returns {Object|null} Config-Objekt oder null bei Fehler
- */
-async function loadConfigFromAPI(endpoint) {
-    try {
-        const resp = await fetch(endpoint);
-        if (!resp.ok) throw new Error(t('common.loadError'));
-        const data = await resp.json();
-        return data.config !== undefined ? data.config : data;
-    } catch (e) {
-        return null;
-    }
-}
-
-/**
- * Speichert eine Konfiguration auf dem Server (POST).
- * @param {Object} config
- * @param {string} config.endpoint - API-Endpunkt
- * @param {Object} config.data - Zu sendende Daten
- * @param {string} config.successMessage - Erfolgsmeldung
- * @param {Function} [config.onSuccess] - Callback nach Erfolg (z.B. reload + render)
- * @returns {boolean} true bei Erfolg, false bei Fehler
- */
-async function saveConfigToAPI(config) {
-    try {
-        const resp = await fetch(config.endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(config.data),
-        });
-
-        if (!resp.ok) {
-            const errData = await resp.json().catch(() => ({}));
-            throw new Error(errData.detail || t('common.saveError'));
-        }
-
-        showNotification(config.successMessage, 'success');
-        if (config.onSuccess) await config.onSuccess();
-        return true;
-    } catch (error) {
-        showNotification(error.message, 'error');
-        return false;
-    }
-}
-
-/**
- * Loescht eine Konfiguration auf dem Server (DELETE) mit Bestaetigungsdialog.
- * @param {Object} config
- * @param {string} config.endpoint - API-Endpunkt
- * @param {string} config.confirmMessage - Bestaetigungsfrage
- * @param {string} config.successMessage - Erfolgsmeldung
- * @param {Function} [config.onSuccess] - Callback nach Erfolg
- * @returns {boolean} true bei Erfolg, false bei Abbruch/Fehler
- */
-async function deleteConfigFromAPI(config) {
-    if (!await msgbox('cancel/yes', 'warning', config.confirmMessage)) return false;
-
-    try {
-        const resp = await fetch(config.endpoint, { method: 'DELETE' });
-        if (!resp.ok) {
-            const errData = await resp.json().catch(() => ({}));
-            throw new Error(errData.detail || t('common.deleteError'));
-        }
-
-        showNotification(config.successMessage, 'success');
-        if (config.onSuccess) await config.onSuccess();
-        return true;
-    } catch (error) {
-        showNotification(error.message, 'error');
-        return false;
-    }
-}
-
-// ========================================
-// MsgBox - Globaler Bestaetigungsdialog
-// ========================================
-
-/**
- * Zeigt einen modalen Dialog an.
- * @param {"ok"|"cancel/yes"} buttons - Button-Layout
- * @param {"alert"|"confirm"|"warning"} type - Styling-Variante
- * @param {string} message - Nachrichtentext
- * @returns {Promise<boolean>} true bei Ok/Ja, false bei Abbrechen
- */
-async function msgbox(buttons, type, message) {
-    return new Promise(resolve => {
-        const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay';
-
-        let buttonsHtml = '';
-        if (buttons === 'ok') {
-            buttonsHtml = `<button class="action-btn msgbox-btn-primary" data-action="confirm">${t('common.ok')}</button>`;
-        } else {
-            buttonsHtml = `
-                <button class="action-btn" data-action="cancel">${t('common.cancel')}</button>
-                <button class="action-btn msgbox-btn-primary" data-action="confirm">${t('common.yes')}</button>`;
-        }
-
-        overlay.innerHTML = `
-            <div class="modal-content msgbox-dialog type-${type}">
-                <div class="modal-body">
-                    <p style="margin:0;font-size:14px">${escapeHtml(message)}</p>
-                </div>
-                <div class="modal-footer">
-                    ${buttonsHtml}
-                </div>
-            </div>
-        `;
-
-        const close = (result) => {
-            overlay.remove();
-            document.removeEventListener('keydown', keyHandler);
-            resolve(result);
-        };
-
-        const cancelBtn = overlay.querySelector('[data-action="cancel"]');
-        const confirmBtn = overlay.querySelector('[data-action="confirm"]');
-
-        if (cancelBtn) cancelBtn.onclick = () => close(false);
-        confirmBtn.onclick = () => close(true);
-        overlay.onclick = (e) => { if (e.target === overlay) close(false); };
-
-        const keyHandler = (e) => {
-            if (e.key === 'Escape') close(false);
-            if (e.key === 'Enter') close(true);
-        };
-        document.addEventListener('keydown', keyHandler);
-
-        document.body.appendChild(overlay);
-        confirmBtn.focus();
-    });
 }

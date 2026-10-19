@@ -1,0 +1,14 @@
+# Casos unter Debian/Ubuntu
+
+Das Paket installiert Casos unter `/opt/casos`. Haupt-App und Einstellungen liegen auf Port 8514, der getrennte MCP-Zugang auf Port 8516. Eine frische Datenbank erzeugt `admin` / `admin`; das Passwort nach der ersten Anmeldung ändern.
+
+- [Betrieb, Dienste, Vorschaugrenzen und vollständiges Backup/Restore](operations.md)
+- [Agenten-Guide](casos-agent-guide.md)
+- [Abhängigkeiten und eigene Bibliothekslizenzen](DEPENDENCIES.md)
+- Casos-Lizenz: `copyright`; beigefügte Preview-Lizenzen: `licenses/`; Marked-Lizenz: `/opt/casos/dashboard/static/js/vendor/marked.LICENSE`.
+
+Die Runtime liegt unter `/opt/casos/data` mit `casos.db`, `secret.key` und `attachments/`. Beide Apps und Scheduler teilen diese Ablage. Vor Änderungen vollständig sichern. Remove erhält die Daten; explizites Purge löscht die Standardablage samt Schlüssel und Anhängen.
+
+Systemabhängigkeiten installiert APT, Pythonabhängigkeiten installiert der Configure-Hook über pip aus `/opt/casos/requirements.txt`. Es wird keine Pythonumgebung oder Datenablage im DEB mitgeliefert. Die Installation startet die beiden Apps und LDAP-/Mail-Timer. Es gibt kein eingerichtetes öffentliches Casos-Paketrepository.
+
+Die lokale Entwicklungsprüfung baut dieses DEB und testet Lifecycle-Hooks isoliert mit Stubs. Sie ist keine Behauptung einer durchgeführten produktiven Installation. Dienste diagnostizieren: `journalctl -u casos -u casos-mcp`.

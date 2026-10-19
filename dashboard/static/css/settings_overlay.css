@@ -14,7 +14,7 @@
 .settings-panel label { display:block; margin:8px 0; }
 .settings-panel label>input:not([type=checkbox]) { display:block; width:100%; }
 .settings-panel input,.settings-panel select,.settings-panel textarea { background:var(--bg-primary,#fff); color:var(--text-primary,#172033); border:1px solid var(--border-color,#ccc); border-radius:4px; padding:8px; }
-.settings-panel .expandable-table,.settings-panel .admin-table { min-width:620px; }
+.settings-panel .admin-table { min-width:620px; }
 .settings-panel { overflow-x:auto; }
 .settings-subdialog { z-index:20001; }
 .settings-subdialog .modal-content { max-width:620px; max-height:90dvh; overflow:auto; width:100%; background:var(--bg-primary,#fff); color:var(--text-primary,#172033); }

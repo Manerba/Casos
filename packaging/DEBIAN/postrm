@@ -1,38 +1,40 @@
 #!/bin/bash
-set -e
-
-APP_DIR="/opt/casos"
-SERVICE_USER="casos"
-
-# Service-Dateien entfernen
-rm -f /etc/systemd/system/casos.service
-rm -f /etc/systemd/system/casos-admin.service
-rm -f /etc/systemd/system/casos-mcp.service
-rm -f /etc/systemd/system/casos-ldap-sync.service
-rm -f /etc/systemd/system/casos-ldap-sync.timer
-systemctl daemon-reload
-
-if [ "$1" = "purge" ]; then
-    # ONLYOFFICE Docker-Container entfernen
-    if command -v docker &> /dev/null; then
-        docker stop casos-onlyoffice-docs 2>/dev/null || true
-        docker rm casos-onlyoffice-docs 2>/dev/null || true
-        echo "ONLYOFFICE-Container entfernt."
+set -euo pipefail
+case "${1:-}" in remove|purge) ;; *) exit 0 ;; esac
+# A prefixed hook may call only explicit local stubs, never host management tools.
+PACKAGE_ROOT="${CASOS_PACKAGE_ROOT:-}"
+if [ -n "$PACKAGE_ROOT" ]; then
+    if [[ "$PACKAGE_ROOT" != /* ]] || [ ! -d "$PACKAGE_ROOT" ]; then
+        echo "Invalid isolated package root" >&2; exit 1
     fi
-
-    # Datenverzeichnis loeschen
-    rm -rf "$APP_DIR/data"
-    echo "Datenverzeichnis geloescht."
-
-    # venv loeschen
-    rm -rf "$APP_DIR/venv"
-
-    # User entfernen
-    if id "$SERVICE_USER" &>/dev/null; then
-        userdel "$SERVICE_USER" 2>/dev/null || true
-        echo "Benutzer '$SERVICE_USER' entfernt."
+    PACKAGE_ROOT=$(realpath -- "$PACKAGE_ROOT")
+    if [ "$PACKAGE_ROOT" = / ]; then echo "Invalid isolated package root" >&2; exit 1; fi
+    STUB_DIR="$PACKAGE_ROOT/.casos-hook-stubs"
+    if [ -L "$STUB_DIR" ]; then echo "Isolated stubs must be local files" >&2; exit 1; fi
+    for command_name in id userdel systemctl; do
+        if [ ! -f "$STUB_DIR/$command_name" ] || [ -L "$STUB_DIR/$command_name" ] || [ ! -x "$STUB_DIR/$command_name" ]; then
+            echo "Missing isolated hook stub: $command_name" >&2; exit 1
+        fi
+    done
+fi
+run_system() {
+    local command_name="$1"
+    shift
+    if [ -n "$PACKAGE_ROOT" ]; then "$STUB_DIR/$command_name" "$@"
+    elif [ "$command_name" = venv-python ]; then "$APP_DIR/venv/bin/python" "$@"
+    else "$command_name" "$@"
     fi
-
-    # Leeres Verzeichnis aufraeumen
-    rmdir "$APP_DIR" 2>/dev/null || true
+}
+APP_DIR="$PACKAGE_ROOT/opt/casos"
+UNIT_DIR="$PACKAGE_ROOT/etc/systemd/system"
+for unit in casos.service casos-mcp.service casos-ldap-sync.service casos-ldap-sync.timer casos-mail-scheduler.service casos-mail-scheduler.timer; do
+    rm -f -- "$UNIT_DIR/$unit"
+done
+run_system systemctl daemon-reload
+if [ "$1" = purge ]; then
+    # Explicit purge deletes the default data directory, including attachments
+    # and the encryption key. Remove/upgrade always retain it.
+    rm -rf -- "$APP_DIR/data" "$APP_DIR/venv"
+    if run_system id casos >/dev/null 2>&1; then run_system userdel casos 2>/dev/null || true; fi
+    rmdir -- "$APP_DIR" 2>/dev/null || true
 fi

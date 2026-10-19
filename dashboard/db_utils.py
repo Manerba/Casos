@@ -8,26 +8,21 @@ from dashboard.database import get_db
 # ============================================================
 
 ALLOWED_TABLES = {
-    "ldap_config", "mail_config", "nextcloud_config",
-    "onlyoffice_config", "tls_config", "tls_verify_config", "app_config",
+    "ldap_config", "mail_config", "tls_config", "tls_verify_config", "app_config",
 }
 
 ALLOWED_COLUMNS = {
     # Passwort-/Secret-Felder (get_masked_config, resolve_masked_password)
-    "password", "bind_password", "jwt_secret",
+    "password", "bind_password",
     # tls_config Felder
     "cert_path", "key_path", "enabled",
     # tls_verify_config Felder
-    "verify_nextcloud", "verify_onlyoffice", "verify_smtp", "verify_ldap",
-    # onlyoffice_config Felder
-    "server_url",
-    # nextcloud_config Felder
-    "username", "base_path",
+    "verify_smtp", "verify_ldap",
     # ldap_config Felder
     "server", "port", "use_ssl", "bind_dn", "search_base",
     "sync_interval_minutes", "group_dn", "group_name",
     # mail_config Felder
-    "smtp_server", "smtp_port", "encryption", "auth_enabled",
+    "smtp_server", "smtp_port", "encryption", "auth_enabled", "username",
     "from_address", "from_name",
 }
 

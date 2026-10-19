@@ -1,0 +1,88 @@
+{
+  "project_id": 77,
+  "subtask_id": 399,
+  "result": "passed",
+  "started_utc": "2026-10-19T16:27:03.064139+00:00",
+  "completed_utc": "2026-10-19T16:27:24.180265+00:00",
+  "command": "venv/bin/python tests/check_backup_restore.py",
+  "checked_worktree_head": "146c6ba9c473116506dd6b169deb340b141837d4",
+  "checked_worktree_version": "0.0.1+148",
+  "processes": {
+    "apps": [
+      "dashboard.app",
+      "dashboard.mcp_app"
+    ],
+    "binding": "127.0.0.1 only",
+    "startup": "Both processes launched before either readiness check, in all three phases",
+    "fresh_shutdown": [
+      -15,
+      -15
+    ],
+    "restored_shutdown": [
+      -15,
+      -15
+    ],
+    "second_restart_shutdown": [
+      -15,
+      -15
+    ],
+    "all_shutdowns_confirmed_in_logs": true
+  },
+  "backup": {
+    "method": "Complete offline copy after both app processes exited cleanly; restore into new empty directory",
+    "full_manifest_equal_before_start": true,
+    "copied_file_count": 7,
+    "sqlite_snapshot_sha256": "2d07371a6ac7f40d25302d707115dd6aba665b51d50f6dee61b97618fb12b932",
+    "wal_shm_files_present_in_snapshot": [],
+    "secret_file_equal": true,
+    "secret_mode": "0600",
+    "directory_modes_preserved": true,
+    "encrypted_fake_smtp_credential_equal_and_decryptable": true
+  },
+  "checks": [
+    "parallel fresh initialization and restarts of both real apps",
+    "SQLite integrity_check and foreign_key_check before/after restore and after second restart",
+    "two same-name binary attachments with distinct IDs and exact bytes over both HTTP services and both MCP mounts",
+    "Issue/update content, authors, IDs and revisions preserved",
+    "FTS Issue/update hits preserved and updated after new writes",
+    "saved signed cookie and fresh login after restore",
+    "MCP identity and token preserved across both restarts",
+    "encrypted fake SMTP credential works through production get_smtp_config/decrypt after restore",
+    "mail preference opt-out preserved",
+    "REST and MCP revision conflicts still reject stale writes",
+    "new Issue/update changes/attachment/audit persist through second restart",
+    "token revocation blocks both services after restore"
+  ],
+  "fixture_attachment_sha256": [
+    "5628efa3dc255533369a92658a8e3c77d8be96210724cf63d56485b784bb55ae",
+    "ed81c4b4873f22ae701c9544b75711142428d2629c36de01ce43645532d1e88d"
+  ],
+  "rows_before_backup": {
+    "issues": 1,
+    "issue_updates": 1,
+    "attachments": 2,
+    "audit_log": 5
+  },
+  "rows_after_restored_writes": {
+    "issues": 2,
+    "issue_updates": 1,
+    "attachments": 3,
+    "audit_log": 10
+  },
+  "isolation": {
+    "temporary_data_only": true,
+    "real_smtp": false,
+    "systemd_or_production_services_used": false,
+    "mail_transport": "in-process recording fake; unexpected smtplib calls raise",
+    "temporary_data_removed_after_check": true
+  },
+  "not_executed": [
+    "production service stop/start",
+    "real SMTP/LDAP network traffic",
+    "external TLS key/certificate backup",
+    "cross-host OS account ownership migration",
+    "live concurrent-writer backup"
+  ],
+  "checked_worktree_dirty": true,
+  "checked_worktree_note": "Root repeat on the final product changes for #399, before central version commit; parent +148. Only later test/documentation changes followed."
+}

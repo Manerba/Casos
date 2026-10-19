@@ -13,10 +13,13 @@ def run():
         context=browser.new_context(viewport={'width':1280,'height':900})
         page=context.new_page();page.set_default_timeout(10000)
         errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
+        missing_translations=[]
+        page.on('console',lambda message:missing_translations.append(message.text) if 'i18n: Missing key' in message.text else None)
         base=fixture['url']
         browser_login(page,base,'admin')
         page.evaluate("openSettingsOverlay('allgemein')")
         expect(page.locator('#appServerAddress')).to_be_visible()
+        expect(page.locator('nav button[data-section="mcp"]')).to_have_text('MCP')
         page.locator('#appServerAddress').fill('draft.example.invalid')
         page.locator('nav button[data-section="tls"]').click()
         expect(page.locator('#verifySmtp')).to_be_visible()
@@ -146,6 +149,7 @@ def run():
         page.locator('#settingsPasswordSave').click()
         expect(page.locator('#settingsNewPassword')).to_have_value('')
         assert not errors,errors
+        assert not missing_translations,missing_translations
         print(json.dumps({'result':'passed','checks':['section drafts','HTTP load and mutation errors','cancel and beforeunload','TLS form isolation','SMTP/template draft isolation','user CRUD and independent drafts','MCP slow body lock and token display','kill switch','390px layout','foreign native dialog preservation','normal-user deep link and mail preferences'],'screenshots':['/tmp/casos-settings-wide.png','/tmp/casos-settings-narrow.png']},ensure_ascii=False))
         browser.close()
 

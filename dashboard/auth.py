@@ -4,8 +4,10 @@ Hashing, Sessions, Cookie-Signing, FastAPI-Dependencies.
 """
 
 import hashlib
+import fcntl
 import os
 import secrets
+import stat
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -24,22 +26,87 @@ SECRET_KEY_PATH = DB_DIR / "secret.key"
 # ============================================================
 
 def get_secret_key() -> str:
-    """Liest oder erstellt den Secret Key fuer Cookie-Signing."""
-    if SECRET_KEY_PATH.exists():
-        # Berechtigungen korrigieren falls noetig
-        os.chmod(str(SECRET_KEY_PATH), 0o600)
-        return SECRET_KEY_PATH.read_text().strip()
-    # Verzeichnis mit restriktiven Rechten erstellen
-    SECRET_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    os.chmod(str(SECRET_KEY_PATH.parent), 0o700)
-    # Key-Datei mit 0600 erstellen (nur Owner lesen/schreiben)
-    key = secrets.token_hex(32)
-    fd = os.open(str(SECRET_KEY_PATH), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    """Read or atomically create the shared cookie/Fernet key under a flock.
+
+    Existing bytes are never replaced, including an empty/corrupt key. A new
+    key is fsynced before publication with link(), which cannot overwrite an
+    existing destination. All operations use the opened private directory.
+    A process killed before publication can leave a private staging file;
+    it is never treated as the active key or reused on the next attempt.
+    """
+    path = SECRET_KEY_PATH
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    lock = None
+    temporary = None
     try:
-        os.write(fd, key.encode())
+        os.fchmod(directory, 0o700)
+        lock = os.open(f'.{path.name}.lock', os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_CLOEXEC,
+                       0o600, dir_fd=directory)
+        if not stat.S_ISREG(os.fstat(lock).st_mode):
+            raise RuntimeError('Secret key lock must be a regular file')
+        os.fchmod(lock, 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+
+        def read_existing():
+            try:
+                fd = os.open(path.name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC,
+                             dir_fd=directory)
+            except FileNotFoundError:
+                return None
+            try:
+                if not stat.S_ISREG(os.fstat(fd).st_mode):
+                    raise RuntimeError('Secret key must be a regular file')
+                os.fchmod(fd, 0o600)
+                with os.fdopen(fd, 'r', encoding='utf-8') as stream:
+                    fd = None
+                    key = stream.read().strip()
+                if not key:
+                    raise RuntimeError('Existing secret key is empty; restore the original key from backup')
+                return key
+            finally:
+                if fd is not None:
+                    os.close(fd)
+
+        existing = read_existing()
+        if existing is not None:
+            return existing
+        key = secrets.token_hex(32)
+        candidate = f'.{path.name}.{secrets.token_hex(16)}.tmp'
+        fd = os.open(candidate, os.O_CREAT | os.O_EXCL | os.O_WRONLY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                     0o600, dir_fd=directory)
+        temporary = candidate
+        try:
+            os.fchmod(fd, 0o600)
+            content = key.encode('utf-8')
+            while content:
+                written = os.write(fd, content)
+                if written <= 0:
+                    raise OSError('Could not write complete secret key')
+                content = content[written:]
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        try:
+            os.link(temporary, path.name, src_dir_fd=directory, dst_dir_fd=directory, follow_symlinks=False)
+        except FileExistsError:
+            # Also protect against another writer which does not use our lock.
+            existing = read_existing()
+            if existing is None:
+                raise RuntimeError('Secret key changed during publication')
+            return existing
+        os.unlink(temporary, dir_fd=directory)
+        temporary = None
+        os.fsync(directory)
+        return key
     finally:
-        os.close(fd)
-    return key
+        try:
+            if temporary is not None:
+                os.unlink(temporary, dir_fd=directory)
+        finally:
+            if lock is not None:
+                os.close(lock)
+            os.close(directory)
 
 
 def _get_serializer() -> URLSafeSerializer:

@@ -9,30 +9,16 @@ const markdownParser = new marked.Marked({
     },
 });
 
-const legacyMarkdownConverter = new TurndownService({
-    headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-',
-});
-// Old WYSIWYG paragraphs sometimes already contain Markdown syntax.
-legacyMarkdownConverter.escape = text => text;
-
-function markdownSource(value, format = 'markdown') {
-    const source = String(value || '');
-    if (format !== 'legacy') return source;
-    let hasLegacyHtml = false;
-    marked.walkTokens(marked.lexer(source), token => {
-        if (token.type === 'html' && /<\/?(?:p|div|br|h[1-6]|b|strong|i|em|u|ul|ol|li|font|pre|span)(?:\s|\/?\>)/i.test(token.text)) {
-            hasLegacyHtml = true;
-        }
-    });
-    return hasLegacyHtml ? legacyMarkdownConverter.turndown(sanitizeHtml(source)) : source;
+function markdownSource(value) {
+    return String(value || '');
 }
 
-function renderMarkdown(value, format = 'markdown') {
-    return sanitizeHtml(markdownParser.parse(markdownSource(value, format)));
+function renderMarkdown(value) {
+    return sanitizeHtml(markdownParser.parse(markdownSource(value)));
 }
 
 class MarkdownEditor {
-    // Keep unfinished edits when expandable rows are rebuilt or tabs change.
+    // Keep unfinished edits when Issue details are rebuilt.
     static drafts = new Map();
     static draftRevisions = new Map();
     // A rebuilt row takes over the response and the lock of its pending save.
@@ -72,8 +58,8 @@ class MarkdownEditor {
                 `}
             </div>
             <div class="markdown-body" data-md-preview></div>
-            <textarea class="markdown-source" aria-label="${escapeAttr(t(this.options.plainText ? 'textFile.source' : 'markdown.source'))}" spellcheck="false" hidden></textarea>
-            <p class="markdown-hint" hidden>${t(this.options.plainText ? 'textFile.hint' : 'markdown.hint')}</p>
+            <textarea class="markdown-source" aria-label="${escapeAttr(t('markdown.source'))}" spellcheck="false" hidden></textarea>
+            <p class="markdown-hint" hidden>${t('markdown.hint')}</p>
             <p class="markdown-error" role="alert" hidden></p>`;
         this.preview = this.container.querySelector('[data-md-preview]');
         this.input = this.container.querySelector('.markdown-source');
@@ -105,14 +91,7 @@ class MarkdownEditor {
     updateView() {
         // A removed editor must not change controls belonging to a new row.
         if (this.input.parentNode !== this.container) return;
-        if (this.options.plainText) {
-            const text = document.createElement('pre');
-            text.className = 'text-file-plain';
-            text.textContent = this.source;
-            this.preview.replaceChildren(text);
-        } else {
-            this.preview.innerHTML = renderMarkdown(this.source) || `<em>${t('markdown.empty')}</em>`;
-        }
+        this.preview.innerHTML = renderMarkdown(this.source) || `<em>${t('markdown.empty')}</em>`;
         this.preview.hidden = this.editing;
         this.input.hidden = !this.editing;
         this.container.querySelector('.markdown-hint').hidden = !this.editing;

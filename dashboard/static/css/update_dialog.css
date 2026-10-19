@@ -1,6 +1,7 @@
 /* Layout derived from Tareas 7157218's shared text/update dialog. */
 .update-dialog {
     padding: 0;
+    margin: auto;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background: var(--bg-primary);

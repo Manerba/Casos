@@ -1,0 +1,88 @@
+{
+  "project_id": 77,
+  "subtasks": [
+    399,
+    400
+  ],
+  "result": "passed",
+  "started_utc": "2026-10-19T16:33:33.127456+00:00",
+  "completed_utc": "2026-10-19T16:33:45.141220+00:00",
+  "command": "venv/bin/python tests/check_packaged_apps.py",
+  "package": {
+    "name": "casos",
+    "version": "0.0.1+148",
+    "sha256": "48cfca83cbda29e74aacd6e0466df993d85f320f59f7e80214eba5c22982e2ab",
+    "built_by_check": true,
+    "build_command": "./publish.sh --build <temporary-artifact-directory>",
+    "extraction": "dpkg-deb -x into temporary directory; no installation/hooks",
+    "payload_file_count": 97,
+    "payload_unchanged_after_runtime": true
+  },
+  "python": {
+    "interpreter": "/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/bin/python",
+    "version": "3.12.3",
+    "dependencies": "Existing repository venv; no fresh dependency installation was performed",
+    "selected_versions": {
+      "fastapi": "0.128.5",
+      "fastmcp": "3.3.1",
+      "Pillow": "12.3.0",
+      "extract-msg": "0.56.1",
+      "striprtf": "0.0.33"
+    }
+  },
+  "processes": {
+    "source": "Extracted /opt/casos/dashboard/app.py and mcp_app.py, executed directly",
+    "cwd": "Extracted /opt/casos",
+    "pythonpath_from_repository": false,
+    "loopback_only": true,
+    "parallel_start": true,
+    "fresh_data_created": true,
+    "returncodes": [
+      -15,
+      -15
+    ],
+    "graceful_shutdown": [
+      true,
+      true
+    ]
+  },
+  "results": {
+    "tool_count": 22,
+    "identical_catalogs": true,
+    "static_asset_count": 24,
+    "binary_sha256": [
+      "fb97986506bd7e7cdd020eafe01e8aa95bfad4a310f9c10323188c941713f6be",
+      "2f3764ec504a698712f0c5cfcafcf2280699a2ecad4570bad69eac9c0b34b0e9"
+    ],
+    "png_dimensions": [
+      17,
+      11
+    ],
+    "smtp_remained_unconfigured": true,
+    "checks": [
+      "parallel fresh startup of both extracted production scripts",
+      "HTTP login and exact packaged version/assets",
+      "22-tool catalogs and current identity on both real MCP mounts",
+      "cross-service Issue and Unicode Update",
+      "FTS Issue and Update search over REST and both MCP mounts",
+      "same-name binary attachments via MCP and dedicated REST, exact bytes on both services",
+      "actual extracted image preview worker on both services",
+      "cookie/Bearer/anonymous/CSRF restrictions and dedicated route isolation",
+      "token revocation on both services"
+    ]
+  },
+  "isolation": {
+    "temporary_data_only": true,
+    "real_mail_sent": false,
+    "smtp_configuration": null,
+    "systemd_apt_pip_or_maintainer_hooks_executed": false,
+    "temporary_data_removed_after_check": true
+  },
+  "not_executed": [
+    "root installation of the DEB",
+    "maintainer hooks and real service activation",
+    "fresh Python dependency download/install",
+    "upgrade/removal on a real host",
+    "real LDAP/SMTP/TLS integrations"
+  ]
+}

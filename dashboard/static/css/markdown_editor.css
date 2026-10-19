@@ -60,18 +60,3 @@
 .markdown-hint, .markdown-error { padding: 0 12px; margin: 8px 0; font-size: 12px; }
 .markdown-hint { color: var(--text-secondary); }
 .markdown-error { color: var(--color-bearish); }
-.project-detail-left .markdown-editor { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.project-detail-left .markdown-editor > .markdown-body,
-.project-detail-left .markdown-source { flex: 1; min-height: 0; resize: none; }
-/* Aktionen und Hilfe beanspruchen in beiden Modi denselben Platz. */
-.project-detail-left .markdown-actions [data-md-action][hidden] {
-    display: inline-flex !important;
-    visibility: hidden;
-}
-.project-detail-left .markdown-hint[hidden] {
-    display: block !important;
-    visibility: hidden;
-}
-.project-detail-left .markdown-toolbar,
-.project-detail-left .markdown-hint,
-.project-detail-left .markdown-error { flex-shrink: 0; }

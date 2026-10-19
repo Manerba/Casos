@@ -57,7 +57,7 @@
 .issue-more { margin-top: 12px; }
 #issue-upload-status { font-size: 13px; overflow-wrap: anywhere; }
 #issue-description-retained textarea { width: 100%; min-height: 140px; color: var(--text-primary); background: var(--bg-secondary); }
-.issue-form-dialog { padding: 0; border: 1px solid var(--border-color); border-radius: 9px; box-shadow: var(--shadow-lg); width: min(660px, calc(100vw - 24px)); max-height: 94dvh; color: var(--text-primary); background: var(--bg-primary); }
+.issue-form-dialog { padding: 0; margin: auto; border: 1px solid var(--border-color); border-radius: 9px; box-shadow: var(--shadow-lg); width: min(660px, calc(100vw - 24px)); max-height: 94dvh; color: var(--text-primary); background: var(--bg-primary); }
 .issue-form-dialog::backdrop { background: rgba(0, 0, 0, .55); }
 .issue-form-dialog form { display: flex; flex-direction: column; max-height: 94dvh; }
 .issue-form-dialog header, .issue-form-dialog footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px; flex-shrink: 0; }

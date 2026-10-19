@@ -1,0 +1,412 @@
+test_actual_main_and_dedicated_application_router_integration (test_attachment_auth.AttachmentAuthTests.test_actual_main_and_dedicated_application_router_integration) ... ok
+test_csrf_bearer_precedence_revocation_kill_switch_and_deactivation (test_attachment_auth.AttachmentAuthTests.test_csrf_bearer_precedence_revocation_kill_switch_and_deactivation) ... ok
+test_dedicated_bearer_api_rejects_cookie_and_supports_upload (test_attachment_auth.AttachmentAuthTests.test_dedicated_bearer_api_rejects_cookie_and_supports_upload) ... ok
+test_disconnect_incomplete_invalid_multipart_and_wrong_field_leave_no_files (test_attachment_auth.AttachmentAuthTests.test_disconnect_incomplete_invalid_multipart_and_wrong_field_leave_no_files) ... Expected boundary character 45, got 98 at index 2
+ok
+test_rest_cookie_and_bearer_round_trips_download_headers_and_delete (test_attachment_auth.AttachmentAuthTests.test_rest_cookie_and_bearer_round_trips_download_headers_and_delete) ... ok
+test_stream_limit_counts_file_bytes_ignores_content_length_and_closes_spool (test_attachment_auth.AttachmentAuthTests.test_stream_limit_counts_file_bytes_ignores_content_length_and_closes_spool) ... ok
+test_token_or_contribution_revoked_during_upload_prevents_publication (test_attachment_auth.AttachmentAuthTests.test_token_or_contribution_revoked_during_upload_prevents_publication) ... ok
+test_unauthorized_body_is_not_consumed_on_main_or_dedicated_app (test_attachment_auth.AttachmentAuthTests.test_unauthorized_body_is_not_consumed_on_main_or_dedicated_app) ... ok
+test_animation_first_frame_and_metadata_removal (test_attachment_preview.AttachmentPreviewTests.test_animation_first_frame_and_metadata_removal) ... ok
+test_corrupt_and_unsupported_formats_keep_original (test_attachment_preview.AttachmentPreviewTests.test_corrupt_and_unsupported_formats_keep_original) ... ok
+test_dedicated_bearer_and_revocation (test_attachment_preview.AttachmentPreviewTests.test_dedicated_bearer_and_revocation) ... ok
+test_duplicate_names_cids_and_traversal_names (test_attachment_preview.AttachmentPreviewTests.test_duplicate_names_cids_and_traversal_names) ... ok
+test_embedded_routes_current_rights_all_active_roles (test_attachment_preview.AttachmentPreviewTests.test_embedded_routes_current_rights_all_active_roles) ... ok
+test_five_raster_formats_and_original_bytes (test_attachment_preview.AttachmentPreviewTests.test_five_raster_formats_and_original_bytes) ... ok
+test_image_dimension_limits_without_large_fixture (test_attachment_preview.AttachmentPreviewTests.test_image_dimension_limits_without_large_fixture) ... ok
+test_limits_input_count_depth_rtf_and_body (test_attachment_preview.AttachmentPreviewTests.test_limits_input_count_depth_rtf_and_body) ... ok
+test_logout_during_worker_rechecks_cookie (test_attachment_preview.AttachmentPreviewTests.test_logout_during_worker_rechecks_cookie) ... ok
+test_official_fixtures_hashes_headers_and_embedded_bytes (test_attachment_preview.AttachmentPreviewTests.test_official_fixtures_hashes_headers_and_embedded_bytes) ... ok
+test_plain_text_rtf_and_missing_fields (test_attachment_preview.AttachmentPreviewTests.test_plain_text_rtf_and_missing_fields) ... ok
+test_revocation_and_deactivation_during_worker (test_attachment_preview.AttachmentPreviewTests.test_revocation_and_deactivation_during_worker) ... ok
+test_sanitizer_allowlist_mutations_and_links (test_attachment_preview.AttachmentPreviewTests.test_sanitizer_allowlist_mutations_and_links) ... ok
+test_timeout_busy_and_temp_cleanup (test_attachment_preview.AttachmentPreviewTests.test_timeout_busy_and_temp_cleanup) ... ok
+test_unicode_html_cid_and_embedded_download (test_attachment_preview.AttachmentPreviewTests.test_unicode_html_cid_and_embedded_download) ... ok
+test_utf16_html_bom_preserves_unicode (test_attachment_preview.AttachmentPreviewTests.test_utf16_html_bom_preserves_unicode) ... ok
+test_worker_resource_limits_are_effective (test_attachment_preview.AttachmentPreviewTests.test_worker_resource_limits_are_effective) ... ok
+test_backup_restore_preserves_mapping_bytes_and_current_rights (test_attachments.AttachmentTests.test_backup_restore_preserves_mapping_bytes_and_current_rights) ... ok
+test_binary_equal_names_empty_files_metadata_pagination_and_audit (test_attachments.AttachmentTests.test_binary_equal_names_empty_files_metadata_pagination_and_audit) ... ok
+test_cleanup_failure_is_durable_and_retryable_and_issue_delete_cleans_all (test_attachments.AttachmentTests.test_cleanup_failure_is_durable_and_retryable_and_issue_delete_cleans_all) ... Attachment cleanup deferred (PermissionError)
+Attachment cleanup deferred (PermissionError)
+Attachment cleanup deferred (PermissionError)
+ok
+test_concurrent_equal_names_are_distinct (test_attachments.AttachmentTests.test_concurrent_equal_names_are_distinct) ... ok
+test_crashed_upload_is_removed_after_restart (test_attachments.AttachmentTests.test_crashed_upload_is_removed_after_restart) ... ok
+test_filename_type_reason_validation_precedes_mutations (test_attachments.AttachmentTests.test_filename_type_reason_validation_precedes_mutations) ... ok
+test_gc_cannot_remove_live_upload_and_revoked_user_cannot_publish (test_attachments.AttachmentTests.test_gc_cannot_remove_live_upload_and_revoked_user_cannot_publish) ... ok
+test_permissions_include_uploader_current_contribution_and_current_admin (test_attachments.AttachmentTests.test_permissions_include_uploader_current_contribution_and_current_admin) ... ok
+test_storage_audit_and_read_failures_preserve_existing_files (test_attachments.AttachmentTests.test_storage_audit_and_read_failures_preserve_existing_files) ... Attachment storage failed (OSError)
+Attachment cleanup deferred (OSError)
+Attachment storage failed (OSError)
+ok
+test_storage_root_symlink_is_rejected (test_attachments.AttachmentTests.test_storage_root_symlink_is_rejected) ... Attachment storage failed (NotADirectoryError)
+ok
+test_stream_is_bounded_and_limit_failure_leaves_no_attachment (test_attachments.AttachmentTests.test_stream_is_bounded_and_limit_failure_leaves_no_attachment) ... ok
+test_symlinks_hardlinks_corrupt_queue_and_live_metadata_are_safe (test_attachments.AttachmentTests.test_symlinks_hardlinks_corrupt_queue_and_live_metadata_are_safe) ... Attachment cleanup deferred (invalid_storage_name)
+ok
+test_wrong_issue_inactive_user_invalid_ids_and_missing_files (test_attachments.AttachmentTests.test_wrong_issue_inactive_user_invalid_ids_and_missing_files) ... ok
+test_commit_before_mail_and_mail_failures_do_not_lose_mutations (test_issue_history_mail.IssueHistoryMailTests.test_commit_before_mail_and_mail_failures_do_not_lose_mutations) ... Issue notification failed: issue=1 event=status_change recipient=2
+Traceback (most recent call last):
+  File "/sdb1/nextcloud/data/mir/files/Dev/Casos/dashboard/mail_service.py", line 303, in notify_issue_event
+    error = notify_event(event_type, uid, placeholders)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sdb1/nextcloud/data/mir/files/Dev/Casos/dashboard/mail_service.py", line 227, in notify_event
+    return send_mail(user["email"], subject, html_body, body_text)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1199, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/sdb1/nextcloud/data/mir/files/Dev/Casos/tests/test_issue_history_mail.py", line 105, in inspect_commit
+    raise RuntimeError('Deliberate transport failure')
+RuntimeError: Deliberate transport failure
+Issue notification failed: issue=1 event=new_update recipient=2: SMTP unavailable
+ok
+test_deadlines_default_individual_warning_terminal_inactive_and_dedup (test_issue_history_mail.IssueHistoryMailTests.test_deadlines_default_individual_warning_terminal_inactive_and_dedup) ... ok
+test_deleted_assignee_preserves_event_names_and_real_admin_actor (test_issue_history_mail.IssueHistoryMailTests.test_deleted_assignee_preserves_event_names_and_real_admin_actor) ... ok
+test_duplicate_addresses_and_actor_mailbox_are_excluded (test_issue_history_mail.IssueHistoryMailTests.test_duplicate_addresses_and_actor_mailbox_are_excluded) ... ok
+test_events_before_after_reopen_actor_and_history_pagination (test_issue_history_mail.IssueHistoryMailTests.test_events_before_after_reopen_actor_and_history_pagination) ... ok
+test_failed_audit_and_commit_send_no_mail_and_leave_no_events (test_issue_history_mail.IssueHistoryMailTests.test_failed_audit_and_commit_send_no_mail_and_leave_no_events) ... ok
+test_history_active_rights_and_strict_pagination (test_issue_history_mail.IssueHistoryMailTests.test_history_active_rights_and_strict_pagination) ... ok
+test_new_updates_only_current_creator_assignee_not_actor_or_readers (test_issue_history_mail.IssueHistoryMailTests.test_new_updates_only_current_creator_assignee_not_actor_or_readers) ... ok
+test_preferences_defaults_validation_and_html_escaping (test_issue_history_mail.IssueHistoryMailTests.test_preferences_defaults_validation_and_html_escaping) ... ok
+test_real_mcp_and_rest_share_history_notifications_and_current_identity (test_issue_history_mail.IssueHistoryMailTests.test_real_mcp_and_rest_share_history_notifications_and_current_identity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1679f950>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_deactivation_revokes_existing_browser_session (test_issue_http.IssueHTTPTests.test_deactivation_revokes_existing_browser_session) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1661ca10>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_real_session_csrf_and_description_conflict (test_issue_http.IssueHTTPTests.test_real_session_csrf_and_description_conflict) ... ok
+test_removed_endpoints_do_not_fall_through_to_spa (test_issue_http.IssueHTTPTests.test_removed_endpoints_do_not_fall_through_to_spa) ... ok
+test_failed_initialization_rolls_back_schema (test_issue_initialization.IssueInitializationTests.test_failed_initialization_rolls_back_schema) ... ok
+test_fresh_restart_and_foreign_keys (test_issue_initialization.IssueInitializationTests.test_fresh_restart_and_foreign_keys) ... ok
+test_future_schema_version_is_rejected_without_changes (test_issue_initialization.IssueInitializationTests.test_future_schema_version_is_rejected_without_changes) ... ok
+test_initialization_error_propagates_closes_connection_and_allows_retry (test_issue_initialization.IssueInitializationTests.test_initialization_error_propagates_closes_connection_and_allows_retry) ... ok
+test_legacy_and_unknown_data_are_not_changed (test_issue_initialization.IssueInitializationTests.test_legacy_and_unknown_data_are_not_changed) ... ok
+test_parallel_first_start_and_restart (test_issue_initialization.IssueInitializationTests.test_parallel_first_start_and_restart) ... ok
+test_process_death_releases_lock_and_rolls_back_partial_schema (test_issue_initialization.IssueInitializationTests.test_process_death_releases_lock_and_rolls_back_partial_schema) ... ok
+test_schema_one_upgrade_preserves_data_and_custom_templates (test_issue_initialization.IssueInitializationTests.test_schema_one_upgrade_preserves_data_and_custom_templates) ... ok
+test_schema_upgrade_failure_rolls_back_columns_version_and_content (test_issue_initialization.IssueInitializationTests.test_schema_upgrade_failure_rolls_back_columns_version_and_content) ... ok
+test_second_initializer_waits_before_wal_setup (test_issue_initialization.IssueInitializationTests.test_second_initializer_waits_before_wal_setup) ... ok
+test_attachments_binary_duplicates_bounds_and_rest_parity (test_issue_mcp.IssueMCPTests.test_attachments_binary_duplicates_bounds_and_rest_parity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1661ea50>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167bef60>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16736de0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:34:55] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16633c50>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16632f60>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167becf0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1679dd60>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f2e10>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16687170>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16685610>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_both_mounts_catalog_lifecycle_and_compact_writes (test_issue_mcp.IssueMCPTests.test_both_mounts_catalog_lifecycle_and_compact_writes) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1668f620>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1661e600>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f35c0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f166aab70>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1661d850>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:34:56] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f2ba0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f3ad0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167be360>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:34:57] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_errors_are_structured_and_no_partial_writes (test_issue_mcp.IssueMCPTests.test_errors_are_structured_and_no_partial_writes) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f1f10>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1662c830>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f1790>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_existing_sessions_refresh_roles_revocation_and_kill_switch (test_issue_mcp.IssueMCPTests.test_existing_sessions_refresh_roles_revocation_and_kill_switch) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16734d40>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167bf380>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:34:58] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1662ecf0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f3ef0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16787500>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:34:59] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_global_read_rights_grants_and_update_revisions (test_issue_mcp.IssueMCPTests.test_global_read_rights_grants_and_update_revisions) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1675cc80>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1679d670>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167474d0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16736e70>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16734380>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+                    ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16713bf0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16632b40>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16737ef0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167f23f0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:35:00] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_guides_bootstrap_search_and_current_identity (test_issue_mcp.IssueMCPTests.test_guides_bootstrap_search_and_current_identity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16736d80>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16713830>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167112b0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1662c860>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16746a80>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_session_id_never_transfers_identity_or_write_rights_between_tokens (test_issue_mcp.IssueMCPTests.test_session_id_never_transfers_identity_or_write_rights_between_tokens) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f168ee5d0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1662eab0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1662eb10>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167367b0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16736180>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f167bc410>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1675e660>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:35:01] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16685d90>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16711160>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1675de20>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16684590>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1686f680>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1686e540>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+[10/19/26 18:35:02] ERROR    MCP tool call failed (details        server.py:1289
+                             omitted)                                           
+ok
+test_and_phrase_and_controlled_literal_punctuation (test_issue_search.IssueSearchTests.test_and_phrase_and_controlled_literal_punctuation) ... ok
+test_backfill_missing_trigger_repair_and_transaction_rollback (test_issue_search.IssueSearchTests.test_backfill_missing_trigger_repair_and_transaction_rollback) ... ok
+test_current_mcp_token_and_kill_switch_apply_to_common_service (test_issue_search.IssueSearchTests.test_current_mcp_token_and_kill_switch_apply_to_common_service) ... ok
+test_every_active_user_reads_and_stale_activity_is_rejected_even_for_empty_query (test_issue_search.IssueSearchTests.test_every_active_user_reads_and_stale_activity_is_rejected_even_for_empty_query) ... ok
+test_initialization_idempotent_and_does_not_index_attachment_names (test_issue_search.IssueSearchTests.test_initialization_idempotent_and_does_not_index_attachment_names) ... ok
+test_insert_update_delete_and_issue_cascade_update_index (test_issue_search.IssueSearchTests.test_insert_update_delete_and_issue_cascade_update_index) ... ok
+test_invalid_filters_and_queries_return_structured_errors (test_issue_search.IssueSearchTests.test_invalid_filters_and_queries_return_structured_errors) ... ok
+test_microsecond_ranking_ties_sort_mixed_sources_before_pagination (test_issue_search.IssueSearchTests.test_microsecond_ranking_ties_sort_mixed_sources_before_pagination) ... ok
+test_missing_fts_is_explicit_and_failed_reinitialization_rolls_back (test_issue_search.IssueSearchTests.test_missing_fts_is_explicit_and_failed_reinitialization_rolls_back) ... ok
+test_one_corpus_ranks_concise_update_over_noisy_issues (test_issue_search.IssueSearchTests.test_one_corpus_ranks_concise_update_over_noisy_issues) ... ok
+test_pagination_has_stable_ties_and_no_duplicate_rows (test_issue_search.IssueSearchTests.test_pagination_has_stable_ties_and_no_duplicate_rows) ... ok
+test_real_rest_auth_filters_and_service_parity (test_issue_search.IssueSearchTests.test_real_rest_auth_filters_and_service_parity) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f16737110>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f1689c3e0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_runtime_metadata_joins_do_not_index_parent_title_as_update (test_issue_search.IssueSearchTests.test_runtime_metadata_joins_do_not_index_parent_title_as_update) ... ok
+test_safe_bounded_snippets_include_late_match (test_issue_search.IssueSearchTests.test_safe_bounded_snippets_include_late_match) ... ok
+test_since_preserves_microsecond_boundaries_for_both_sources_and_zones (test_issue_search.IssueSearchTests.test_since_preserves_microsecond_boundaries_for_both_sources_and_zones) ... ok
+test_since_rejects_precision_loss_and_preserves_latest_supported_instant (test_issue_search.IssueSearchTests.test_since_rejects_precision_loss_and_preserves_latest_supported_instant) ... ok
+test_types_issue_filter_and_timezone_inclusive_updated_at (test_issue_search.IssueSearchTests.test_types_issue_filter_and_timezone_inclusive_updated_at) ... ok
+test_unicode_case_accents_prefix_and_no_infix (test_issue_search.IssueSearchTests.test_unicode_case_accents_prefix_and_no_infix) ... ok
+test_global_order_null_deadline_and_unassigned_filter (test_issue_sorting.IssueSortingTests.test_global_order_null_deadline_and_unassigned_filter) ... ok
+test_order_identifiers_and_contradictory_filters_are_rejected (test_issue_sorting.IssueSortingTests.test_order_identifiers_and_contradictory_filters_are_rejected) ... ok
+test_assignees_browser_and_mcp_edit_but_do_not_manage (test_issues.IssueTests.test_assignees_browser_and_mcp_edit_but_do_not_manage) ... ok
+test_audit_failure_rolls_back_issue_event_grants_and_cleanup_queue (test_issues.IssueTests.test_audit_failure_rolls_back_issue_event_grants_and_cleanup_queue) ... ok
+test_concurrent_description_updates_have_one_winner (test_issues.IssueTests.test_concurrent_description_updates_have_one_winner) ... ok
+test_concurrent_editor_updates_have_one_winner (test_issues.IssueTests.test_concurrent_editor_updates_have_one_winner) ... ok
+test_cookie_and_bearer_revoke_and_kill_switch_use_current_database (test_issues.IssueTests.test_cookie_and_bearer_revoke_and_kill_switch_use_current_database) ... ok
+test_current_admin_active_flags_and_missing_id_are_rechecked (test_issues.IssueTests.test_current_admin_active_flags_and_missing_id_are_rechecked) ... ok
+test_description_revision_preserves_text_and_rejects_conflict_atomically (test_issues.IssueTests.test_description_revision_preserves_text_and_rejects_conflict_atomically) ... ok
+test_editor_grants_revision_current_rights_and_strict_members (test_issues.IssueTests.test_editor_grants_revision_current_rights_and_strict_members) ... ok
+test_every_active_identity_reads_and_creates_but_reader_cannot_mutate (test_issues.IssueTests.test_every_active_identity_reads_and_creates_but_reader_cannot_mutate) ... ok
+test_exact_patch_append_replace_and_overlapping_ambiguity (test_issues.IssueTests.test_exact_patch_append_replace_and_overlapping_ambiguity) ... ok
+test_issue_delete_cascades_and_tracks_invalid_cleanup_names (test_issues.IssueTests.test_issue_delete_cascades_and_tracks_invalid_cleanup_names) ... Attachment cleanup deferred (invalid_storage_name)
+ok
+test_lifecycle_null_clearing_events_and_audit_reason (test_issues.IssueTests.test_lifecycle_null_clearing_events_and_audit_reason) ... ok
+test_login_rejects_deactivated_local_and_mcp_users (test_issues.IssueTests.test_login_rejects_deactivated_local_and_mcp_users) ... ok
+test_pagination_filters_compact_rows_and_restart (test_issues.IssueTests.test_pagination_filters_compact_rows_and_restart) ... ok
+test_strict_fields_status_title_priority_deadline_and_unicode (test_issues.IssueTests.test_strict_fields_status_title_priority_deadline_and_unicode) ... ok
+test_user_deletion_retains_issue_and_nulls_author_and_assignment (test_issues.IssueTests.test_user_deletion_retains_issue_and_nulls_author_and_assignment) ... ok
+test_utf8_description_limit_applies_to_create_update_and_patch (test_issues.IssueTests.test_utf8_description_limit_applies_to_create_update_and_patch) ... ok
+test_actual_package_inventory_dependencies_and_safe_modes (test_operations.OperationsTests.test_actual_package_inventory_dependencies_and_safe_modes) ... ok
+test_configure_creates_runtime_and_all_units_without_mutating_source (test_operations.OperationsTests.test_configure_creates_runtime_and_all_units_without_mutating_source) ... ok
+test_failed_dependencies_do_not_start_services_or_drop_existing_data (test_operations.OperationsTests.test_failed_dependencies_do_not_start_services_or_drop_existing_data) ... ok
+test_isolated_hooks_require_stubs_before_any_system_action (test_operations.OperationsTests.test_isolated_hooks_require_stubs_before_any_system_action) ... ok
+test_local_installer_passes_only_validated_package_to_stub_apt (test_operations.OperationsTests.test_local_installer_passes_only_validated_package_to_stub_apt) ... ok
+test_shell_syntax_and_explicit_local_build_mode (test_operations.OperationsTests.test_shell_syntax_and_explicit_local_build_mode) ... ok
+test_units_keep_hardening_paths_and_both_timers (test_operations.OperationsTests.test_units_keep_hardening_paths_and_both_timers) ... ok
+test_upgrade_and_remove_preserve_runtime_purge_only_default_data (test_operations.OperationsTests.test_upgrade_and_remove_preserve_runtime_purge_only_default_data) ... ok
+test_empty_existing_key_is_rejected_without_regeneration (test_secret_key.SecretKeyTests.test_empty_existing_key_is_rejected_without_regeneration) ... ok
+test_existing_key_bytes_are_preserved_and_modes_are_corrected (test_secret_key.SecretKeyTests.test_existing_key_bytes_are_preserved_and_modes_are_corrected) ... ok
+test_forced_parallel_cookie_and_fernet_first_use_share_one_key (test_secret_key.SecretKeyTests.test_forced_parallel_cookie_and_fernet_first_use_share_one_key) ... ok
+test_fsynced_private_candidate_is_published_without_overwriting_racing_key (test_secret_key.SecretKeyTests.test_fsynced_private_candidate_is_published_without_overwriting_racing_key) ... ok
+test_killed_partial_writer_never_publishes_and_restart_succeeds (test_secret_key.SecretKeyTests.test_killed_partial_writer_never_publishes_and_restart_succeeds) ... ok
+test_killed_publisher_keeps_complete_published_key_on_restart (test_secret_key.SecretKeyTests.test_killed_publisher_keeps_complete_published_key_on_restart) ... ok
+test_symlink_and_nonregular_key_lock_and_directory_are_rejected (test_secret_key.SecretKeyTests.test_symlink_and_nonregular_key_lock_and_directory_are_rejected) ... ok
+test_write_and_fsync_failures_leave_no_partial_active_key (test_secret_key.SecretKeyTests.test_write_and_fsync_failures_leave_no_partial_active_key) ... ok
+test_authentication_csrf_and_security_headers_on_real_apps (test_security_regressions.SecurityRegressions.test_authentication_csrf_and_security_headers_on_real_apps) ... ok
+test_exact_markdown_roundtrip_between_rest_and_mcp (test_security_regressions.SecurityRegressions.test_exact_markdown_roundtrip_between_rest_and_mcp) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f175ac5c0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_list_total_and_items_share_one_snapshot_under_concurrent_delete (test_security_regressions.SecurityRegressions.test_list_total_and_items_share_one_snapshot_under_concurrent_delete) ... ok
+test_reason_unicode_length_empty_and_audit_separation (test_security_regressions.SecurityRegressions.test_reason_unicode_length_empty_and_audit_separation) ... /sdb1/nextcloud/data/mir/files/Dev/Casos/venv/lib/python3.12/site-packages/anyio/streams/memory.py:189: ResourceWarning: Unclosed <MemoryObjectReceiveStream at 789f17c4dfa0>
+  warnings.warn(
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
+test_signed_cookie_security_flags_logout_and_current_session (test_security_regressions.SecurityRegressions.test_signed_cookie_security_flags_logout_and_current_session) ... ok
+test_unknown_errors_never_expose_details_and_success_schema_survives (test_security_regressions.StructuredErrorRegressions.test_unknown_errors_never_expose_details_and_success_schema_survives) ... Unerwarteter MCP-Werkzeugfehler (ToolError)
+Unerwarteter MCP-Werkzeugfehler (ToolError)
+ok
+test_all_admin_sections_are_session_and_admin_protected (test_settings.SettingsTests.test_all_admin_sections_are_session_and_admin_protected) ... ok
+test_app_configuration_is_immediately_visible_and_audited (test_settings.SettingsTests.test_app_configuration_is_immediately_visible_and_audited) ... ok
+test_csrf_on_admin_writes_and_restart_without_service_execution (test_settings.SettingsTests.test_csrf_on_admin_writes_and_restart_without_service_execution) ... ok
+test_current_admin_and_active_state_apply_to_existing_session (test_settings.SettingsTests.test_current_admin_and_active_state_apply_to_existing_session) ... ok
+test_ldap_secret_masking_retains_secret_and_delete_deactivates (test_settings.SettingsTests.test_ldap_secret_masking_retains_secret_and_delete_deactivates) ... ok
+test_mail_secret_and_preferences_with_fake_transport (test_settings.SettingsTests.test_mail_secret_and_preferences_with_fake_transport) ... ok
+test_tls_options_and_current_database_path (test_settings.SettingsTests.test_tls_options_and_current_database_path) ... ok
+test_user_management_preserves_issue_and_cannot_expose_password (test_settings.SettingsTests.test_user_management_preserves_issue_and_cannot_expose_password) ... ok
+test_all_active_users_read_and_capabilities_match_creation (test_updates.UpdateTests.test_all_active_users_read_and_capabilities_match_creation) ... ok
+test_audit_failure_rolls_back_create_edit_and_delete (test_updates.UpdateTests.test_audit_failure_rolls_back_create_edit_and_delete) ... ok
+test_author_window_boundaries_preserve_identity_time_and_revision (test_updates.UpdateTests.test_author_window_boundaries_preserve_identity_time_and_revision) ... ok
+test_concurrent_corrections_have_one_winner (test_updates.UpdateTests.test_concurrent_corrections_have_one_winner) ... ok
+test_invalid_text_target_reason_and_limits_leave_no_update (test_updates.UpdateTests.test_invalid_text_target_reason_and_limits_leave_no_update) ... ok
+test_only_author_corrects_and_only_admin_deletes (test_updates.UpdateTests.test_only_author_corrects_and_only_admin_deletes) ... ok
+test_pagination_orders_time_then_id_and_preserves_authorless_entries (test_updates.UpdateTests.test_pagination_orders_time_then_id_and_preserves_authorless_entries) ... ok
+test_rest_creation_preserves_markdown_author_revision_and_audit (test_updates.UpdateTests.test_rest_creation_preserves_markdown_author_revision_and_audit) ... ok
+test_revisions_required_for_admin_and_author_and_conflicts_do_not_write (test_updates.UpdateTests.test_revisions_required_for_admin_and_author_and_conflicts_do_not_write) ... ok
+test_revocation_and_deactivation_apply_after_opening (test_updates.UpdateTests.test_revocation_and_deactivation_apply_after_opening) ... ok
+
+----------------------------------------------------------------------
+Ran 145 tests in 128.482s
+
+OK

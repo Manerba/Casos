@@ -1,0 +1,2 @@
+Update browser checks passed: real cookie/REST creation, author metadata, empty input, failed save draft, double-submit lock, POST-to-PUT, conflict draft, cancel/Escape/focus, foreign draft, mobile, read-only user, revoked rights, sanitizing, strict CSP, production translations and successful static requests.
+Evidence: /tmp/casos-update-dialog-evidence

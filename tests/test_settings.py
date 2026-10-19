@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-from dashboard import auth, database, tls_utils
+from dashboard import auth, database, tls_utils, mcp_transport
 from dashboard.app import app
 from dashboard import api_ldap, api_mail, issue_service
 
@@ -17,7 +17,7 @@ class SettingsTests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory(prefix='casos-settings-')
         self.addCleanup(tmp.cleanup)
         self.root = Path(tmp.name)
-        for module, name, value in ((database,'DB_DIR',self.root), (database,'DB_PATH',self.root/'casos.db'), (auth,'SECRET_KEY_PATH',self.root/'secret.key')):
+        for module, name, value in ((database,'DB_DIR',self.root), (database,'DB_PATH',self.root/'casos.db'), (auth,'SECRET_KEY_PATH',self.root/'secret.key'), (mcp_transport,'setup_security_logger',lambda: None)):
             patcher=patch.object(module,name,value);patcher.start();self.addCleanup(patcher.stop)
         database.init_db()
         with closing(database.get_db()) as db, db:
@@ -44,12 +44,21 @@ class SettingsTests(unittest.TestCase):
 
     def test_csrf_on_admin_writes_and_restart_without_service_execution(self):
         operations=[('POST','/api/admin/users',{}),('POST','/api/admin/app/config',{}),('POST','/api/admin/ldap/config',{}),('POST','/api/admin/mail/config',{}),('POST','/api/admin/tls/verify',{}),('POST','/api/admin/mcp/tokens',{}),('POST','/api/dashboard/restart',{})]
-        with patch('dashboard.app.subprocess.Popen') as process:
+        with patch('dashboard.app.subprocess.run') as process:
+            process.return_value.returncode = 0
             for method,url,body in operations:
                 with self.subTest(url=url): self.assertEqual(self.client.request(method,url,json=body).status_code,403)
             process.assert_not_called()
             self.assertEqual(self.client.post('/api/dashboard/restart',headers=self.headers).status_code,200)
-            self.assertEqual(process.call_args.args[0],['systemctl','restart','casos.service','casos-mcp.service'])
+            self.assertEqual(process.call_args.args[0],['systemctl','--no-block','--no-ask-password','restart','casos.service','casos-mcp.service'])
+            process.return_value.returncode = 1
+            denied=self.client.post('/api/dashboard/restart',headers=self.headers)
+            self.assertEqual(denied.status_code,503)
+            self.assertEqual(denied.json()['code'],'restart_failed')
+            process.side_effect=FileNotFoundError('private path')
+            missing=self.client.post('/api/dashboard/restart',headers=self.headers)
+            self.assertEqual(missing.status_code,503)
+            self.assertNotIn('private path',missing.text)
 
     def test_current_admin_and_active_state_apply_to_existing_session(self):
         with closing(database.get_db()) as db, db: db.execute('UPDATE users SET is_admin=0 WHERE id=1')

@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
 import uvicorn
 
 from dashboard.api_auth import router as auth_router
@@ -75,13 +76,20 @@ async def security_headers(request, call_next):
 async def dashboard_info(user=Depends(get_current_user)):
     return {'version': (root.parent / 'version.txt').read_text().strip(), 'title': 'Casos',
             'description': 'Issues, Updates und lokale Anhänge',
-            'components': ['FastAPI', 'SQLite', 'Vanilla JS', 'Markdown', 'MCP']}
+            'components': ['FastAPI', 'SQLite / FTS5', 'Vanilla JS', 'Marked / Markdown',
+                           'MCP', 'Pillow', 'extract-msg', 'striprtf']}
 
 
 @app.post('/api/dashboard/restart')
 async def restart_dashboard(user=Depends(get_admin_user)):
-    subprocess.Popen(['systemctl', 'restart', 'casos.service', 'casos-mcp.service'],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        result = await run_in_threadpool(subprocess.run,
+            ['systemctl', '--no-block', '--no-ask-password', 'restart', 'casos.service', 'casos-mcp.service'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10, check=False)
+        if result.returncode:
+            raise OSError('Restart request rejected')
+    except (OSError, subprocess.TimeoutExpired):
+        raise ApplicationError(503, 'Neustart konnte nicht angefordert werden. Gespeicherte Einstellungen bleiben erhalten. Bitte die Dienste durch den Betreiber neu starten lassen.', code='restart_failed') from None
     return {'status': 'restarting'}
 
 
@@ -110,6 +118,10 @@ async def index(request: Request):
 
 def main():
     logging.basicConfig(level=logging.INFO)
+    # Both services can start together. Finish the locked schema initialization
+    # before reading TLS from a database another process may just be creating.
+    from dashboard.database import init_db
+    init_db()
     tls = get_tls_config()
     kwargs = {'host': os.environ.get('CASOS_HOST', '0.0.0.0'), 'port': int(os.environ.get('CASOS_PORT', '8514'))}
     if tls and tls['enabled']:

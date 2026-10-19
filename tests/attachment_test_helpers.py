@@ -11,7 +11,7 @@ from unittest.mock import patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dashboard import api_attachments, attachment_service, auth, database, issue_service
+from dashboard import api_attachments, attachment_service, auth, database, issue_service, mcp_transport
 from dashboard.mcp_transport import MCPAuthMiddleware, api_csrf_protection
 
 
@@ -23,6 +23,9 @@ class AttachmentTestCase(unittest.TestCase):
         self.patch(database, "DB_DIR", self.root)
         self.patch(database, "DB_PATH", self.root / "casos.db")
         self.patch(auth, "SECRET_KEY_PATH", self.root / "secret.key")
+        # Full-app lifespans in subclasses must not open the host security log.
+        # Logging assertions still capture events; DB audit remains unchanged.
+        self.patch(mcp_transport, "setup_security_logger", lambda: None)
         database.init_db()
         self.users = {"admin": {"id": 1}}
         with closing(database.get_db()) as db, db:

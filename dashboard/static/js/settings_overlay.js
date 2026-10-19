@@ -67,6 +67,7 @@ async function settingsRequest(url, options = {}) {
     const response = await settingsFetch(url, options);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+        if (data.code === 'restart_failed') throw new Error(t('settingsOverlay.restartFailed'));
         const detail = data.detail;
         throw new Error(typeof detail === 'string' ? detail : t('common.loadError') + ' (' + response.status + ')');
     }

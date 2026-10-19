@@ -1,0 +1,2 @@
+History browser passed: assignment/status/reopen, real authors and old/new values, updates/corrections, preferences and fake-mail recipients, drafts, load errors/retry, user deletion, admin update deletion, pagination, 390px layout.
+Evidence: /tmp/casos-history-evidence

@@ -37,9 +37,9 @@
     --neutral-soft: #e2e8f0;
     --highlight-bg: #fde68a;
     --highlight-text: #422006;
-    --project-color: #5b21b6;
-    --project-soft: #ede9fe;
-    --project-text: #5b21b6;
+    --identity-color: #5b21b6;
+    --identity-soft: #ede9fe;
+    --identity-text: #5b21b6;
 
     /* Akzentfarben */
     --accent-primary: #1d4ed8;
@@ -90,9 +90,9 @@
     --neutral-soft: #334155;
     --highlight-bg: #854d0e;
     --highlight-text: #fffbeb;
-    --project-color: #ddd6fe;
-    --project-soft: #312e81;
-    --project-text: #ddd6fe;
+    --identity-color: #ddd6fe;
+    --identity-soft: #312e81;
+    --identity-text: #ddd6fe;
 
     --accent-primary: #22d3ee;
     --accent-primary-rgb: 34, 211, 238;
@@ -137,9 +137,9 @@
     --neutral-soft: #e2e8f0;
     --highlight-bg: #fde68a;
     --highlight-text: #422006;
-    --project-color: #5b21b6;
-    --project-soft: #ede9fe;
-    --project-text: #5b21b6;
+    --identity-color: #5b21b6;
+    --identity-soft: #ede9fe;
+    --identity-text: #5b21b6;
 
     --accent-primary: #0e7490;
     --accent-primary-rgb: 14, 116, 144;
@@ -181,9 +181,9 @@
     --neutral-soft: #e2e8f0;
     --highlight-bg: #fde68a;
     --highlight-text: #422006;
-    --project-color: #5b21b6;
-    --project-soft: #ede9fe;
-    --project-text: #5b21b6;
+    --identity-color: #5b21b6;
+    --identity-soft: #ede9fe;
+    --identity-text: #5b21b6;
 
     --accent-primary: #047857;
     --accent-primary-rgb: 4, 120, 87;
@@ -225,9 +225,9 @@
     --neutral-soft: #292524;
     --highlight-bg: #713f12;
     --highlight-text: #fffbeb;
-    --project-color: #ddd6fe;
-    --project-soft: #312e81;
-    --project-text: #ddd6fe;
+    --identity-color: #ddd6fe;
+    --identity-soft: #312e81;
+    --identity-text: #ddd6fe;
 
     --accent-primary: #c4b5fd;
     --accent-primary-rgb: 196, 181, 253;
@@ -1215,8 +1215,8 @@ a.tab {
 }
 
 .badge-ldap {
-    background-color: var(--project-soft);
-    color: var(--project-text);
+    background-color: var(--identity-soft);
+    color: var(--identity-text);
 }
 
 .badge-local {

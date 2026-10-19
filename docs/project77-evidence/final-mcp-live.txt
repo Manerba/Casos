@@ -1,0 +1,1 @@
+{"result": "passed", "checks": ["live main and dedicated HTTP MCP sessions", "shared issue/update/attachment data", "binary byte preservation", "search", "runtime guides", "cross-service deletion"]}

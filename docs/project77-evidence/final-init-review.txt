@@ -1,0 +1,16 @@
+test_concurrent_schema_one_upgrade_waits_and_preserves_data_and_snapshots (tests.test_issue_initialization.IssueInitializationTests.test_concurrent_schema_one_upgrade_waits_and_preserves_data_and_snapshots) ... ok
+test_failed_initialization_rolls_back_schema (tests.test_issue_initialization.IssueInitializationTests.test_failed_initialization_rolls_back_schema) ... ok
+test_fresh_restart_and_foreign_keys (tests.test_issue_initialization.IssueInitializationTests.test_fresh_restart_and_foreign_keys) ... ok
+test_future_schema_version_is_rejected_without_changes (tests.test_issue_initialization.IssueInitializationTests.test_future_schema_version_is_rejected_without_changes) ... ok
+test_initialization_error_propagates_closes_connection_and_allows_retry (tests.test_issue_initialization.IssueInitializationTests.test_initialization_error_propagates_closes_connection_and_allows_retry) ... ok
+test_legacy_and_unknown_data_are_not_changed (tests.test_issue_initialization.IssueInitializationTests.test_legacy_and_unknown_data_are_not_changed) ... ok
+test_parallel_first_start_and_restart (tests.test_issue_initialization.IssueInitializationTests.test_parallel_first_start_and_restart) ... ok
+test_process_death_releases_lock_and_rolls_back_partial_schema (tests.test_issue_initialization.IssueInitializationTests.test_process_death_releases_lock_and_rolls_back_partial_schema) ... ok
+test_schema_one_upgrade_preserves_data_and_custom_templates (tests.test_issue_initialization.IssueInitializationTests.test_schema_one_upgrade_preserves_data_and_custom_templates) ... ok
+test_schema_upgrade_failure_rolls_back_columns_version_and_content (tests.test_issue_initialization.IssueInitializationTests.test_schema_upgrade_failure_rolls_back_columns_version_and_content) ... ok
+test_second_initializer_waits_before_wal_setup (tests.test_issue_initialization.IssueInitializationTests.test_second_initializer_waits_before_wal_setup) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 16.457s
+
+OK

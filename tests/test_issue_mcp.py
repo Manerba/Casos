@@ -167,6 +167,26 @@ class IssueMCPTests(AttachmentTestCase):
                 self.assertEqual(client.post('/mcp/',headers=h,json={'jsonrpc':'2.0','id':3,'method':'tools/list','params':{}}).status_code,401)
                 self.assertEqual(client.get(self.url,headers=h).status_code,401)
 
+    def test_session_id_never_transfers_identity_or_write_rights_between_tokens(self):
+        for app in (main_app, dedicated_app):
+            with self.subTest(app=app.title), TestClient(app) as client:
+                writer = self.initialize(client)
+                reader = self.initialize(client, self.reader_token)
+                self.assertEqual(self.call(client, writer, 'whoami')['id'], self.users['agent']['id'])
+                self.assertEqual(self.call(client, reader, 'whoami')['id'], self.reader['id'])
+                changed = {**writer, 'Authorization': 'Bearer ' + self.reader_token}
+                response = client.post('/mcp/', headers=changed, json={'jsonrpc':'2.0', 'id':2,
+                    'method':'tools/call', 'params':{'name':'whoami','arguments':{}}})
+                if response.status_code == 200:
+                    self.assertEqual(self.call(client, changed, 'whoami')['id'], self.reader['id'])
+                    self.call(client, changed, 'issue.update', {'issue_id':self.issue_id,
+                        'changes':{'title':'Must not inherit writer access'}}, error='permission_denied')
+                else:
+                    self.assertIn(response.status_code, (403, 404))
+                self.assertEqual(self.call(client, writer, 'whoami')['id'], self.users['agent']['id'])
+                self.assertEqual(self.call(client, reader, 'whoami')['id'], self.reader['id'])
+                self.assertEqual(issue_service.get_issue(self.issue_id, self.users['owner'])['title'], 'Attachments')
+
     def test_errors_are_structured_and_no_partial_writes(self):
         with TestClient(main_app) as client:
             h=self.initialize(client)
