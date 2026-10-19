@@ -3,7 +3,7 @@
     'use strict';
     const statuses = ['offen', 'in_arbeit', 'erledigt', 'abgebrochen'];
     const state = {
-        users: [], issueId: null, issue: null, generation: 0,
+        users: [], usersRequest: null, openingDialog: null, issueId: null, issue: null, generation: 0,
         list: { status: '', assignee: '', sortBy: 'id', direction: 'desc', offset: 0, limit: 25, scroll: 0, requestSequence: 0 },
         updates: [], attachments: [], updateRequest: 0, attachmentRequest: 0,
         uploading: new Set(), dialogs: new Set(), descriptionSaves: new Map(),
@@ -35,6 +35,44 @@
     const jsonOptions = (method, data) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     const current = (id, generation) => state.issueId === id && state.generation === generation;
 
+    function refreshUsers() {
+        // Each consumer requests current identities (including MCP/LDAP users).
+        // An older response must neither replace newer names nor reopen a
+        // removed identity. Its consumers wait for the newest request instead.
+        const pending = request('/api/users/list').then(data => {
+            if (state.usersRequest !== pending) return state.usersRequest;
+            state.users = data.items;
+            const filter = document.getElementById('issue-assignee-filter');
+            if (filter) {
+                const selected = filter.value;
+                filter.innerHTML = userOptions(/^\d+$/.test(selected) ? Number(selected) : null, true);
+                filter.value = selected;
+            }
+            document.querySelectorAll('[data-issue-user]').forEach(element => {
+                element.textContent = userName(element.dataset.issueUser ? Number(element.dataset.issueUser) : null);
+            });
+        }, error => {
+            if (state.usersRequest !== pending) return state.usersRequest;
+            throw error;
+        });
+        state.usersRequest = pending;
+        return pending;
+    }
+    const refreshUsersInPlace = () => refreshUsers().catch(error => showNotification(errorText(error), 'error'));
+
+    async function openUserDialog(issueId, build) {
+        // Old DOM buttons can remain visible while the next route loads.
+        if (state.issueId !== issueId || state.openingDialog?.generation === state.generation) return;
+        const intent = { issueId, generation: state.generation };
+        state.openingDialog = intent;
+        try {
+            const data = await build.load();
+            if (state.openingDialog === intent && current(issueId, intent.generation) && !document.querySelector('.settings-overlay[open]')) build.open(data);
+        } catch (error) {
+            if (current(issueId, intent.generation)) showNotification(errorText(error), 'error');
+        } finally { if (state.openingDialog === intent) state.openingDialog = null; }
+    }
+
     function showPageError(error) {
         main().innerHTML = `<div class="issue-empty" role="alert">${esc(errorText(error))}</div><button class="issue-btn" data-issue-retry>${tr('retry')}</button>`;
         main().querySelector('[data-issue-retry]').onclick = () => window.renderIssueRoute(parseRoute());
@@ -44,14 +82,14 @@
         const first = includeAll ? `<option value="">${t('common.all')}</option><option value="unassigned">${tr('unassigned')}</option>`
             : `<option value="">${tr('unassigned')}</option>`;
         const missing = selected !== null && !state.users.some(user => user.id === selected)
-            ? `<option value="${selected}" selected>#${selected}</option>` : '';
+            ? `<option value="${selected}" selected ${includeAll ? '' : 'disabled'}>#${selected}</option>` : '';
         return first + missing + state.users.map(user => `<option value="${user.id}" ${user.id === selected ? 'selected' : ''}>${esc(userLabel(user))}</option>`).join('');
     }
 
     function buildFilters() {
         const bar = document.getElementById('filterBar');
         bar.innerHTML = `<label class="issue-filter">${tr('status')}<select id="issue-status-filter"><option value="">${t('common.all')}</option>${statuses.map(value => `<option value="${value}">${t(`status.${value}`)}</option>`).join('')}</select></label>
-            <label class="issue-filter">${tr('assignee')}<select id="issue-assignee-filter">${userOptions(null, true)}</select></label>
+            <label class="issue-filter">${tr('assignee')}<select id="issue-assignee-filter">${userOptions(/^\d+$/.test(state.list.assignee) ? Number(state.list.assignee) : null, true)}</select></label>
             <label class="issue-filter">${tr('sort')}<select id="issue-sort-filter">${['id', 'title', 'priority', 'deadline', 'created_at'].map(value => `<option value="${value}">${tr(value === 'created_at' ? 'created' : value)}</option>`).join('')}</select></label>
             <label class="issue-filter">${tr('direction')}<select id="issue-direction-filter"><option value="desc">${tr('descending')}</option><option value="asc">${tr('ascending')}</option></select></label>`;
         const controls = [['issue-status-filter', 'status'], ['issue-assignee-filter', 'assignee'], ['issue-sort-filter', 'sortBy'], ['issue-direction-filter', 'direction']];
@@ -60,6 +98,7 @@
             control.value = state.list[property];
             control.onchange = () => { state.list[property] = control.value; state.list.offset = 0; state.list.scroll = 0; loadList(state.generation); };
         }
+        document.getElementById('issue-assignee-filter').onfocus = refreshUsersInPlace;
         bar.style.display = 'flex';
     }
 
@@ -87,7 +126,7 @@
                     <td data-label="${attr(tr('title'))}"><a class="issue-link" href="/issues/${issue.id}">${esc(issue.title)}</a></td>
                     <td data-label="${attr(tr('status'))}"><span class="issue-status status-${issue.status}">${t(`status.${issue.status}`)}</span></td>
                     <td data-label="${attr(tr('priority'))}">${issue.priority}</td>
-                    <td data-label="${attr(tr('assignee'))}">${esc(userName(issue.assigned_to))}</td>
+                    <td data-label="${attr(tr('assignee'))}" data-issue-user="${issue.assigned_to ?? ''}">${esc(userName(issue.assigned_to))}</td>
                     <td data-label="${attr(tr('deadline'))}">${esc(issue.deadline || '—')}</td>
                     <td data-label="${attr(tr('created'))}">${esc(dateTime(issue.created_at))}</td>
                 </tr>`).join('')}</tbody></table></div>
@@ -113,7 +152,7 @@
             ${issue.permissions.can_edit ? `<button class="issue-btn" id="issue-edit">${tr('editDetails')}</button>` : ''}
             ${issue.permissions.can_manage ? `<button class="issue-btn" id="issue-editors">${tr('editors')}</button><button class="issue-btn danger" id="issue-delete">${t('common.delete')}</button>` : ''}</div></div>
             <dl class="issue-metadata">
-            ${[['status', t(`status.${issue.status}`)], ['priority', issue.priority], ['assignee', userName(issue.assigned_to)], ['deadline', issue.deadline || '—'], ['creator', issue.created_by === null ? tr('unknownUser') : userName(issue.created_by)], ['created', dateTime(issue.created_at)], ['updated', dateTime(issue.updated_at)]].map(([key, value]) => `<div><dt>${tr(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}
+            ${[['status', t(`status.${issue.status}`)], ['priority', issue.priority], ['assignee', userName(issue.assigned_to), issue.assigned_to], ['deadline', issue.deadline || '—'], ['creator', issue.created_by === null ? tr('unknownUser') : userName(issue.created_by), issue.created_by], ['created', dateTime(issue.created_at)], ['updated', dateTime(issue.updated_at)]].map(([key, value, userId]) => `<div><dt>${tr(key)}</dt><dd${userId ? ` data-issue-user="${userId}"` : ''}>${esc(value)}</dd></div>`).join('')}
             </dl>`;
     }
 
@@ -350,6 +389,10 @@
     }
 
     function openIssueForm(issue = null) {
+        return openUserDialog(issue?.id ?? null, {load: refreshUsers, open: () => buildIssueForm(issue)});
+    }
+
+    function buildIssueForm(issue) {
         const creating = issue === null;
         const value = issue || { title: '', status: 'offen', priority: 50, deadline: null, assigned_to: null };
         const canAssign = creating || issue.permissions.can_manage;
@@ -377,16 +420,18 @@
         });
     }
 
-    async function openEditors(issueId) {
-        try {
-            const data = await request(`/api/issues/${issueId}/editors`);
-            const userMap = new Map([...state.users, ...data.items].map(user => [user.id, user]));
-            const body = `<p>${tr('editorsHelp')}</p><div class="issue-editor-choices">${[...userMap.values()].map(user => `<label><input type="checkbox" name="editor-${user.id}" value="${user.id}" ${data.user_ids.includes(user.id) ? 'checked' : ''}>${esc(userLabel(user))}</label>`).join('')}</div>`;
+    function openEditors(issueId) {
+        return openUserDialog(issueId, {load: async () => {
+            const [, data] = await Promise.all([refreshUsers(), request(`/api/issues/${issueId}/editors`)]);
+            return data;
+        }, open: data => {
+            const userMap = new Map([...data.items, ...state.users].map(user => [user.id, user]));
+            const body = `<p>${tr('editorsHelp')}</p><div class="issue-editor-choices">${[...userMap.values()].map(user => `<label><input type="checkbox" name="editor-${user.id}" value="${user.id}" ${data.user_ids.includes(user.id) ? 'checked' : ''}>${esc(userLabel(user))}${user.is_active === 0 ? ` (${esc(t('users.inactive'))})` : ''}</label>`).join('')}</div>`;
             formDialog(tr('editors'), body, form => {
                 const user_ids = [...form.querySelectorAll('input[type=checkbox]:checked')].map(input => Number(input.value));
                 return request(`/api/issues/${issueId}/editors`, jsonOptions('PUT', { user_ids, revision: data.revision }));
             });
-        } catch (error) { showNotification(errorText(error), 'error'); }
+        }});
     }
 
     window.renderIssueRoute = async function ({ issueId, updateId = null }) {
@@ -394,6 +439,9 @@
         state.issueId = issueId;
         state.issue = null;
         const generation = ++state.generation;
+        try { await refreshUsers(); }
+        catch (error) { if (current(issueId, generation)) showPageError(error); return; }
+        if (!current(issueId, generation)) return;
         if (issueId === null) { buildFilters(); return loadList(generation); }
         document.getElementById('filterBar').style.display = 'none';
         window.scrollTo(0, 0);
@@ -402,10 +450,9 @@
     };
     window.refreshIssueDetail = issueId => state.issueId === issueId ? window.renderIssueRoute({ issueId }) : Promise.resolve();
     window.initIssues = async function () {
-        try { state.users = (await request('/api/users/list')).items; }
-        catch (error) { showPageError(error); return; }
         return window.renderIssueRoute(parseRoute());
     };
+    window.addEventListener('settings-closed', refreshUsersInPlace);
     window.addEventListener('update-saved', event => {
         if (state.issueId === event.detail.issueId) loadUpdates(event.detail.issueId, false);
     });

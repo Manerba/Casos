@@ -165,6 +165,7 @@ async function settingsClose() {
     if (state.returnFocus?.isConnected) state.returnFocus.focus();
     const url = new URL(location.href);
     if (url.searchParams.has('settings')) { url.searchParams.delete('settings'); history.replaceState(history.state, '', url); }
+    window.dispatchEvent(new Event('settings-closed'));
 }
 function settingsKey(event) {
     const state = settingsState;

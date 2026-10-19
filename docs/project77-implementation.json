@@ -206,21 +206,54 @@
       "commit": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92",
       "log": "docs/project77-evidence/acceptance-backend-149.txt",
       "includes": "8 operations/package tests, 11 initialization tests, 8 atomic-secret tests and rights/security/service/REST/MCP tests"
+    },
+    {
+      "command": "venv/bin/python tests/check_user_directory_ui.py",
+      "result": "passed; coordinator independently repeated final agent harness",
+      "log": "docs/project77-evidence/pl401-01/user-directory.txt",
+      "evidence": "docs/project77-evidence/pl401-01/user-directory.json",
+      "scope": "Actual Settings user creation, assignment/grants persisted server-side, normal user rights before/after assignment, names/filter/table labels, deactivate/reactivate, actual MCP bearer attachment writes 403/201/403, Description/Update/Settings drafts, one admin document request/no reload",
+      "phase": "PL-401-01 follow-up, delivery +151"
+    },
+    {
+      "command": "venv/bin/python tests/check_user_directory_failures_ui.py",
+      "result": "passed; coordinator run on final product diff",
+      "log": "docs/project77-evidence/pl401-01/user-directory-failures.txt",
+      "evidence": "docs/project77-evidence/pl401-01/user-directory-failures.json",
+      "scope": "Injected 503 and delayed user-list replies over real isolated HTTP app; retry, double-click, old/new response ordering, SPA route changes, old DOM clicks, inactive selected filter/assignee and explicit removal of inactive grant, description draft retained",
+      "phase": "PL-401-01 follow-up, delivery +151"
+    },
+    {
+      "command": "venv/bin/python tests/check_issues_ui.py",
+      "result": "passed; coordinator repeated after final dialog race fixes",
+      "log": "docs/project77-evidence/pl401-01/issues-browser.txt",
+      "phase": "PL-401-01 follow-up, delivery +151"
+    },
+    {
+      "command": "venv/bin/python tests/check_settings_ui.py",
+      "result": "passed; coordinator run with settings-close refresh integration",
+      "log": "docs/project77-evidence/pl401-01/settings-browser.txt",
+      "phase": "PL-401-01 follow-up, delivery +151"
+    },
+    {
+      "command": "node --check dashboard/static/js/tab_issues.js; node --check dashboard/static/js/settings_overlay.js; Python AST on both new browser harnesses; git diff --check",
+      "result": "passed (separate commands); no runtime data and no Git remote",
+      "phase": "PL-401-01 follow-up, delivery +151"
     }
   ],
   "progress": {
     "390": "complete: 0cdd27f / 0.0.1+145; Tareas100",
-    "401": "PL only; open",
+    "401": "PL only; 90%, open. Targeted recheck of PL-401-01 pending.",
     "391": "complete implementation and root review; grouped version 0.0.1+146",
     "392": "complete implementation and root review; grouped version 0.0.1+146",
     "395": "complete implementation and root review; grouped version 0.0.1+146",
-    "393": "complete; Root browser repetition passed incl concurrent save/detail reload; desktop/mobile light/dark viewed; version0.0.1+147",
+    "393": "PL reopened +150 for PL-401-01. Corrected user refresh and dialog races, root targeted browser checks passed; delivery +151, exact commit/status in Tareas.",
     "396": "complete; Root6 real protocol tests passed, live2process SDK check passed, integrated86 tests passed; version0.0.1+147",
     "397": "complete; Root15 backend tests and11-scenario real browser repetition passed, mobile screenshot viewed; version0.0.1+147",
     "394": "complete implementation and root review; version0.0.1+148",
     "398": "complete implementation and root review; version0.0.1+148",
     "399": "Complete: b0bcbc5 / 0.0.1+149; Tareas100",
-    "400": "Exact-source integration passed; ready for PL handoff, documentation version0.0.1+150"
+    "400": "PL-401-01 follow-up integration passed; +151 targeted report docs/project77-pl401-01-fix.json; exact artifact verification and handoff recorded after central commit."
   },
   "constraints": [
     "No Tareas writes except authorized project handoffs/status through MCP",
@@ -229,12 +262,12 @@
     "Complete packages only after coordinator review and recorded tests"
   ],
   "environment": "Playwright1.64/Chromium156 installed and smoke-tested; extract-msg0.56.1/Pillow12.3.0 installed; runtime data/ still empty",
-  "next": "Only independent PL acceptance #401. Final +150 hash/artifact verification in Tareas.",
-  "last_committed": "b0bcbc5729c2fa923779a2094b4c9dc3d10b4c92 / 0.0.1+149",
+  "next": "Independent targeted PL recheck #401 on +151. Exact delivery commit/package proof in Tareas and dist/project77-pl401-01-handoff.json.",
+  "last_committed": "Delivery baseline 3f8516bd1648ee5422bb0f7b60c617d37a6de8b9 / 0.0.1+150; +151 exact hash recorded after central commit in Tareas.",
   "known_test_notes": [
     "ASGI TestClient MCP protocol tests emit upstream anyio MemoryObjectReceiveStream ResourceWarnings; live SDK two-process check clean. No assertion failure.",
     "Earlier in-process tests initialized /var/log/casos.log; test fixtures now suppress host-handler installation. Existing log retained, no runtime DB/secret/attachments created. Final targeted isolation rerun verified unchanged host log.",
     "A too-broad test-only os.write fault injection caused resource_tracker warnings; narrowed to candidate key file descriptors. Full 145-test rerun has no multiprocessing tracker/semaphore warnings."
   ],
-  "final_integration_report": "docs/project77-handoff.json"
+  "final_integration_report": "docs/project77-pl401-01-fix.json (follow-up); docs/project77-handoff.json retains historical +150 evidence."
 }

@@ -1,7 +1,7 @@
 {
   "project_id": 77,
   "subtask_id": 400,
-  "status": "bereit zur PL-Abnahme",
+  "status": "Historical +150 handoff; independent PL requested PL-401-01 fix. Current follow-up: docs/project77-pl401-01-fix.json.",
   "acceptance_owner": "Separate PL session; #401 remains open and untouched",
   "completed_implementation_subtasks": [
     390,
@@ -156,5 +156,12 @@
     "real_mail_sent": false,
     "tareas_code_or_runtime_modified": false
   },
-  "handoff": "bereit zur PL-Abnahme; #401 remains exclusively for the separate PL session."
+  "handoff": "bereit zur PL-Abnahme; #401 remains exclusively for the separate PL session.",
+  "pl_followup": {
+    "review": "dist/pl-401-3f8516b/review.json",
+    "finding": "PL-401-01",
+    "delivery": "0.0.1+151",
+    "report": "docs/project77-pl401-01-fix.json",
+    "note": "Preserve original +150 evidence below. Additional PL password/login/rate-limit checks passed and close the historical authentication test gap; final PL acceptance remains pending."
+  }
 }

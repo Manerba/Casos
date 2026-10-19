@@ -1,0 +1,101 @@
+{
+  "project_id": 77,
+  "primary_subtask": 393,
+  "integration_subtask": 400,
+  "finding": "PL-401-01",
+  "severity": "P2",
+  "status": "Implementation corrected and targeted checks passed; independent PL recheck remains open",
+  "baseline_commit": "3f8516bd1648ee5422bb0f7b60c617d37a6de8b9",
+  "baseline_version": "0.0.1+150",
+  "delivery_version": "0.0.1+151",
+  "delivery_commit": "Exact hash recorded after central git-commit.sh in Tareas #393/#400/project handoffs and dist/project77-pl401-01-handoff.json.",
+  "created_utc": "2026-10-19T18:42:58.230004+00:00",
+  "root_cause": "Issue UI only loaded state.users once during initIssues; Settings mutations left the snapshot stale.",
+  "changes": [
+    "Read current active users before Issue create/edit and editor-grant dialogs, on SPA route load, on user-filter focus and after confirmed Settings overlay close.",
+    "Refresh only user filter options and visible creator/assignee text nodes in place; do not rebuild Issue, Markdown, Update or Settings drafts.",
+    "Newest request wins for out-of-order user-list responses; a failed latest read displays an error and does not open stale assignment/grant forms.",
+    "Bind pending dialog intent to actual Issue ID and route generation; reject old DOM buttons, allow a new route dialog while an older read is pending, and prevent duplicate dialogs.",
+    "Keep selected inactive filter IDs explicit, keep an existing inactive assignee on unrelated metadata edits, and label existing inactive grants for deliberate removal. Fresh active user labels override older grant snapshots."
+  ],
+  "product_files": [
+    "dashboard/static/js/tab_issues.js",
+    "dashboard/static/js/settings_overlay.js"
+  ],
+  "unchanged": [
+    "Backend and database schema",
+    "REST/MCP contracts and authorization",
+    "Existing Markdown/Update revisions",
+    "Token revocation and kill switch",
+    "Translations (all user-facing labels already exist)"
+  ],
+  "reproduction": {
+    "result": "Original missing-user assertion reproduced before fix by regression agent; expected failure, then harness extended and root independently ran final green checks.",
+    "evidence": "docs/project77-evidence/pl401-01/initial-reproduction.json",
+    "log": "docs/project77-evidence/pl401-01/initial-reproduction.txt"
+  },
+  "parallel_review": {
+    "capture_analysis": "Exclusive owner tests/check_user_directory_ui.py; red reproduction, full regression, frozen before coordinator commit.",
+    "attachments_analysis": "Read-only code review found two asynchronous dialog races; coordinator fixed both and proved them with deliberately delayed browser responses. Final review has no further findings.",
+    "coordinator": "Product integration, second browser harness, independent final runs and screenshot/source review, evidence and central commit."
+  },
+  "checks": [
+    {
+      "command": "venv/bin/python tests/check_user_directory_ui.py",
+      "result": "passed; coordinator independently repeated final agent harness",
+      "log": "docs/project77-evidence/pl401-01/user-directory.txt",
+      "evidence": "docs/project77-evidence/pl401-01/user-directory.json",
+      "scope": "Actual Settings user creation, assignment/grants persisted server-side, normal user rights before/after assignment, names/filter/table labels, deactivate/reactivate, actual MCP bearer attachment writes 403/201/403, Description/Update/Settings drafts, one admin document request/no reload"
+    },
+    {
+      "command": "venv/bin/python tests/check_user_directory_failures_ui.py",
+      "result": "passed; coordinator run on final product diff",
+      "log": "docs/project77-evidence/pl401-01/user-directory-failures.txt",
+      "evidence": "docs/project77-evidence/pl401-01/user-directory-failures.json",
+      "scope": "Injected 503 and delayed user-list replies over real isolated HTTP app; retry, double-click, old/new response ordering, SPA route changes, old DOM clicks, inactive selected filter/assignee and explicit removal of inactive grant, description draft retained"
+    },
+    {
+      "command": "venv/bin/python tests/check_issues_ui.py",
+      "result": "passed; coordinator repeated after final dialog race fixes",
+      "log": "docs/project77-evidence/pl401-01/issues-browser.txt"
+    },
+    {
+      "command": "venv/bin/python tests/check_settings_ui.py",
+      "result": "passed; coordinator run with settings-close refresh integration",
+      "log": "docs/project77-evidence/pl401-01/settings-browser.txt"
+    },
+    {
+      "command": "node --check dashboard/static/js/tab_issues.js; node --check dashboard/static/js/settings_overlay.js; Python AST on both new browser harnesses; git diff --check",
+      "result": "passed (separate commands); no runtime data and no Git remote"
+    }
+  ],
+  "screenshots": [
+    "docs/project77-evidence/pl401-01/new-user-assignment-current.png",
+    "docs/project77-evidence/pl401-01/directory-final-draft.png",
+    "docs/project77-evidence/pl401-01/preserved-draft-inactive-assignee.png"
+  ],
+  "baseline_pl_evidence": {
+    "path": "dist/pl-401-3f8516b/review.json",
+    "modified": false,
+    "result": "Independent PL rejected +150 for PL-401-01; 146 backend tests, seven browser harnesses, HTTP MCP, offline restore, delivered DEB start and additional password/rate-limit checks passed.",
+    "note": "These are baseline PL results, not claimed as repeated full-suite results of this frontend fix."
+  },
+  "preview_evidence": "Unchanged from +150 and independent PL preview run: docs/project77-handoff.json and dist/pl-401-3f8516b/browser-artifacts/. No preview code changed.",
+  "package_followup": "Build final +151 DEB locally after commit and test its extracted scripts/assets with existing venv. Exact artifact SHA256 and result will be recorded in dist/project77-package-151.json and final Tareas handoff; no installation or publication.",
+  "not_repeated_for_frontend_fix": [
+    "Complete 146-test backend suite",
+    "Separate search/history/Markdown/Update/preview browser suites",
+    "Standalone backup/restore and HTTP MCP harnesses; extracted package receives its own real HTTP checks"
+  ],
+  "not_executed": [
+    "Real apt/root/systemd installation, activation, upgrade or removal",
+    "Fresh dependency installation or additional Python versions",
+    "External LDAP/SMTP/TLS connections or dedicated protocol servers",
+    "Physical 500-MiB upload",
+    "Backup under active writers, host/user change or external certificate restore",
+    "Independent PL recheck #401"
+  ],
+  "known_behavior": "Active users are refreshed when choices open. Server still validates current permissions and activation at write time. Existing inactive grants are kept visible and checked until explicitly removed; submitting inactive users is rejected by the unchanged backend.",
+  "open_functional_findings_after_implementation_checks": [],
+  "handoff": "bereit zur PL-Abnahme / gezielten Nachprüfung von PL-401-01; #401 remains at PL-owned 90%, open and untouched"
+}

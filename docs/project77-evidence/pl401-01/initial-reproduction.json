@@ -1,0 +1,27 @@
+{
+  "fresh_rest_user_id": 5,
+  "assignee_choices": [
+    {
+      "value": "",
+      "text": "Nicht zugewiesen"
+    },
+    {
+      "value": "1",
+      "text": "Administrator"
+    },
+    {
+      "value": "2",
+      "text": "Alice"
+    },
+    {
+      "value": "3",
+      "text": "Bob"
+    },
+    {
+      "value": "4",
+      "text": "Browser agent"
+    }
+  ],
+  "page_errors": [],
+  "user_available_without_reload": false
+}
