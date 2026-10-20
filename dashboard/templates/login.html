@@ -83,7 +83,7 @@
                     throw new Error(data.detail || t('auth.loginFailed'));
                 }
 
-                window.location.href = '/aufgaben';
+                window.location.href = '/';
             } catch (error) {
                 showError(error.message);
                 loginBtn.disabled = false;

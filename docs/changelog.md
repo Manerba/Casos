@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+20.10.2026 18:27;0.0.1+154;Bugfix;Anmeldeformular nach erfolgreichem Login zur Issue-Startseite statt zum entfernten Pfad /aufgaben weiterleiten. Echten Formularlogin und Weiterleitung im Issue-Browsertest pruefen. Produktive Paketinstallation unter /opt/casos dokumentieren
 20.10.2026 12:05;0.0.1+153;Infra;Oeffentliches Gitea-Repository mir/Casos einrichten, SSH-Zugriff bestaetigen und lokalen Commit-Workflow fuer Push zu GitHub und Gitea konfigurieren
 20.10.2026 11:59;0.0.1+152;Infra;Oeffentliches GitHub-Repository Manerba/Casos einrichten und Quellcode-, Remote- und Abnahmedokumentation aktualisieren
 19.10.2026 20:42;0.0.1+151;Bugfix;PL-401-01: Benutzer nach Einstellungen sofort in Issue-Zuweisung, Bearbeitungsfreigaben und Filter aktualisieren. Namen, Aktivstatus und MCP-Identitaeten ohne Reload, Entwuerfe bleiben erhalten. Veraltete Antworten und Dialoge nach Navigation abgesichert. Vier gezielte Browserpruefungen bestanden, bereit zur PL-Nachpruefung

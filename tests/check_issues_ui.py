@@ -23,7 +23,13 @@ def main():
         errors, missing = [], []
         page.on('pageerror', lambda error: errors.append(str(error)))
         page.on('console', lambda message: missing.append(message.text) if 'i18n: Missing key' in message.text else None)
-        browser_login(page, base)
+        # Exercise the actual login form, including its post-login navigation.
+        page.goto(base)
+        expect(page).to_have_url(base + '/login')
+        page.locator('#loginUsername').fill('alice')
+        page.locator('#loginPassword').fill('Browser77!')
+        page.locator('#loginBtn').click()
+        expect(page).to_have_url(base + '/')
         expect(page.locator('.issues-list')).to_be_visible()
         expect(page.locator('.issues-list > .issue-empty')).to_contain_text('Keine passenden Issues')
         page.locator('#issue-create').click()
@@ -248,7 +254,7 @@ def main():
         assert errors == [], errors
         assert missing == [], missing
         browser.close()
-    print('Issue browser checks passed: real creation/read/assignment/reopen, Alice/Bob/Admin permissions, update integration, drafts across navigation, revisions/grant conflicts, duplicate filenames/download/retry/delete, server pagination/sort/filter, mobile dark mode, keyboard, admin cleanup.')
+    print('Issue browser checks passed: login form and redirect, real creation/read/assignment/reopen, Alice/Bob/Admin permissions, update integration, drafts across navigation, revisions/grant conflicts, duplicate filenames/download/retry/delete, server pagination/sort/filter, mobile dark mode, keyboard, admin cleanup.')
     print(f'Evidence: {artifacts}')
 
 
