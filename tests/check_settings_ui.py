@@ -17,7 +17,10 @@ def run():
         page.on('console',lambda message:missing_translations.append(message.text) if 'i18n: Missing key' in message.text else None)
         base=fixture['url']
         browser_login(page,base,'admin')
-        page.evaluate("openSettingsOverlay('allgemein')")
+        page.locator('#settingsBtn').click()
+        page.locator('#openSettingsBtn').click()
+        expect(page.locator('#settingsScheme')).to_be_visible()
+        page.locator('nav button[data-section="allgemein"]').click()
         expect(page.locator('#appServerAddress')).to_be_visible()
         expect(page.locator('nav button[data-section="mcp"]')).to_have_text('MCP')
         page.locator('#appServerAddress').fill('draft.example.invalid')

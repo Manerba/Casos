@@ -105,7 +105,7 @@ function initEventListeners() {
     // Language Submenu
     const langToggle = document.getElementById('langToggle');
     if (langToggle) {
-        langToggle.addEventListener('click', toggleLangMenu);
+        langToggle.addEventListener('click', () => toggleLangMenu());
         buildLangMenu();
     }
 
@@ -219,14 +219,15 @@ function setColorScheme(code) {
     }));
 }
 
-function toggleLangMenu() {
+function toggleLangMenu(forceState = null) {
     const sub = document.getElementById('langSubMenu');
     const icon = document.getElementById('langExpandIcon');
     if (!sub) return;
 
-    const isOpen = sub.style.display !== 'none';
-    sub.style.display = isOpen ? 'none' : 'block';
-    if (icon) icon.classList.toggle('open', !isOpen);
+    const isOpen = forceState === null ? sub.style.display === 'none' : forceState;
+    sub.style.display = isOpen ? 'block' : 'none';
+    if (icon) icon.classList.toggle('open', isOpen);
+    document.getElementById('langToggle')?.setAttribute('aria-expanded', String(isOpen));
 }
 
 function buildLangMenu() {
@@ -237,10 +238,10 @@ function buildLangMenu() {
     sub.innerHTML = langs.map(l => {
         const active = l.code === current ? ' active' : '';
         const check = l.code === current ? '\u2713' : '';
-        return `<div class="settings-sub-item${active}" data-lang="${l.code}">
-            <span class="lang-check">${check}</span>
-            <span>${l.label}</span>
-        </div>`;
+        return `<button type="button" class="settings-sub-item${active}" data-lang="${l.code}" lang="${l.code}" aria-current="${l.code === current}">
+            <span class="lang-check" aria-hidden="true">${check}</span>
+            <span>${escapeHtml(l.label)}</span>
+        </button>`;
     }).join('');
     sub.addEventListener('click', (e) => {
         const item = e.target.closest('[data-lang]');
@@ -262,6 +263,7 @@ function initLangStatus() {
 function toggleSettingsDropdown(forceState = null) {
     const dropdown = document.getElementById('settingsDropdown');
     const btn = document.getElementById('settingsBtn');
+    const hadDropdownFocus = dropdown?.contains(document.activeElement);
 
     if (forceState !== null) {
         settingsDropdownOpen = forceState;
@@ -273,8 +275,13 @@ function toggleSettingsDropdown(forceState = null) {
         dropdown.style.display = settingsDropdownOpen ? 'block' : 'none';
     }
     if (btn) {
-        btn.style.transform = settingsDropdownOpen ? 'rotate(90deg)' : '';
         btn.setAttribute('aria-expanded', String(settingsDropdownOpen));
+    }
+    if (settingsDropdownOpen) {
+        dropdown?.querySelector('button')?.focus();
+    } else {
+        toggleLangMenu(false);
+        if (hadDropdownFocus) btn?.focus();
     }
 }
 
