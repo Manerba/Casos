@@ -1,12 +1,12 @@
 # Casos - Agenten-Kontext
 
-Stand: 19.10.2026. Schlankes Issue-System gemäß Tareas-Projekt #77. Die verbindlichen Anforderungen und Zuständigkeiten stehen in `docs/project77-spec.json`; die endgültige PL-Abnahme liegt in Subtask #401 und wird durch Implementierungsprüfungen nicht vorweggenommen.
+Stand: 20.10.2026. Schlankes Issue-System gemäß Tareas-Projekt #77. Die verbindlichen Anforderungen und Zuständigkeiten stehen in `docs/project77-spec.json`. Die unabhängige PL-Abnahme in Subtask #401 ist für Version `0.0.1+151`, Commit `e039c3963728f0a269b1f98bb1d7f983f2ff735d`, abgeschlossen.
 
 ## Arbeitsbereich und Schutzregeln
 
 - Änderungen ausschließlich in `/sdb1/nextcloud/data/mir/files/Dev/Casos`. `../Tareas` ist eine unabhängige lesbare Referenz; dessen Code, Runtime-Daten, Benutzer und Secrets nicht verändern oder übernehmen.
 - Vor Änderungen Gitstatus und tatsächlich vorhandene Daten prüfen. Fremde Änderungen und Runtime-Daten bewahren. Unbekannte Datenbanken nicht stillschweigend migrieren, initialisieren oder löschen.
-- Kein Git-Remote eingerichtet, keine Veröffentlichung und keine produktiven Dienste installiert/aktiviert. Remote-Setup, Publishing und produktive Dienstaktionen sind kein stillschweigender Teil von Entwicklungsaufträgen. Lokale isolierte Testinstanzen sind erlaubt.
+- Öffentliches Quellcode-Repository: `https://github.com/Manerba/Casos`, lokales Remote `origin`. Veröffentlichung am 20.10.2026 ausdrücklich beauftragt. Produktive Dienste sind nicht installiert/aktiviert; Paketveröffentlichungen und produktive Dienstaktionen sind kein stillschweigender Teil von Entwicklungsaufträgen. Lokale isolierte Testinstanzen sind erlaubt.
 - `data/`, `venv/` und `clients/` bleiben durch `.gitignore` ausgeschlossen. Keine Tokens, Credentials, Benutzerdateien oder Datenbankkopien committen. Es gibt keine Casos-Desktop-App; mögliche künftige Clients erhalten eigene Repositories/Anweisungen.
 - Parallel arbeitende Agenten nutzen getrennte Worktrees oder exklusiv vereinbarte Dateien. Zentrale Dateien und Versionscommits werden koordiniert; Erfolgsmeldungen ersetzen keine tatsächliche Gegenprüfung.
 - Sprache: Deutsch bevorzugt. Betriebssystem: Ubuntu 24.04 Server, Bash. Der Entwickler verbindet sich von Windows 11 per SSH/SMB.

@@ -32,7 +32,7 @@ Das Artefakt `casos_VERSION_all.deb` bleibt im Zielverzeichnis. Ohne Verzeichnis
 
 Enthalten sind aktive Dashboarddateien, die beiden Scheduler, die sechs Paketunits, Requirements, Version sowie README.Debian/Betriebs-/Agenten-/Lizenzhinweise. Nicht enthalten sind Runtime, Secrets, virtuelle Umgebung, Pythoncache, Testfixtures, Entwicklungspläne oder ein Admin-/Office-Dienst. Marked und sein Lizenztext bleiben Bestandteil des Frontends. Preview-Abhängigkeiten werden über pip installiert und behalten ihre eigenen Lizenzen.
 
-`publish.sh` unterstützt ausschließlich `--build` und `--help`. Es richtet kein Remote oder APT-Repository ein und besitzt keinen automatischen Uploadpfad. Ein öffentliches Casos-Repository ist nicht eingerichtet.
+`publish.sh` unterstützt ausschließlich `--build` und `--help`. Es richtet kein Remote oder APT-Repository ein und besitzt keinen automatischen Uploadpfad. Der Quellcode liegt öffentlich auf [GitHub](https://github.com/Manerba/Casos); DEB-Builds werden dadurch nicht automatisch veröffentlicht.
 
 ## Installation und Dienste
 

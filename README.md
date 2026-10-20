@@ -2,6 +2,8 @@
 
 Casos ist ein selbst gehostetes Issue-System mit **FastAPI, SQLite und Vanilla JavaScript**. Alle aktiven angemeldeten Benutzer sehen dieselben Issues, chronologischen Updates und lokalen Anhänge. Die Oberfläche unterstützt Deutsch, Englisch, Spanisch, Französisch, Rumänisch, Russisch und Ukrainisch.
 
+Quellcode: [GitHub – Manerba/Casos](https://github.com/Manerba/Casos).
+
 ## Funktionen und Rechte
 
 - Flache Issues mit stabiler ID, Markdown-Beschreibung, Priorität, optionaler Fälligkeit, Ersteller, Verantwortlichem und Status `offen`, `in_arbeit`, `erledigt` oder `abgebrochen`. Wiederöffnen ist möglich.
@@ -18,7 +20,7 @@ Vorschauen haben eigene Grenzen: 25 MiB Eingabe, 20 Millionen Bildpixel, maximal
 
 ## Lokaler Start
 
-Voraussetzungen: Ubuntu 24.04 als geprüfte Entwicklungsplattform, Python ab 3.10 und SQLite mit FTS5/unicode61. Es ist kein Casos-Remote oder öffentliches Paketrepository eingerichtet.
+Voraussetzungen: Ubuntu 24.04 als geprüfte Entwicklungsplattform, Python ab 3.10 und SQLite mit FTS5/unicode61. Der Quellcode ist öffentlich auf GitHub verfügbar; ein öffentliches Paketrepository ist nicht eingerichtet.
 
 ```bash
 cd /sdb1/nextcloud/data/mir/files/Dev/Casos
