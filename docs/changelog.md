@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+20.10.2026 12:05;0.0.1+153;Infra;Oeffentliches Gitea-Repository mir/Casos einrichten, SSH-Zugriff bestaetigen und lokalen Commit-Workflow fuer Push zu GitHub und Gitea konfigurieren
 20.10.2026 11:59;0.0.1+152;Infra;Oeffentliches GitHub-Repository Manerba/Casos einrichten und Quellcode-, Remote- und Abnahmedokumentation aktualisieren
 19.10.2026 20:42;0.0.1+151;Bugfix;PL-401-01: Benutzer nach Einstellungen sofort in Issue-Zuweisung, Bearbeitungsfreigaben und Filter aktualisieren. Namen, Aktivstatus und MCP-Identitaeten ohne Reload, Entwuerfe bleiben erhalten. Veraltete Antworten und Dialoge nach Navigation abgesichert. Vier gezielte Browserpruefungen bestanden, bereit zur PL-Nachpruefung
 19.10.2026 18:46;0.0.1+150;Docs;Projekt 77 Paket 400: Integrationsnachweise auf b0bcbc5/+149, 146 Backendtests in 138,690 Sekunden erfolgreich, sieben Browserablaeufe, echter Zwei-Prozess-MCP-Betrieb, exakter Debian-Paketstart und vollstaendiger Offline-Restore geprueft. Bild-/MSG-Nachweise und offene Pruefgrenzen dokumentiert. Produktcode unveraendert, bereit zur unabhaengigen PL-Abnahme in 401

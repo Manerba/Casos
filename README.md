@@ -2,7 +2,7 @@
 
 Casos ist ein selbst gehostetes Issue-System mit **FastAPI, SQLite und Vanilla JavaScript**. Alle aktiven angemeldeten Benutzer sehen dieselben Issues, chronologischen Updates und lokalen Anhänge. Die Oberfläche unterstützt Deutsch, Englisch, Spanisch, Französisch, Rumänisch, Russisch und Ukrainisch.
 
-Quellcode: [GitHub – Manerba/Casos](https://github.com/Manerba/Casos).
+Quellcode: [GitHub – Manerba/Casos](https://github.com/Manerba/Casos) und [Gitea – mir/Casos](https://10.0.12.17:3000/mir/Casos) (im lokalen Netz). Beide Repositories sind öffentlich lesbar.
 
 ## Funktionen und Rechte
 

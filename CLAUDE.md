@@ -10,6 +10,6 @@ Aktiv bleiben Markdownbeschreibungen, chronologische Updates, fachlicher Verlauf
 
 Backendprüfung: `venv/bin/python -m unittest discover -s tests -v`. Weitere Browser-, Paket- und Wiederherstellungsprüfungen sind in AGENTS/README dokumentiert. Ergebnisse und nicht ausgeführte Prüfungen wahrheitsgemäß festhalten. Die unabhängige PL-Abnahme in Subtask #401 ist für `0.0.1+151` / `e039c3963728f0a269b1f98bb1d7f983f2ff735d` abgeschlossen.
 
-Commits ausschließlich mit `./git-commit.sh "Kurze Beschreibung"`. Vorher `docs/changelog.md` im Format `DD.MM.YYYY HH:MM;Version;Kategorie;Beschreibung` pflegen. Das Script staged alle Änderungen; parallele Agenten dürfen nicht unkoordiniert committen. Öffentliches Remote `origin`: `https://github.com/Manerba/Casos`.
+Commits ausschließlich mit `./git-commit.sh "Kurze Beschreibung"`. Vorher `docs/changelog.md` im Format `DD.MM.YYYY HH:MM;Version;Kategorie;Beschreibung` pflegen. Das Script staged alle Änderungen; parallele Agenten dürfen nicht unkoordiniert committen. Öffentliche Repositories: `https://github.com/Manerba/Casos` und `https://10.0.12.17:3000/mir/Casos`. In dieser Arbeitskopie liest `origin` von GitHub und pusht zu beiden Diensten; das zusätzliche Remote `gitea` nutzt SSH.
 
 Sprache: Deutsch bevorzugt. Entwicklung auf Ubuntu 24.04/Bash, Zugriff vom Windows-PC per SSH/SMB. `clients/` bleibt ausgeschlossen; künftige Clients benötigen eigene Repositories und Anweisungen.
