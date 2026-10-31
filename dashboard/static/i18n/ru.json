@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "Не удалось загрузить предпросмотр вложенного изображения.",
   "preview.retry": "Повторить",
   "settingsOverlay.restartFailed": "Не удалось запросить перезапуск. Сохранённые настройки сохранены. Попросите оператора перезапустить службы.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Затронутый пользователь",
+  "adPeople.none": "Не выбран",
+  "adPeople.placeholder": "Имя, фамилия или имя входа",
+  "adPeople.clear": "Удалить пользователя",
+  "adPeople.results": "Пользователи AD",
+  "adPeople.hint": "Найдите пользователя в Active Directory и выберите его.",
+  "adPeople.loading": "Поиск пользователей …",
+  "adPeople.more": "Ещё результаты",
+  "adPeople.choose": "Выберите пользователя из списка.",
+  "adPeople.empty": "Подходящие пользователи не найдены.",
+  "adPeople.retry": "Повторить",
+  "adPeople.selectionRequired": "Выберите пользователя из списка или очистите поле.",
+  "adPeople.notConfigured": "Подключение к AD ещё не настроено.",
+  "adPeople.unavailable": "Active Directory временно недоступен. Повторите попытку.",
+  "adPeople.invalidSid": "Недопустимый SID пользователя.",
+  "adPeople.invalidQuery": "Введите корректный поисковый запрос.",
+  "adPeople.notFound": "Учётная запись не найдена в AD. Выберите пользователя заново."
 }

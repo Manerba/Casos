@@ -12,7 +12,7 @@
     const tr = (key, values) => t(`issues.${key}`, values);
     const esc = value => escapeHtml(value);
     const attr = value => escapeAttr(value);
-    const errorText = error => /^(description|updates|issues)\./.test(error?.message || '') ? t(error.message) : (error?.message || t('common.error'));
+    const errorText = error => /^(description|updates|issues|adPeople)\./.test(error?.message || '') ? t(error.message) : (error?.message || t('common.error'));
     const userLabel = user => [user?.vorname, user?.nachname].filter(Boolean).join(' ').trim() || user?.username || tr('unknownUser');
     const userName = id => id === null ? tr('unassigned') : userLabel(state.users.find(user => user.id === id) || { username: `#${id}` });
     const dateTime = value => {
@@ -120,13 +120,14 @@
             main().innerHTML = `<section class="issues-list">
                 <div class="issue-page-heading"><h2>${tr('list')}</h2><button type="button" class="issue-btn primary" id="issue-create">+ ${tr('new')}</button></div>
                 <div id="issue-search-slot"></div>
-                <div class="issue-table-wrap"><table class="issue-table"><thead><tr>${['id', 'title', 'status', 'priority', 'assignee', 'deadline', 'created'].map(key => `<th scope="col">${tr(key)}</th>`).join('')}</tr></thead>
+                <div class="issue-table-wrap"><table class="issue-table"><thead><tr>${['id', 'title', 'status', 'priority', 'assignee', 'affectedPerson', 'deadline', 'created'].map(key => `<th scope="col">${tr(key)}</th>`).join('')}</tr></thead>
                 <tbody>${data.items.map(issue => `<tr data-issue-id="${issue.id}">
                     <td data-label="${attr(tr('id'))}">#${issue.id}</td>
                     <td data-label="${attr(tr('title'))}"><a class="issue-link" href="/issues/${issue.id}">${esc(issue.title)}</a></td>
                     <td data-label="${attr(tr('status'))}"><span class="issue-status status-${issue.status}">${t(`status.${issue.status}`)}</span></td>
                     <td data-label="${attr(tr('priority'))}">${issue.priority}</td>
                     <td data-label="${attr(tr('assignee'))}" data-issue-user="${issue.assigned_to ?? ''}">${esc(userName(issue.assigned_to))}</td>
+                    <td data-label="${attr(tr('affectedPerson'))}">${esc(AdPersonPicker.label(issue.affected_person))}</td>
                     <td data-label="${attr(tr('deadline'))}">${esc(issue.deadline || '—')}</td>
                     <td data-label="${attr(tr('created'))}">${esc(dateTime(issue.created_at))}</td>
                 </tr>`).join('')}</tbody></table></div>
@@ -152,7 +153,7 @@
             ${issue.permissions.can_edit ? `<button class="issue-btn" id="issue-edit">${tr('editDetails')}</button>` : ''}
             ${issue.permissions.can_manage ? `<button class="issue-btn" id="issue-editors">${tr('editors')}</button><button class="issue-btn danger" id="issue-delete">${t('common.delete')}</button>` : ''}</div></div>
             <dl class="issue-metadata">
-            ${[['status', t(`status.${issue.status}`)], ['priority', issue.priority], ['assignee', userName(issue.assigned_to), issue.assigned_to], ['deadline', issue.deadline || '—'], ['creator', issue.created_by === null ? tr('unknownUser') : userName(issue.created_by), issue.created_by], ['created', dateTime(issue.created_at)], ['updated', dateTime(issue.updated_at)]].map(([key, value, userId]) => `<div><dt>${tr(key)}</dt><dd${userId ? ` data-issue-user="${userId}"` : ''}>${esc(value)}</dd></div>`).join('')}
+            ${[['status', t(`status.${issue.status}`)], ['priority', issue.priority], ['assignee', userName(issue.assigned_to), issue.assigned_to], ['affectedPerson', AdPersonPicker.label(issue.affected_person)], ['deadline', issue.deadline || '—'], ['creator', issue.created_by === null ? tr('unknownUser') : userName(issue.created_by), issue.created_by], ['created', dateTime(issue.created_at)], ['updated', dateTime(issue.updated_at)]].map(([key, value, userId]) => `<div><dt>${tr(key)}</dt><dd${userId ? ` data-issue-user="${userId}"` : ''}>${esc(value)}</dd></div>`).join('')}
             </dl>`;
     }
 
@@ -401,13 +402,18 @@
             <label>${tr('priority')}<input type="number" name="priority" min="0" max="100" step="1" required value="${value.priority}"></label>
             <label>${tr('deadline')}<input type="date" name="deadline" value="${attr(value.deadline || '')}"></label>
             ${canAssign ? `<label>${tr('assignee')}<select name="assigned_to">${userOptions(value.assigned_to)}</select></label>` : ''}</div>
+            ${AdPersonPicker.markup(value.affected_person)}
             ${creating ? `<label>${tr('description')} (Markdown)<textarea name="description" rows="7"></textarea></label>` : ''}`;
-        formDialog(creating ? tr('new') : tr('editDetails'), body, async form => {
+        const dialog = formDialog(creating ? tr('new') : tr('editDetails'), body, async form => {
             const data = { title: form.elements.title.value, status: form.elements.status.value,
                 priority: Number(form.elements.priority.value), deadline: form.elements.deadline.value || null };
             if (canAssign) data.assigned_to = form.elements.assigned_to.value ? Number(form.elements.assigned_to.value) : null;
+            data.affected_person_sid = form.elements.affected_person_sid.value || null;
             if (creating) data.description = form.elements.description.value;
-            else for (const key of Object.keys(data)) if (data[key] === issue[key]) delete data[key];
+            else for (const key of Object.keys(data)) {
+                const selectedPerson = key === 'affected_person_sid' && form.elements.affected_person_sid.dataset.selected === 'true';
+                if (data[key] === issue[key] && !selectedPerson) delete data[key];
+            }
             return request(creating ? '/api/issues' : `/api/issues/${issue.id}`, jsonOptions(creating ? 'POST' : 'PUT', data));
         }, result => {
             if (creating) navigateIssue(result.id);
@@ -418,6 +424,7 @@
                 window.dispatchEvent(new CustomEvent('issue-changed', { detail: { issueId: result.id, issue: result } }));
             }
         });
+        new AdPersonPicker(dialog.querySelector('[data-ad-person]'));
     }
 
     function openEditors(issueId) {

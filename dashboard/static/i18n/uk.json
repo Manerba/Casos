@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "Не вдалося завантажити перегляд вкладеного зображення.",
   "preview.retry": "Повторити",
   "settingsOverlay.restartFailed": "Не вдалося надіслати запит на перезапуск. Збережені налаштування залишаються чинними. Попросіть оператора перезапустити служби.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Користувач, якого стосується заявка",
+  "adPeople.none": "Не вибрано",
+  "adPeople.placeholder": "Ім’я, прізвище або ім’я входу",
+  "adPeople.clear": "Видалити користувача",
+  "adPeople.results": "Користувачі AD",
+  "adPeople.hint": "Знайдіть користувача в Active Directory та виберіть його.",
+  "adPeople.loading": "Пошук користувачів …",
+  "adPeople.more": "Більше результатів",
+  "adPeople.choose": "Виберіть користувача зі списку.",
+  "adPeople.empty": "Відповідних користувачів не знайдено.",
+  "adPeople.retry": "Повторити",
+  "adPeople.selectionRequired": "Виберіть користувача зі списку або очистіть поле.",
+  "adPeople.notConfigured": "Підключення до AD ще не налаштовано.",
+  "adPeople.unavailable": "Active Directory тимчасово недоступний. Спробуйте ще раз.",
+  "adPeople.invalidSid": "Неприпустимий SID користувача.",
+  "adPeople.invalidQuery": "Введіть коректний пошуковий запит.",
+  "adPeople.notFound": "Обліковий запис не знайдено в AD. Виберіть користувача знову."
 }

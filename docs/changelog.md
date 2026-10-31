@@ -1,6 +1,7 @@
 # Changelog
 
 Zeitstempel;Version;Kategorie;Beschreibung
+31.10.2026 21:49;0.0.1+156;Feature;Betroffene AD-Person getrennt vom Verantwortlichen am Issue zuordnen. Suche nach Vor-, Nach- und Anmeldename mit Tastaturauswahl und weiteren Trefferseiten. SID, Anmeldename und voller Name lokal gecacht, Anzeige ohne LDAP-Abfrage. REST/MCP, Verlauf, sieben Sprachen und atomarer Schemawechsel auf Version 3
 20.10.2026 18:46;0.0.1+155;Aenderung;Einstellungsmenue mit durchgehenden Menuezeilen, einheitlichen SVG-Symbolen, Sprachkuerzel und klaren Hover-/Fokuszustaenden gestalten. Sprachauswahl per Tastatur, Fokusrueckgabe und kompakte Darstellung in allen Farbschemas sowie auf schmalen Displays geprueft
 20.10.2026 18:27;0.0.1+154;Bugfix;Anmeldeformular nach erfolgreichem Login zur Issue-Startseite statt zum entfernten Pfad /aufgaben weiterleiten. Echten Formularlogin und Weiterleitung im Issue-Browsertest pruefen. Produktive Paketinstallation unter /opt/casos dokumentieren
 20.10.2026 12:05;0.0.1+153;Infra;Oeffentliches Gitea-Repository mir/Casos einrichten, SSH-Zugriff bestaetigen und lokalen Commit-Workflow fuer Push zu GitHub und Gitea konfigurieren

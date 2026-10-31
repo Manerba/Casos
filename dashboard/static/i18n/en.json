@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "The embedded image preview could not be loaded.",
   "preview.retry": "Retry",
   "settingsOverlay.restartFailed": "The restart could not be requested. Saved settings are retained. Ask the operator to restart the services.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Affected person",
+  "adPeople.none": "None",
+  "adPeople.placeholder": "First name, last name or login name",
+  "adPeople.clear": "Remove person",
+  "adPeople.results": "AD users",
+  "adPeople.hint": "Search Active Directory and select a person.",
+  "adPeople.loading": "Searching for users …",
+  "adPeople.more": "More results",
+  "adPeople.choose": "Select a person from the list.",
+  "adPeople.empty": "No matching users found.",
+  "adPeople.retry": "Try again",
+  "adPeople.selectionRequired": "Select a person from the list or clear the field.",
+  "adPeople.notConfigured": "The AD connection has not been configured yet.",
+  "adPeople.unavailable": "Active Directory is currently unavailable. Please try again.",
+  "adPeople.invalidSid": "The user SID is invalid.",
+  "adPeople.invalidQuery": "Enter a valid search term.",
+  "adPeople.notFound": "The user account was not found in AD. Please select again."
 }

@@ -1,6 +1,6 @@
 # Casos - Agenten-Kontext
 
-Stand: 20.10.2026. Schlankes Issue-System gemäß Tareas-Projekt #77. Die verbindlichen Anforderungen und Zuständigkeiten stehen in `docs/project77-spec.json`. Die unabhängige PL-Abnahme in Subtask #401 ist für Version `0.0.1+151`, Commit `e039c3963728f0a269b1f98bb1d7f983f2ff735d`, abgeschlossen.
+Stand: 31.10.2026. Schlankes Issue-System gemäß Tareas-Projekt #77. Die verbindlichen Anforderungen und Zuständigkeiten stehen in `docs/project77-spec.json`. Die unabhängige PL-Abnahme in Subtask #401 ist für Version `0.0.1+151`, Commit `e039c3963728f0a269b1f98bb1d7f983f2ff735d`, abgeschlossen.
 
 ## Arbeitsbereich und Schutzregeln
 
@@ -18,7 +18,7 @@ Stand: 20.10.2026. Schlankes Issue-System gemäß Tareas-Projekt #77. Die verbin
 |---|---|
 | Backend | Python ab 3.10, FastAPI, Uvicorn |
 | Frontend | Vanilla JS, CSS Custom Properties, sieben Sprachen |
-| Datenbank | SQLite, WAL, Foreign Keys, FTS5/unicode61, Schema 2 |
+| Datenbank | SQLite, WAL, Foreign Keys, FTS5/unicode61, Schema 3 |
 | Runtime | `data/casos.db`, `data/secret.key`, `data/attachments/` |
 | Haupt-App | `dashboard/app.py`, Port 8514, Cookie `casos_session` |
 | MCP | `dashboard/mcp_app.py`, Port 8516; derselbe MCP-Endpunkt auch auf 8514 |
@@ -30,6 +30,8 @@ Beide Apps starten als Script und setzen den Packagepfad selbst. In App-/Routerc
 ## Fachmodell und Rechte
 
 `issues` speichert Titel, Markdown-Beschreibung, Priorität, optionale Fälligkeit, Ersteller, Verantwortlichen und Status `offen`, `in_arbeit`, `erledigt`, `abgebrochen`. Wiederöffnen ist möglich. `issue_editors` speichert zusätzliche Bearbeiter. `issue_updates` enthält chronologische Markdownbeiträge; `issue_events` den fachlichen Verlauf. `attachments` enthält Originalname/Typ/Größe/Uploader und intern erzeugten Speichernamen; `attachment_gc` hält wiederholbare Bereinigungsaufträge. Weitere Tabellen betreffen Nutzer/Sessions, LDAP/SMTP/TLS/App/MCP, Audit, Mailpräferenzen/-templates und den abgeleiteten Suchindex.
+
+`issues.affected_person_sid` ist eine zusätzliche betroffene AD-Person, unabhängig vom Verantwortlichen und ohne zusätzliche Rechte/Mailempfänger. `ad_people` speichert SID als Primärschlüssel sowie gecachten Anmeldenamen und vollen Namen. `ad_directory.py` durchsucht die AD-Domäne unabhängig von der Casos-Anmeldegruppe. Bei Auswahl SID im AD prüfen, Netzwerkzugriff außerhalb der DB-Schreibtransaktion, danach Rechte erneut prüfen. Reads greifen ausschließlich auf den lokalen Cache zu. REST `/api/ad/people` und MCP `ad.people.search` teilen Suche/Pagination. Änderungen durch aktuelle Ticketbearbeiter erscheinen als `affected_person`-Ereignis im Verlauf. Schema 1/2 wird nach vorheriger Betreiber-Sicherung atomar auf 3 ergänzt.
 
 Alle aktiven angemeldeten Benutzer einschließlich MCP-Identitäten dürfen alle Issues/Updates/Anhänge lesen und Issues erstellen. Ersteller, Verantwortlicher, Admin und ausdrücklich freigegebene Bearbeiter dürfen Inhalt/Status ändern, Updates hinzufügen und Dateien anhängen. Zuweisung, Bearbeitungsfreigaben und Issue-Löschung bleiben Ersteller/Admin vorbehalten. Sichtbarkeit allein gewährt keine Schreibrechte.
 
@@ -50,7 +52,7 @@ Projekt-/Subtask-/Abhängigkeits-/Netzplan-/Fortschritts-/Bereichslogik, persön
 | `issue_history_service.py`, `api_issue_history.py`, `mail_service.py`, `api_mail.py` | Atomarer Verlauf, Mailversand nach Commit und Präferenzen |
 | `auth.py`, `api_auth.py`, `crypto_utils.py`, `config_utils.py` | Sessions/Tokens, Login, Credentialverschlüsselung und Masking |
 | `api_admin.py`, `api_app.py`, `api_ldap.py`, `api_tls.py`, `api_admin_mcp.py` | Geschützte Konfiguration in der Haupt-App |
-| `mcp_server.py`, `mcp_transport.py`, `mcp_errors.py`, `agent_guide.py` | 22 aktuelle Werkzeuge, HTTP-Transport, strukturierte Fehler, Bootstrap |
+| `mcp_server.py`, `mcp_transport.py`, `mcp_errors.py`, `agent_guide.py` | 23 aktuelle Werkzeuge, HTTP-Transport, strukturierte Fehler, Bootstrap |
 | `app_core.js`, `tab_issues.js` | Theme, globale Helpers, SPA-Navigation, Issueabläufe |
 | `markdown_editor.js`, `update_dialog.js`, `vendor/marked.umd.js` | Markdown mit Sanitizer, Revisionen und Entwurfserhalt |
 | `issue_search.js`, `issue_history.js`, `attachment_preview.js` | Such-/Verlauf-/Vorschauansichten |
@@ -70,7 +72,7 @@ REST beginnt mit `/api/issues`; Updates, Anhänge und Verlauf hängen am Issue. 
 - Uploadlimit 500 MiB streamend; sichere interne Speichernamen statt Nutzerpfade. Symlinks/Hardlinks und falsche Issuezuordnung abweisen. Dateisystemcleanup über dauerhafte Queue und Locks; Locks im laufenden Betrieb nicht löschen.
 - LDAP-/SMTP-Secrets mit Fernet schützen, APIs maskieren, Audit/Fehler ohne Inhalte und Secrets. `normalize_reason` vor Mutationen anwenden. Dynamische SQL-Identifier nur über Whitelists; Transaktionen und Foreign Keys erhalten.
 - SMTP-/LDAP-TLS-Verify sowie HTTPS-Konfiguration und systemd-Härtung erhalten. Produktive Mails/AD-Zugriffe in Tests durch Testtransporte ersetzen.
-- Vor Migration Backup; Schema 2 wird atomar initialisiert, unbekannte/ältere fremde Tabellen nicht verworfen. DB, Secret und Anhänge gemeinsam sichern. Details: `docs/operations.md`.
+- Vor Migration Backup; Schema 3 wird atomar initialisiert, unbekannte/ältere fremde Tabellen nicht verworfen. DB, Secret und Anhänge gemeinsam sichern. Details: `docs/operations.md`.
 
 ## Suche, Verlauf und Vorschau
 

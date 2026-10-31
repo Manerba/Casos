@@ -9,9 +9,10 @@ from dashboard.audit_log import log_change, normalize_reason
 from dashboard.db_utils import db_query, db_transaction
 from dashboard.errors import ApplicationError
 from dashboard.issue_permissions import require_active_user, require_issue_access, issue_permissions
+from dashboard import ad_directory
 
 STATUSES = frozenset({"offen", "in_arbeit", "erledigt", "abgebrochen"})
-ISSUE_FIELDS = frozenset({"title", "description", "priority", "deadline", "assigned_to", "status"})
+ISSUE_FIELDS = frozenset({"title", "description", "priority", "deadline", "assigned_to", "affected_person_sid", "status"})
 DESCRIPTION_MAX_BYTES = 1024 * 1024
 
 
@@ -62,6 +63,8 @@ def validate_issue_data(data, *, creating=False):
     if "assigned_to" in result and result["assigned_to"] is not None:
         if type(result["assigned_to"]) is not int or result["assigned_to"] < 1:
             _invalid("assigned_to", "Verantwortlicher muss eine Benutzer-ID oder null sein")
+    if result.get("affected_person_sid") is not None:
+        ad_directory.sid_bytes(result["affected_person_sid"])
     if "deadline" in result and result["deadline"] is not None:
         value = result["deadline"]
         if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
@@ -96,6 +99,8 @@ def _active_target(db, user_id, field="assigned_to"):
 
 def _serialize(db, row, user, *, include_description=True):
     item = dict(row)
+    person = db.execute('SELECT sid,username,full_name FROM ad_people WHERE sid=?', (row['affected_person_sid'],)).fetchone() if row['affected_person_sid'] else None
+    item['affected_person'] = dict(person) if person else None
     item["permissions"] = issue_permissions(db, row, user)
     item["description_revision"] = description_revision(row["description"], row["description_format"])
     if not include_description:
@@ -161,23 +166,34 @@ def _event(db, issue_id, actor_id, event_type, old, new):
     return record_event(db, issue_id, actor_id, event_type, old, new)
 
 
+def _cache_person(db, person):
+    if person:
+        db.execute('INSERT INTO ad_people(sid,username,full_name) VALUES(?,?,?) '
+                   'ON CONFLICT(sid) DO UPDATE SET username=excluded.username,full_name=excluded.full_name,cached_at=datetime(\'now\')',
+                   (person['sid'], person['username'], person['full_name']))
+
+
 def create_issue(data, user, reason=None):
     reason = normalize_reason(reason)
     data = validate_issue_data(data, creating=True)
     values = {"title": data["title"], "description": "", "priority": 50, "deadline": None,
-              "assigned_to": None, "status": "offen", **data}
+              "assigned_to": None, "affected_person_sid": None, "status": "offen", **data}
+    person = ad_directory.resolve_person(values['affected_person_sid'], user) if values['affected_person_sid'] else None
     notifications = []
     with db_transaction() as db:
         db.execute("BEGIN IMMEDIATE")
         current = require_active_user(db, user)
         _active_target(db, values["assigned_to"])
+        _cache_person(db, person)
         cursor = db.execute(
-            "INSERT INTO issues (title, description, description_format, priority, deadline, assigned_to, status, created_by) "
-            "VALUES (?, ?, 'markdown', ?, ?, ?, ?, ?)",
+            "INSERT INTO issues (title, description, description_format, priority, deadline, assigned_to, affected_person_sid, status, created_by) "
+            "VALUES (?, ?, 'markdown', ?, ?, ?, ?, ?, ?)",
             (values["title"], values["description"], values["priority"], values["deadline"],
-             values["assigned_to"], values["status"], current["id"]),
+             values["assigned_to"], values["affected_person_sid"], values["status"], current["id"]),
         )
         issue_id = cursor.lastrowid
+        if person:
+            _event(db, issue_id, current['id'], 'affected_person', None, person['sid'])
         if values["assigned_to"] is not None:
             change = _event(db, issue_id, current["id"], "assignment", None, values["assigned_to"])
             notifications.append(("issue_assigned", change))
@@ -185,7 +201,10 @@ def create_issue(data, user, reason=None):
             change = _event(db, issue_id, current["id"], "status", "offen", values["status"])
             notifications.append(("status_change", change))
         result = _serialize(db, db.execute("SELECT * FROM issues WHERE id = ?", (issue_id,)).fetchone(), current)
-        log_change(current, "issue", issue_id, "create", {"title": values["title"], "status": values["status"]}, reason=reason, db=db)
+        audit = {"title": values["title"], "status": values["status"]}
+        if person:
+            audit['affected_person_sid'] = person['sid']
+        log_change(current, "issue", issue_id, "create", audit, reason=reason, db=db)
     from dashboard.mail_service import notify_issue_event
     for event_type, change in notifications:
         notify_issue_event(issue_id, event_type, current["id"], changes=change)
@@ -195,6 +214,12 @@ def create_issue(data, user, reason=None):
 def update_issue(issue_id, data, user, reason=None):
     reason = normalize_reason(reason)
     data = validate_issue_data(data)
+    person = None
+    if data.get('affected_person_sid'):
+        # No network I/O under a SQLite writer lock. Recheck rights after lookup.
+        with db_query() as db:
+            require_issue_access(db, issue_id, user, 'edit')
+        person = ad_directory.resolve_person(data['affected_person_sid'], user)
     notifications = []
     with db_transaction() as db:
         db.execute("BEGIN IMMEDIATE")
@@ -206,6 +231,7 @@ def update_issue(issue_id, data, user, reason=None):
             _active_target(db, data["assigned_to"])
         if "description" in data:
             _check_revision(row, data.get("description_revision"))
+        _cache_person(db, person)
         changes = {key: {"old": row[key], "new": value} for key, value in data.items()
                    if key in ISSUE_FIELDS and row[key] != value}
         if changes:
@@ -214,13 +240,16 @@ def update_issue(issue_id, data, user, reason=None):
             db.execute("UPDATE issues SET " + ", ".join(f"{key} = ?" for key in fields)
                        + ", updated_at = datetime('now') WHERE id = ?",
                        [*(data[key] for key in fields), issue_id])
-            for field, event_type in (("status", "status"), ("assigned_to", "assignment")):
+            for field, event_type in (("status", "status"), ("assigned_to", "assignment"), ('affected_person_sid', 'affected_person')):
                 if field in changes:
                     change = _event(db, issue_id, current["id"], event_type, row[field], data[field])
-                    notifications.append(("issue_assigned" if event_type == "assignment" else "status_change", change))
+                    if event_type != 'affected_person':
+                        notifications.append(("issue_assigned" if event_type == "assignment" else "status_change", change))
         result = _serialize(db, db.execute("SELECT * FROM issues WHERE id = ?", (issue_id,)).fetchone(), current)
-        if changes:
+        if changes or person:
             audit = {key: value for key, value in changes.items() if key != "description"}
+            if person:
+                audit['affected_person_cache'] = person
             if "description" in changes:
                 audit["description_len"] = len(data["description"])
             log_change(current, "issue", issue_id, "update", audit, reason=reason, db=db)

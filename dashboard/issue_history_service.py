@@ -17,10 +17,15 @@ def user_label(db, user_id):
 
 def record_event(db, issue_id, actor_id, event_type, old, new):
     """Caller owns the mutation transaction; snapshots survive renamed/deleted users."""
-    if event_type not in ('status', 'assignment'):
+    if event_type not in ('status', 'assignment', 'affected_person'):
         raise ValueError('Unsupported Issue event')
     old_label = user_label(db, old) if event_type == 'assignment' else ''
     new_label = user_label(db, new) if event_type == 'assignment' else ''
+    if event_type == 'affected_person':
+        def person_label(sid):
+            row = db.execute('SELECT username,full_name FROM ad_people WHERE sid=?', (sid,)).fetchone()
+            return f"{row['full_name']} ({row['username']})" if row else (sid or '')
+        old_label, new_label = person_label(old), person_label(new)
     db.execute('INSERT INTO issue_events(issue_id,actor_id,actor_name,event_type,old_value,new_value,old_label,new_label,created_at) '
                'VALUES(?,?,?,?,?,?,?,?,?)', (issue_id, actor_id, user_label(db, actor_id), event_type,
                                          json.dumps(old, ensure_ascii=False), json.dumps(new, ensure_ascii=False),

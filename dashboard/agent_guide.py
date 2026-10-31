@@ -178,8 +178,8 @@ Deaktivierung, aktuelle Rollen und MCP-Kill-Switch gelten auch in bestehenden Se
 | whoami, get_agent_guide | Aktuelle Identitaet bzw. dieser dynamische Guide |
 | issue.list | offset0, limit50 (max500), status, assigned_to oder unassigned, include_description=false, sort_by=id/title/priority/deadline/created_at, sort_direction=desc/asc |
 | issue.get | issue_id, include_description=true; aktuelle permissions und description_revision |
-| issue.create | title, description, priority50, deadline=null, assigned_to=null, status=offen; Antwort ok/issue_id |
-| issue.update | issue_id, changes-Objekt; fehlende Felder bleiben, null leert deadline/assigned_to; Beschreibung nur mit description_revision; Antwort ok |
+| issue.create | title, description, priority50, deadline=null, assigned_to=null, affected_person_sid=null, status=offen; Antwort ok/issue_id |
+| issue.update | issue_id, changes-Objekt; fehlende Felder bleiben, null leert deadline/assigned_to/affected_person_sid; Beschreibung nur mit description_revision; Antwort ok |
 | issue.patch_description | issue_id, revision, operation=append/replace, text; replace braucht eindeutiges old_text. Keine automatische Newline. Antwort neue description_revision |
 | issue.delete | issue_id; endgueltig samt Updates und Anhaengen; cleanup_pending nennt verbleibende wiederholbare Dateibereinigung |
 | issue.editors.get/set | issue_id; get liefert user_ids/revision, set ersetzt alle user_ids mit revision; nur Ersteller/Admin |
@@ -193,9 +193,10 @@ Deaktivierung, aktuelle Rollen und MCP-Kill-Switch gelten auch in bestehenden Se
 | attachment.read | issue_id, attachment_id, encoding=base64 (oder utf-8); Metadaten + content |
 | attachment.delete | issue_id, attachment_id; endgueltig |
 | users.list | offset/limit; aktive Benutzer mit user_id fuer Zuweisung/Freigabe |
+| ad.people.search | query nach Vor-/Nach-/Anmeldename, offset0, limit50 (max100); alle AD-Benutzer der Domaene, unabhaengig von der Casos-Anmeldegruppe; Antwort items mit sid/username/full_name und next_offset |
 | search | query, issue_id, types=[issue,update], since, offset, limit20 (max200) |
 
-Alle Listen liefern `items`, `offset`, `limit`, `total`, `next_offset`.
+Listen liefern `items`, `offset`, `limit`, `total`, `next_offset`; die AD-Suche liefert kein `total`.
 Zwischen Seiten koennen parallele Aenderungen die Reihenfolge verschieben.
 Schreibwerkzeuge akzeptieren optional `reason` (max1000 Unicode-Zeichen vor Trimmen).
 Werkzeugfehler: `isError=true` und `structuredContent` mit `code`, `message`,
@@ -208,6 +209,15 @@ keine beliebige Teilwortsuche. `since` ist inklusive auf `updated_at` in UTC,
 Eingabe ISO8601 mit expliziter Zeitzone. Ranking ueber Issues/Updates gemeinsam.
 Treffer enthalten sichere Fundstellen und direkte Issue-/Update-URLs.
 Binaere Anhanginhalte werden nicht indiziert.
+
+`affected_person_sid` bezeichnet die betroffene Person, getrennt von `assigned_to`
+(Verantwortlicher mit Bearbeitungsrechten). Erst mit `ad.people.search` suchen,
+dann die SID beim Anlegen/Bearbeiten uebergeben. Casos prueft sie im AD und speichert
+SID, Anmeldename und vollen Namen lokal. `issue.get/list` liefern `affected_person`
+mit `sid`, `username`, `full_name` ohne LDAP-Abfrage. Keine automatische Anlage eines
+Casos-Anmeldekontos, keine zusaetzlichen Rechte oder Mailempfaenger. Bearbeiter duerfen
+die betroffene Person aendern. `null` entfernt die Zuordnung. Unveraenderte Felder
+weglassen, damit Bearbeiten auch bei einem AD-Ausfall funktioniert.
 
 ## Beispielablauf
 

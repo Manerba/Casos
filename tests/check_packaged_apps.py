@@ -31,7 +31,7 @@ EXPECTED_TOOLS = {
     'whoami', 'get_agent_guide', 'issue.list', 'issue.get', 'issue.create', 'issue.update',
     'issue.delete', 'issue.patch_description', 'issue.editors.get', 'issue.editors.set',
     'issue.history', 'update.list', 'update.get', 'update.add', 'update.edit', 'update.delete',
-    'attachment.list', 'attachment.add', 'attachment.read', 'attachment.delete', 'users.list', 'search',
+    'attachment.list', 'attachment.add', 'attachment.read', 'attachment.delete', 'users.list', 'search', 'ad.people.search',
 }
 BINARIES = (b'\x00\xffpackaged first\r\n\x80' * 137, bytes(range(256)) * 9 + b'packaged second\x00')
 
@@ -146,6 +146,9 @@ async def exercise(endpoints, app_dir, version):
         assets = StaticAssets()
         assets.feed(page.text)
         assert len(assets.urls) >= 8
+        assert '/static/js/ad_person_picker.js' in assets.urls
+        missing_directory = http.get('/api/ad/people', params={'query': 'Example'})
+        assert missing_directory.status_code == 503 and missing_directory.json()['code'] == 'ad_not_configured'
         for url in assets.urls:
             response = http.get(url)
             assert response.status_code == 200, url
@@ -155,7 +158,7 @@ async def exercise(endpoints, app_dir, version):
         bearer = {'Authorization': 'Bearer ' + token['token']}
         async with Client(main_url + '/mcp/', auth=token['token'], timeout=15) as main, Client(mcp_url + '/mcp/', auth=token['token'], timeout=15) as dedicated:
             catalogs = [{tool.name for tool in await client.list_tools()} for client in (main, dedicated)]
-            assert catalogs[0] == catalogs[1] == EXPECTED_TOOLS and len(catalogs[0]) == 22
+            assert catalogs[0] == catalogs[1] == EXPECTED_TOOLS and len(catalogs[0]) == 23
             assert (await call(main, 'whoami'))['id'] == (await call(dedicated, 'whoami'))['id']
             created = await call(main, 'issue.create', {'title': 'Paketstart ü ✓', 'description': 'packagedissuenovember **Markdown**'})
             issue_id = created['issue_id']
@@ -222,7 +225,7 @@ async def exercise(endpoints, app_dir, version):
                 'binary_sha256': [hashlib.sha256(raw).hexdigest() for raw in BINARIES],
                 'png_dimensions': [17, 11], 'smtp_remained_unconfigured': True,
                 'checks': ['parallel fresh startup of both extracted production scripts', 'HTTP login and exact packaged version/assets',
-                           '22-tool catalogs and current identity on both real MCP mounts', 'cross-service Issue and Unicode Update',
+                           '23-tool catalogs and current identity on both real MCP mounts', 'AD picker asset and explicit unconfigured-directory response', 'cross-service Issue and Unicode Update',
                            'FTS Issue and Update search over REST and both MCP mounts', 'same-name binary attachments via MCP and dedicated REST, exact bytes on both services',
                            'actual extracted image preview worker on both services', 'cookie/Bearer/anonymous/CSRF restrictions and dedicated route isolation',
                            'token revocation on both services']}

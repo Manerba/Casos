@@ -8,7 +8,7 @@ from pathlib import Path
 
 DB_DIR = Path(os.environ.get('CASOS_DATA_DIR', Path(__file__).parent.parent / 'data'))
 DB_PATH = DB_DIR / 'casos.db'
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def get_db() -> sqlite3.Connection:
@@ -32,7 +32,7 @@ def _initialize_db(conn):
         raise RuntimeError('Existing database is not a Casos issue database. Back up database, secret and files; use a fresh CASOS_DATA_DIR. No data was deleted or migrated.')
     if tables:
         version = conn.execute('SELECT version FROM schema_info').fetchall()
-        if version not in ([(1,)], [(SCHEMA_VERSION,)]):
+        if version not in ([(1,)], [(2,)], [(SCHEMA_VERSION,)]):
             raise RuntimeError('Unsupported Casos database schema version; back up before upgrading.')
     conn.execute('PRAGMA journal_mode=WAL')
     conn.execute('PRAGMA foreign_keys=ON')
@@ -46,6 +46,9 @@ def _initialize_db(conn):
         if not tables:
             conn.execute('INSERT INTO schema_info(version) VALUES (?)', (SCHEMA_VERSION,))
         _migrate_event_names(conn)
+        columns = {row[1] for row in conn.execute('PRAGMA table_info(issues)')}
+        if 'affected_person_sid' not in columns:
+            conn.execute('ALTER TABLE issues ADD COLUMN affected_person_sid TEXT REFERENCES ad_people(sid)')
         # Preserve schema1 notification opt-outs under the Issue event name.
         conn.execute("INSERT OR IGNORE INTO user_mail_preferences(user_id,event_type,enabled,days_before) "
                      "SELECT user_id,'issue_assigned',enabled,days_before FROM user_mail_preferences "

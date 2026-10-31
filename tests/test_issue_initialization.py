@@ -191,7 +191,7 @@ class IssueInitializationTests(unittest.TestCase):
         database.init_db()
         database.init_db()
         with closing(database.get_db()) as db:
-            self.assertEqual(db.execute('SELECT version FROM schema_info').fetchone()[0],2)
+            self.assertEqual(db.execute('SELECT version FROM schema_info').fetchone()[0],database.SCHEMA_VERSION)
             event=db.execute('SELECT * FROM issue_events WHERE id=9').fetchone()
             self.assertEqual((event['issue_id'],event['actor_id'],event['old_value'],event['new_value']),(7,1,'null','2'))
             self.assertEqual((event['actor_name'],event['old_label'],event['new_label']),('Administrator','','Alice'))
@@ -236,7 +236,7 @@ class IssueInitializationTests(unittest.TestCase):
             self.assertIsNone(results.get(timeout=2))
         self.assertTrue(second_connected.is_set())
         with closing(database.get_db()) as db:
-            self.assertEqual([tuple(row) for row in db.execute('SELECT version FROM schema_info')], [(2,)])
+            self.assertEqual([tuple(row) for row in db.execute('SELECT version FROM schema_info')], [(database.SCHEMA_VERSION,)])
             for table, rows in before.items():
                 self.assertEqual([tuple(row) for row in db.execute(f'SELECT * FROM {table} ORDER BY id')], rows)
             event = db.execute('SELECT * FROM issue_events WHERE id=9').fetchone()

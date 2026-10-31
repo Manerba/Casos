@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "Impossible de charger l’aperçu de l’image incluse.",
   "preview.retry": "Réessayer",
   "settingsOverlay.restartFailed": "Le redémarrage n’a pas pu être demandé. Les paramètres enregistrés sont conservés. Demandez à l’administrateur de redémarrer les services.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Personne concernée",
+  "adPeople.none": "Aucune",
+  "adPeople.placeholder": "Prénom, nom ou identifiant",
+  "adPeople.clear": "Retirer la personne",
+  "adPeople.results": "Utilisateurs AD",
+  "adPeople.hint": "Rechercher dans Active Directory et sélectionner une personne.",
+  "adPeople.loading": "Recherche des utilisateurs …",
+  "adPeople.more": "Plus de résultats",
+  "adPeople.choose": "Sélectionnez une personne dans la liste.",
+  "adPeople.empty": "Aucun utilisateur correspondant trouvé.",
+  "adPeople.retry": "Réessayer",
+  "adPeople.selectionRequired": "Sélectionnez une personne dans la liste ou videz le champ.",
+  "adPeople.notConfigured": "La connexion AD n’est pas encore configurée.",
+  "adPeople.unavailable": "Active Directory est indisponible. Veuillez réessayer.",
+  "adPeople.invalidSid": "Le SID de l’utilisateur est invalide.",
+  "adPeople.invalidQuery": "Saisissez un terme de recherche valide.",
+  "adPeople.notFound": "Le compte est introuvable dans AD. Veuillez le sélectionner à nouveau."
 }

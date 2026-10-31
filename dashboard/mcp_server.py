@@ -34,6 +34,7 @@ class IssueChanges(BaseModel):
     priority: Priority | None = None
     deadline: str | None = None
     assigned_to: Id | None = None
+    affected_person_sid: Text | None = None
     status: Status | None = None
 
 
@@ -117,18 +118,26 @@ def issue_get(issue_id: Id, include_description: bool = True) -> dict:
 @mcp.tool(name='issue.create')
 def issue_create(title: Text, description: Text = '', priority: Priority = 50,
                  deadline: Text | None = None, assigned_to: Id | None = None,
-                 status: Status = 'offen', reason: Text | None = None) -> dict:
-    """Issue anlegen; liefert ok und issue_id. Beschreibung als Markdown, Frist YYYY-MM-DD."""
+                 status: Status = 'offen', reason: Text | None = None, affected_person_sid: Text | None = None) -> dict:
+    """Issue anlegen. Optionale betroffene AD-Person per SID aus ad.people.search; unabhaengig vom Verantwortlichen."""
     result = issue_service.create_issue(dict(title=title, description=description, priority=priority,
-                                             deadline=deadline, assigned_to=assigned_to, status=status), _user(), reason)
+                                             deadline=deadline, assigned_to=assigned_to, status=status,
+                                             affected_person_sid=affected_person_sid), _user(), reason)
     return {'ok': True, 'issue_id': result['id']}
 
 
 @mcp.tool(name='issue.update')
 def issue_update(issue_id: Id, changes: IssueChanges, reason: Text | None = None) -> dict:
-    """Nur Felder in changes aendern. null loescht deadline/assigned_to. Beschreibung braucht description_revision."""
+    """Nur changes aendern. null leert deadline/assigned_to/affected_person_sid. AD-SID aus ad.people.search. Beschreibung braucht description_revision."""
     issue_service.update_issue(issue_id, changes.model_dump(exclude_unset=True), _user(), reason)
     return {'ok': True}
+
+
+@mcp.tool(name='ad.people.search', annotations={'readOnlyHint': True})
+def ad_people_search(query: Text, offset: Offset = 0, limit: Annotated[int, Field(strict=True, ge=1, le=100)] = 50) -> dict:
+    """Alle AD-Benutzer nach Vor-/Nach-/Anmeldename suchen, unabhaengig von der Login-Gruppe. Liefert SID und Namen; next_offset folgen."""
+    from dashboard.ad_directory import search_people
+    return search_people(query, _user(), offset, limit)
 
 
 @mcp.tool(name='issue.delete', annotations={'destructiveHint': True})

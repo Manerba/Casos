@@ -1,8 +1,8 @@
 """Real loopback, offline backup/restore of a completely isolated Casos instance.
 
 Run: venv/bin/python tests/check_backup_restore.py
-Both production ASGI apps run in child processes. Only SMTP connection/send is
-replaced by a recording test transport. No systemd, real mail, runtime data or
+Both production ASGI apps run in child processes. SMTP and AD resolution use
+isolated test transports. No systemd, real mail, runtime data or
 external integrations are used. The complete data directory is copied only
 with both writers stopped, then restored to a new empty directory.
 """
@@ -29,6 +29,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 FAKE_PASSWORD = 'BackupCheck-FakeOnly-77!'
+FAKE_AD_PERSON = {'sid':'S-1-5-21-111-222-333-1001', 'username':'emeyer', 'full_name':'Eva Meyer'}
 CSRF = {'X-Requested-With': 'XMLHttpRequest'}
 BINARY_FILES = (b'\x00\xffCasos restore first\r\n\x80' * 113,
                 bytes(range(256)) * 19 + b'\x00restore second')
@@ -70,6 +71,16 @@ def serve(kind):
     import smtplib
     smtplib.SMTP = forbid_smtp
     smtplib.SMTP_SSL = forbid_smtp
+    from dashboard import ad_directory
+
+    def resolve_test_person(sid, user):
+        assert sid == FAKE_AD_PERSON['sid']
+        return dict(FAKE_AD_PERSON)
+
+    def forbid_ldap(*args, **kwargs):
+        raise AssertionError('Real LDAP is forbidden in the backup fixture')
+    ad_directory.resolve_person = resolve_test_person
+    ad_directory._bind_connection = forbid_ldap
     if kind == 'main':
         from dashboard.app import main
     else:
@@ -110,7 +121,7 @@ def assert_database(path):
         assert db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
         assert not db.execute('PRAGMA foreign_key_check').fetchall()
         return {name: db.execute('SELECT COUNT(*) FROM ' + name).fetchone()[0]
-                for name in ('issues', 'issue_updates', 'attachments', 'audit_log')}
+                for name in ('issues', 'issue_updates', 'attachments', 'ad_people', 'audit_log')}
 
 
 class Apps:
@@ -213,7 +224,8 @@ async def populate(apps, http):
     state = {'token': token['token'], 'token_id': token['id']}
     async with Client(apps.main + '/mcp/', auth=state['token'], timeout=15) as main, Client(apps.dedicated + '/mcp/', auth=state['token'], timeout=15) as dedicated:
         state['identity'] = await call(main, 'whoami')
-        created = await call(main, 'issue.create', {'title': 'Offline restore ü ✓', 'description': 'restoreissuenovember original Markdown **source**'})
+        created = await call(main, 'issue.create', {'title': 'Offline restore ü ✓', 'description': 'restoreissuenovember original Markdown **source**',
+                                                  'affected_person_sid': FAKE_AD_PERSON['sid']})
         state['issue_id'] = created['issue_id']
         update = await call(dedicated, 'update.add', {'issue_id': state['issue_id'], 'content': 'restoreupdatenovember chronological update ü ✓'})
         state['update_id'] = update['update_id']
@@ -255,7 +267,7 @@ async def verify_snapshot(apps, http, state):
     from fastmcp import Client
     issue_id = state['issue_id']
     issue = response_json(http.get(f'/api/issues/{issue_id}'))
-    for key in ('title', 'description', 'description_revision', 'status', 'created_by'):
+    for key in ('title', 'description', 'description_revision', 'status', 'created_by', 'affected_person_sid', 'affected_person'):
         assert issue[key] == state['issue'][key], key
     update = response_json(http.get(f'/api/issues/{issue_id}/updates/{state["update_id"]}'))
     for key in ('content', 'revision', 'created_at', 'user_id'):
@@ -269,6 +281,7 @@ async def verify_snapshot(apps, http, state):
             assert (await call(client, 'whoami'))['id'] == state['identity']['id']
             got = await call(client, 'issue.get', {'issue_id': issue_id})
             assert got['description_revision'] == state['issue']['description_revision']
+            assert got['affected_person'] == FAKE_AD_PERSON
             got_update = await call(client, 'update.get', {'issue_id': issue_id, 'update_id': state['update_id']})
             assert got_update['revision'] == state['update']['revision']
             assert (await call(client, 'search', {'query': 'restoreupdatenovember'}))['total'] == 1
@@ -411,6 +424,7 @@ def main(evidence_path=None):
             'checks': ['parallel fresh initialization and restarts of both real apps', 'SQLite integrity_check and foreign_key_check before/after restore and after second restart',
                        'two same-name binary attachments with distinct IDs and exact bytes over both HTTP services and both MCP mounts',
                        'Issue/update content, authors, IDs and revisions preserved', 'FTS Issue/update hits preserved and updated after new writes',
+                       'AD SID, cached login/full name and Issue contact preserved without LDAP on reads',
                        'saved signed cookie and fresh login after restore', 'MCP identity and token preserved across both restarts',
                        'encrypted fake SMTP credential works through production get_smtp_config/decrypt after restore',
                        'mail preference opt-out preserved', 'REST and MCP revision conflicts still reject stale writes',

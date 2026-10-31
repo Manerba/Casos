@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "No se pudo cargar la vista previa de la imagen incluida.",
   "preview.retry": "Reintentar",
   "settingsOverlay.restartFailed": "No se pudo solicitar el reinicio. La configuración guardada se conserva. Pida al operador que reinicie los servicios.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Persona afectada",
+  "adPeople.none": "Ninguna",
+  "adPeople.placeholder": "Nombre, apellidos o nombre de usuario",
+  "adPeople.clear": "Quitar persona",
+  "adPeople.results": "Usuarios de AD",
+  "adPeople.hint": "Buscar en Active Directory y seleccionar una persona.",
+  "adPeople.loading": "Buscando usuarios …",
+  "adPeople.more": "Más resultados",
+  "adPeople.choose": "Seleccione una persona de la lista.",
+  "adPeople.empty": "No se encontraron usuarios coincidentes.",
+  "adPeople.retry": "Reintentar",
+  "adPeople.selectionRequired": "Seleccione una persona de la lista o vacíe el campo.",
+  "adPeople.notConfigured": "La conexión con AD aún no está configurada.",
+  "adPeople.unavailable": "Active Directory no está disponible. Inténtelo de nuevo.",
+  "adPeople.invalidSid": "El SID del usuario no es válido.",
+  "adPeople.invalidQuery": "Introduzca un término de búsqueda válido.",
+  "adPeople.notFound": "No se encontró la cuenta en AD. Vuelva a seleccionarla."
 }

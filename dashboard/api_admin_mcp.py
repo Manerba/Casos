@@ -31,6 +31,7 @@ router = APIRouter(prefix="/api/admin/mcp", tags=["mcp-admin"])
 # Static tool list (Sync mit mcp_server.py). Bewusst hardcoded fuer Robustheit
 # und um Import-Reihenfolge-Probleme zu vermeiden.
 MCP_TOOLS = [
+    'ad.people.search',
     "whoami", "get_agent_guide", "issue.list", "issue.get", "issue.create", "issue.update", "issue.delete",
     "issue.patch_description", "issue.editors.get", "issue.editors.set", "issue.history",
     "update.list", "update.get", "update.add", "update.edit", "update.delete",

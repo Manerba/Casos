@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "Previzualizarea imaginii incluse nu a putut fi încărcată.",
   "preview.retry": "Reîncearcă",
   "settingsOverlay.restartFailed": "Repornirea nu a putut fi solicitată. Setările salvate sunt păstrate. Cereți operatorului să repornească serviciile.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Persoană afectată",
+  "adPeople.none": "Niciuna",
+  "adPeople.placeholder": "Prenume, nume sau nume de utilizator",
+  "adPeople.clear": "Elimină persoana",
+  "adPeople.results": "Utilizatori AD",
+  "adPeople.hint": "Căutați în Active Directory și selectați o persoană.",
+  "adPeople.loading": "Se caută utilizatori …",
+  "adPeople.more": "Mai multe rezultate",
+  "adPeople.choose": "Selectați o persoană din listă.",
+  "adPeople.empty": "Nu s-au găsit utilizatori potriviți.",
+  "adPeople.retry": "Reîncercați",
+  "adPeople.selectionRequired": "Selectați o persoană din listă sau goliți câmpul.",
+  "adPeople.notConfigured": "Conexiunea AD nu este încă configurată.",
+  "adPeople.unavailable": "Active Directory nu este disponibil momentan. Reîncercați.",
+  "adPeople.invalidSid": "SID-ul utilizatorului nu este valid.",
+  "adPeople.invalidQuery": "Introduceți un termen de căutare valid.",
+  "adPeople.notFound": "Contul nu a fost găsit în AD. Selectați-l din nou."
 }

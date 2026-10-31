@@ -7,6 +7,7 @@ Quellcode: [GitHub – Manerba/Casos](https://github.com/Manerba/Casos) und [Git
 ## Funktionen und Rechte
 
 - Flache Issues mit stabiler ID, Markdown-Beschreibung, Priorität, optionaler Fälligkeit, Ersteller, Verantwortlichem und Status `offen`, `in_arbeit`, `erledigt` oder `abgebrochen`. Wiederöffnen ist möglich.
+- Zusätzliche **betroffene Person** aus Active Directory: Suche nach Vor-, Nach- oder Anmeldename, Auswahl per Maus oder Tastatur. SID, Anmeldename und voller Name werden lokal gespeichert. Die Person bleibt vom verantwortlichen Casos-Benutzer getrennt und erhält dadurch keine Zugriffsrechte.
 - Jeder aktive Benutzer darf Issues erstellen. Ersteller, Verantwortlicher, ausdrücklich freigegebene Bearbeiter und Admins dürfen Inhalte ändern, Updates schreiben und Dateien anhängen. Zuweisung, Bearbeitungsfreigaben und Issue-Löschung bleiben Ersteller/Admin vorbehalten. Sichtbarkeit allein gewährt keine Schreibrechte.
 - Autoren dürfen eigene Updates mit aktuellen Beitragsrechten innerhalb von 300 Sekunden revisionsgesichert korrigieren. Admins dürfen auch später korrigieren und Updates löschen. Autor und Erstellzeit bleiben erhalten.
 - Status- und Zuweisungsereignisse erscheinen zusammen mit Updates im Verlauf. Persönliche Mailpräferenzen steuern Zuweisungs-, Status-, Update- und Fristbenachrichtigungen. Ein neues Update informiert standardmäßig aktiven Ersteller und Verantwortlichen, ohne Akteur und Doppelzustellungen.
@@ -37,7 +38,7 @@ venv/bin/python dashboard/mcp_app.py
 
 MCP ist unter `http://localhost:8516/mcp/` und weiterhin unter `http://localhost:8514/mcp/` verfügbar. Der getrennte Zugang stellt nur MCP, geschützte Anhangswege und tokenfreie Bootstrapinformationen bereit. Browseroberfläche und Einstellungen liegen auf Port 8514. Tokens werden im Einstellungsbereich MCP erstellt und nur einmal vollständig angezeigt. Einstieg: [Agenten-Guide](docs/casos-agent-guide.md), zur Laufzeit `/agent-guide.md` und `/.well-known/casos-agent.json`.
 
-`CASOS_DATA_DIR` wählt eine isolierte Datenablage, `CASOS_HOST` die Bindadresse und `CASOS_PORT` den Port der Haupt-App und `CASOS_MCP_PORT` den getrennten MCP-Port. Beide Prozesse müssen dieselbe Datenablage verwenden. Standard ist `data/casos.db` mit Schema-Version 2, `data/secret.key` und `data/attachments/`. Vorhandene fremde oder unbekannte Datenbanken werden ohne Migration oder Löschung abgewiesen.
+`CASOS_DATA_DIR` wählt eine isolierte Datenablage, `CASOS_HOST` die Bindadresse und `CASOS_PORT` den Port der Haupt-App und `CASOS_MCP_PORT` den getrennten MCP-Port. Beide Prozesse müssen dieselbe Datenablage verwenden. Standard ist `data/casos.db` mit Schema-Version 3, `data/secret.key` und `data/attachments/`. Vorhandene fremde oder unbekannte Datenbanken werden ohne Migration oder Löschung abgewiesen. Vor einem Upgrade von Casos-Schema 1/2 die vollständige Ablage sichern; der Wechsel auf Schema 3 erhält bestehende Inhalte und ergänzt die optionale AD-Person.
 
 ## Lokales Paket und Betrieb
 
@@ -56,6 +57,7 @@ venv/bin/pip install -r requirements-dev.txt
 venv/bin/python -m playwright install chromium
 venv/bin/python -m unittest discover -s tests -v
 venv/bin/python tests/check_issues_ui.py
+venv/bin/python tests/check_ad_people_ui.py
 venv/bin/python tests/check_update_dialog_ui.py
 venv/bin/python tests/check_settings_ui.py
 venv/bin/python tests/check_search_ui.py

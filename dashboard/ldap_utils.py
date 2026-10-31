@@ -22,11 +22,16 @@ def _bind_connection(server, bind_dn, bind_password, use_ssl, receive_timeout=10
     conn = Connection(server, user=bind_dn, password=bind_password,
                       auto_bind=False, receive_timeout=receive_timeout,
                       raise_exceptions=True)
-    conn.open()
-    if not use_ssl:
-        conn.start_tls()
-    conn.bind()
-    return conn
+    try:
+        conn.open()
+        if not use_ssl and not conn.start_tls():
+            raise RuntimeError('LDAP StartTLS failed')
+        if not conn.bind():
+            raise RuntimeError('LDAP bind failed')
+        return conn
+    except Exception:
+        conn.unbind()
+        raise
 
 
 def test_connection(server_addr, port, use_ssl, bind_dn, bind_password, search_base, verify_cert=False):

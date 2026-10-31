@@ -16,9 +16,11 @@
                 content = `<a href="/issues/${state.issueId}?update=${item.update_id}" data-history-update="${item.update_id}">${tr('update')} #${item.update_id}</a><p class="issue-history-preview">${esc(item.content_preview)}</p>`;
             } else {
                 const assignment = item.event_type === 'assignment';
-                const old = assignment ? (item.old_value === null ? tr('unassigned') : item.old_label || `#${item.old_value}`) : t(`status.${item.old_value}`);
-                const next = assignment ? (item.new_value === null ? tr('unassigned') : item.new_label || `#${item.new_value}`) : t(`status.${item.new_value}`);
-                content = `<span>${tr(assignment ? 'assignment' : 'status')}: <span class="issue-history-old">${esc(old)}</span> <span aria-label="${tr('to')}">→</span> <strong>${esc(next)}</strong></span>`;
+                const person = item.event_type === 'affected_person';
+                const empty = person ? t('adPeople.none') : tr('unassigned');
+                const old = assignment || person ? (item.old_value === null ? empty : item.old_label || String(item.old_value)) : t(`status.${item.old_value}`);
+                const next = assignment || person ? (item.new_value === null ? empty : item.new_label || String(item.new_value)) : t(`status.${item.new_value}`);
+                content = `<span>${person ? t('issues.affectedPerson') : tr(assignment ? 'assignment' : 'status')}: <span class="issue-history-old">${esc(old)}</span> <span aria-label="${tr('to')}">→</span> <strong>${esc(next)}</strong></span>`;
             }
             return `<li data-history-kind="${item.kind}" data-history-id="${item.id}"><div class="issue-history-meta"><strong>${esc(item.actor_name || tr('unknownActor'))}</strong><time>${esc(dateTime(item.created_at))}</time></div><div>${content}</div></li>`;
         }).join('')}</ol>${items.length ? '' : `<p class="issue-empty">${tr('empty')}</p>`}<button type="button" class="issue-btn" data-history-more ${state.next === null ? 'hidden' : ''}>${tr('older')}</button>`;

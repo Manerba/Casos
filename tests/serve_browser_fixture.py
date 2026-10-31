@@ -37,6 +37,9 @@ def fake_mail(to_email, subject, html_body, text_body):
 
 mail_service.send_mail = fake_mail
 mail_service.test_smtp_connection = lambda config: None
+if os.environ.get('CASOS_TEST_AD') == '1':
+    from ad_directory_fixture import install_directory_fixture
+    install_directory_fixture(database.DB_DIR)
 from dashboard.app import app
 import uvicorn
 uvicorn.run(app, host='127.0.0.1', port=int(os.environ['CASOS_TEST_PORT']), log_level='warning')

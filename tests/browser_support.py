@@ -14,7 +14,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 
 @contextmanager
-def browser_server():
+def browser_server(*, ad_fixture=False):
     with tempfile.TemporaryDirectory(prefix='casos-browser-') as directory:
         root = Path(directory)
         with socket.socket() as sock:
@@ -22,6 +22,8 @@ def browser_server():
             port = sock.getsockname()[1]
         env = {**os.environ, 'CASOS_DATA_DIR': str(root / 'data'),
                'CASOS_LOG_FILE': str(root / 'security.log'), 'CASOS_TEST_PORT': str(port)}
+        if ad_fixture:
+            env['CASOS_TEST_AD'] = '1'
         with (root / 'server.log').open('w+') as log:
             process = subprocess.Popen([sys.executable, str(REPO / 'tests/serve_browser_fixture.py')],
                                        cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT)

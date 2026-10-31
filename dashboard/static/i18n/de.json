@@ -392,5 +392,22 @@
   "preview.embedded_image_failed": "Das enthaltene Bild konnte nicht als Vorschau geladen werden.",
   "preview.retry": "Erneut versuchen",
   "settingsOverlay.restartFailed": "Neustart konnte nicht angefordert werden. Gespeicherte Einstellungen bleiben erhalten. Bitte die Dienste durch den Betreiber neu starten lassen.",
-  "nav.mcp": "MCP"
+  "nav.mcp": "MCP",
+  "issues.affectedPerson": "Betroffene Person",
+  "adPeople.none": "Keine",
+  "adPeople.placeholder": "Vorname, Nachname oder Anmeldename",
+  "adPeople.clear": "Person entfernen",
+  "adPeople.results": "AD-Benutzer",
+  "adPeople.hint": "Im Active Directory suchen und eine Person auswählen.",
+  "adPeople.loading": "Benutzer werden gesucht …",
+  "adPeople.more": "Weitere Treffer",
+  "adPeople.choose": "Person aus der Liste auswählen.",
+  "adPeople.empty": "Keine passenden Benutzer gefunden.",
+  "adPeople.retry": "Erneut versuchen",
+  "adPeople.selectionRequired": "Bitte eine Person aus der Liste auswählen oder das Feld leeren.",
+  "adPeople.notConfigured": "Die AD-Verbindung ist noch nicht eingerichtet.",
+  "adPeople.unavailable": "Das Active Directory ist momentan nicht erreichbar. Bitte erneut versuchen.",
+  "adPeople.invalidSid": "Die Benutzer-SID ist ungültig.",
+  "adPeople.invalidQuery": "Bitte einen gültigen Suchtext eingeben.",
+  "adPeople.notFound": "Das Benutzerkonto wurde im AD nicht gefunden. Bitte erneut auswählen."
 }

@@ -72,6 +72,21 @@
 .issue-form-error { padding: 0 18px; margin: 0 0 12px; }
 .issue-editor-choices { display: flex; flex-direction: column; gap: 10px; }
 .issue-editor-choices label { display: flex; align-items: center; gap: 10px; padding: 6px; }
+.ad-person-picker { margin-bottom: 16px; font-size: 13px; }
+.ad-person-picker > label { display: block; margin-bottom: 7px; }
+.ad-person-input { display: flex; gap: 6px; }
+.ad-person-input input { min-width: 0; }
+.ad-person-input input:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.ad-person-input button { flex: 0 0 38px; font-size: 20px; }
+.ad-person-picker > small { display: block; color: var(--text-secondary); line-height: 1.5; margin-top: 6px; }
+.ad-person-dropdown { border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-primary); box-shadow: var(--shadow-lg); margin-top: 4px; padding: 4px; }
+.ad-person-dropdown ul { list-style: none; margin: 0; padding: 0; max-height: 210px; overflow-y: auto; }
+.ad-person-dropdown li { display: flex; flex-direction: column; gap: 3px; padding: 10px; border-radius: 4px; cursor: pointer; overflow-wrap: anywhere; }
+.ad-person-dropdown li:hover, .ad-person-dropdown li[aria-selected=true] { background: var(--bg-row-hover); }
+.ad-person-dropdown li[aria-selected=true] { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+.ad-person-dropdown li span, .ad-person-status { color: var(--text-secondary); font-size: 12px; }
+.ad-person-status { margin: 8px 10px; }
+.ad-person-dropdown > button { margin: 0 6px 6px; }
 @media (max-width: 850px) { .issue-columns { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 @media (max-width: 600px) {
     .main-app .container { padding: 12px; }

@@ -12,6 +12,7 @@ from dashboard.api_admin_mcp import MCP_TOOLS
 from dashboard.app import app as main_app
 from dashboard.mcp_app import app as dedicated_app
 from dashboard.agent_guide import build_agent_metadata, build_agent_guide_markdown
+from dashboard import ad_directory
 
 
 class TestClient(BaseTestClient):
@@ -235,3 +236,38 @@ class IssueMCPTests(AttachmentTestCase):
             db.execute('UPDATE users SET is_active=0 WHERE id=?',(self.reader['id'],))
         with TestClient(dedicated_app) as client:
             self.assertEqual(client.post('/mcp/',headers={'Authorization':'Bearer '+self.reader_token},json={}).status_code,401)
+
+    def test_ad_person_search_create_read_and_clear_on_both_mounts(self):
+        person = {'sid':'S-1-5-21-111-222-333-1001','username':'emeyer','full_name':'Eva Meyer'}
+        with closing(database.get_db()) as db, db:
+            db.execute("INSERT INTO ldap_config(id,server,bind_dn,bind_password,search_base) VALUES(1,'ad.example.invalid','fixture','fixture','DC=example,DC=invalid')")
+        for app in (main_app, dedicated_app):
+            with TestClient(app) as client:
+                h = self.initialize(client)
+                with patch.object(ad_directory, '_lookup', return_value={'items':[person], 'offset':0, 'limit':50, 'next_offset':None}) as lookup:
+                    found = self.call(client,h,'ad.people.search',{'query':'Meyer'})
+                    self.assertEqual(found['items'], [person])
+                    created = self.call(client,h,'issue.create',{'title':'AD contact','affected_person_sid':person['sid']})
+                    self.assertEqual(set(created), {'ok','issue_id'})
+                    self.assertEqual(lookup.call_count, 2)
+                with patch.object(ad_directory, '_lookup', side_effect=AssertionError('Read must use cache')) as lookup:
+                    current = self.call(client,h,'issue.get',{'issue_id':created['issue_id']})
+                    self.assertEqual(current['affected_person'], person)
+                    cleared = self.call(client,h,'issue.update',{'issue_id':created['issue_id'],'changes':{'affected_person_sid':None}})
+                    self.assertEqual(cleared, {'ok':True})
+                    current = self.call(client,h,'issue.get',{'issue_id':created['issue_id']})
+                    self.assertIsNone(current['affected_person'])
+                    lookup.assert_not_called()
+                self.call(client,h,'issue.update',{'issue_id':created['issue_id'],'changes':{'affected_person_sid':'invalid'}},error='invalid_ad_sid')
+
+    def test_ad_search_rechecks_kill_switch_after_directory_response(self):
+        with closing(database.get_db()) as db, db:
+            db.execute("INSERT INTO ldap_config(id,server,bind_dn,bind_password,search_base) VALUES(1,'ad.example.invalid','fixture','fixture','DC=example,DC=invalid')")
+        def revoke(*args):
+            with closing(database.get_db()) as db, db:
+                db.execute('UPDATE mcp_config SET enabled=0')
+            return {'items':[],'next_offset':None}
+        with TestClient(dedicated_app) as client:
+            h = self.initialize(client)
+            with patch.object(ad_directory, '_lookup', side_effect=revoke):
+                self.call(client,h,'ad.people.search',{'query':'Meyer'},error='invalid_token')

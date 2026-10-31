@@ -1,6 +1,6 @@
 # Betrieb, Paketierung und Wiederherstellung
 
-Diese Anleitung beschreibt den aktuellen Casos-Issue-Stand mit Schema-Version 2. Casos und das benachbarte Tareas sind getrennte Anwendungen. Die hier gezeigten Installations-, Dienst- und Restorebefehle sind bewusst auszuführende Betreiberaktionen; die Entwicklungsprüfungen aktivieren keine produktiven Dienste.
+Diese Anleitung beschreibt den aktuellen Casos-Issue-Stand mit Schema-Version 3. Casos und das benachbarte Tareas sind getrennte Anwendungen. Die hier gezeigten Installations-, Dienst- und Restorebefehle sind bewusst auszuführende Betreiberaktionen; die Entwicklungsprüfungen aktivieren keine produktiven Dienste.
 
 ## Prozesse und Ablage
 
@@ -19,6 +19,22 @@ Metadaten, Bearbeitungsfreigaben, Updates, Verlauf, Suchindex, Audit und Mailkon
 `CASOS_DATA_DIR` kann die komplette Datenablage verlegen. `CASOS_HOST` gilt für beide Prozesse; `CASOS_PORT` legt den Haupt-App-Port fest, `CASOS_MCP_PORT` den getrennten MCP-Port. Haupt-App, MCP und beide Scheduler müssen dieselbe Ablage verwenden. Bei einer systemd-Abweichung auch `ReadWritePaths` sowie Besitzer und Zugriffsrechte anpassen; eine Umgebungsvariable allein erweitert die Service-Schreibrechte nicht. Keine Tareas-Datenablage als Ziel verwenden.
 
 Frische Initialisierung erzeugt `admin` / `admin`. Das Passwort nach der ersten Anmeldung ändern. Ein vorhandenes fremdes Schema wird abgewiesen und bleibt erhalten. Bei unterstützten Casos-Upgrades vor dem Start alle Daten gemeinsam sichern; der Schemawechsel ist kein Ersatz für ein Backup.
+
+## Betroffene Personen aus Active Directory
+
+Die vorhandene LDAP-Konfiguration (Server, Bindkonto, Suchbasis und TLS-Prüfung) wird auch für die Personensuche verwendet. Sie durchsucht die aus den DC-Komponenten der Suchbasis abgeleitete Domäne, unabhängig von einer für Casos ausgewählten Anmeldegruppe. Auch deaktivierte AD-Benutzerkonten sind auffindbar; Computer und Kontakte werden ausgeschlossen. Das Bindkonto benötigt Leserechte auf `objectSid`, `sAMAccountName`, `givenName`, `sn` und `displayName`. Es wird nichts ins AD geschrieben.
+
+Alle aktiven Casos-Benutzer können nach Vorname, Nachname, Anmeldename und Anzeigename suchen. Teiltreffer sind erlaubt; mehrere Wörter müssen jeweils in einem der Attribute vorkommen. Die Oberfläche startet nach 250 ms Schreibpause, bietet 50 Treffer pro Seite und „Weitere Treffer“. LDAP-Seiten werden auf einer Verbindung gelesen; Folgeanfragen wenden den Offset auf eine neue Suche an. Änderungen im AD zwischen Seiten können daher die Reihenfolge verschieben. Empfangs-/Suchzeitlimits begrenzen langsame Abfragen. Eine leere Suche ruft das AD nicht auf.
+
+Beim Speichern einer Auswahl wird die SID nochmals im AD geprüft. Nur dabei werden SID, Anmeldename und voller Name in `ad_people` geschrieben bzw. aktualisiert. `displayName` liefert den vollen Namen, ersatzweise Vor- und Nachname, zuletzt der Anmeldename. `issues.affected_person_sid` referenziert diesen Cache. Weder Ticketanzeige noch Hintergrund-Scheduler lösen diese Zuordnung per LDAP auf. Bei einer erneuten Auswahl derselben SID werden die gecachten Namen aktualisiert; frühere Verlaufsereignisse behalten ihre Namens-Snapshots. Nicht mehr zugeordnete Cacheeinträge bleiben als lokale Identitätsreferenzen erhalten.
+
+Die betroffene Person ist unabhängig vom Verantwortlichen, von Anmeldekonten und Bearbeitungsfreigaben. Sie erhält keine Rechte oder automatischen Mails. Aktuelle Ticketbearbeiter dürfen die Zuordnung ändern. Bei AD-Ausfall bleiben Auswahl und andere Entwürfe im Dialog erhalten; neue Auswahl kann erst mit funktionierender Verbindung gespeichert werden. Anzeige, Änderungen anderer Felder und Entfernen der Zuordnung benötigen kein AD.
+
+REST: `GET /api/ad/people?query=…&offset=0&limit=50` (maximal 100), nur mit Session. MCP: `ad.people.search`, dieselbe Suche mit aktuellen Tokenrechten. Antworten enthalten `items` (`sid`, `username`, `full_name`), `offset`, `limit`, `next_offset`; kein Gesamttrefferzähler. `issue.create/update` bzw. Issue-REST nehmen nur `affected_person_sid` oder `null` an, keine vom Client vorgegebenen Namen. Issue-Reads liefern zusätzlich `affected_person` aus dem Cache.
+
+Schema 3 ergänzt Cache und optionale Referenz atomar unter der gemeinsamen Startsperre. Vor dem Upgrade von Schema 1/2 Apps/Scheduler stoppen und **Datenbank, Secret und Anhänge gemeinsam sichern**, wie unten beschrieben. Vorhandene Issues behalten ihren Verantwortlichen und zunächst keine betroffene Person. Ein alter Schema-2-Code darf danach nicht mit dieser Datenbank gestartet werden; für einen Rückstieg den passenden vollständigen Backupstand verwenden.
+
+Grundlagen: [Microsoft AD-Suchfilter](https://learn.microsoft.com/en-us/windows/win32/adsi/search-filter-syntax), [Microsoft objectSid](https://learn.microsoft.com/en-us/windows/win32/adschema/a-objectsid), [ldap3-Suche und Pagination](https://ldap3.readthedocs.io/en/latest/searches.html).
 
 ## Lokales Paket
 

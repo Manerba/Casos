@@ -1,14 +1,23 @@
 """Session-authenticated REST transport for the shared Issue services."""
 
 from fastapi import APIRouter, Body, Depends, Query
+from starlette.concurrency import run_in_threadpool
 
 from dashboard.auth import get_current_user
 from dashboard.db_utils import db_query
 from dashboard.errors import ApplicationError
 from dashboard.issue_permissions import require_active_user
 from dashboard import issue_service
+from dashboard.ad_directory import search_people
 
 router = APIRouter(tags=["issues"])
+
+
+@router.get('/api/ad/people')
+def find_ad_people(query: str = Query(..., min_length=1, max_length=200),
+                   offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=100),
+                   user=Depends(get_current_user)):
+    return search_people(query, user, offset, limit)
 
 
 def _body(data, allowed=None):
@@ -40,7 +49,7 @@ async def list_issues(offset: int = Query(0, ge=0), limit: int = Query(50, ge=1,
 @router.post("/api/issues", status_code=201)
 async def create_issue(data: dict = Body(...), user=Depends(get_current_user)):
     data, reason = _body(data)
-    return issue_service.create_issue(data, user, reason=reason)
+    return await run_in_threadpool(issue_service.create_issue, data, user, reason=reason)
 
 
 @router.get("/api/issues/{issue_id}")
@@ -51,7 +60,7 @@ async def get_issue(issue_id: int, user=Depends(get_current_user)):
 @router.put("/api/issues/{issue_id}")
 async def update_issue(issue_id: int, data: dict = Body(...), user=Depends(get_current_user)):
     data, reason = _body(data)
-    return issue_service.update_issue(issue_id, data, user, reason=reason)
+    return await run_in_threadpool(issue_service.update_issue, issue_id, data, user, reason=reason)
 
 
 @router.delete("/api/issues/{issue_id}")

@@ -9,12 +9,17 @@ CREATE TABLE IF NOT EXISTS sessions (
  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  token TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL DEFAULT (datetime('now')), expires_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS ad_people (
+ sid TEXT PRIMARY KEY, username TEXT NOT NULL, full_name TEXT NOT NULL,
+ cached_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS issues (
  id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL CHECK(length(trim(title)) > 0),
  description TEXT NOT NULL DEFAULT '', description_format TEXT NOT NULL DEFAULT 'markdown',
  priority INTEGER NOT NULL DEFAULT 50 CHECK(typeof(priority) = 'integer' AND priority BETWEEN 0 AND 100),
  deadline TEXT, created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
  assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+ affected_person_sid TEXT REFERENCES ad_people(sid),
  status TEXT NOT NULL DEFAULT 'offen' CHECK(status IN ('offen','in_arbeit','erledigt','abgebrochen')),
  created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
